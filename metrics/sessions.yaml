@@ -1,0 +1,12 @@
+id: sessions
+version: 1
+label: { en: "Sessions", tr: "Oturum" }
+unit: count
+source: ga4
+owner: Bahadır Ölez
+description:
+  en: "GA4 sessions: distinct user_pseudo_id and ga_session_id pairs in the BigQuery export, on the day the session starts."
+  tr: "GA4 oturumları: BigQuery dışa aktarımındaki benzersiz user_pseudo_id ve ga_session_id çiftleri; oturumun başladığı güne yazılır."
+model: daily_channel_device
+sum: sessions
+dimensions: [day, week, month, channel, device]

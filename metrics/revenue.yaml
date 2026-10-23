@@ -1,0 +1,13 @@
+id: revenue
+version: 2
+label: { en: "Revenue", tr: "Ciro" }
+unit: try
+source: backoffice
+owner: Bahadır Ölez
+description:
+  en: "Order value in TRY including VAT, excluding shipping, from the back office. Refunds are not subtracted."
+  tr: "Arka ofisten, KDV dahil ve kargo hariç TRY sipariş tutarı. İadeler düşülmez."
+model: daily_channel_device
+sum: revenue
+dimensions: [day, week, month, channel, device]
+check: ga4_rev_vs_revenue

@@ -1,0 +1,13 @@
+id: ad_spend
+version: 1
+label: { en: "Ad spend", tr: "Reklam harcaması" }
+unit: try
+source: ads
+owner: Bahadır Ölez
+description:
+  en: "Cost reported by Google Ads, Meta Ads and TikTok Ads, converted to TRY at the day’s TCMB rate."
+  tr: "Google Ads, Meta Ads ve TikTok Ads’in bildirdiği maliyet; günün TCMB kuruyla TRY’ye çevrilir."
+model: daily_channel_device
+sum: ad_spend
+where: { channel: [google_ads, meta_ads, tiktok_ads] }
+dimensions: [day, week, month, channel, device]

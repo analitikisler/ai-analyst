@@ -1,0 +1,13 @@
+id: platform_conversions
+version: 1
+label: { en: "Platform-reported conversions", tr: "Platformun bildirdiği dönüşüm" }
+unit: count
+source: ads
+owner: Bahadır Ölez
+description:
+  en: "Conversions as Google Ads, Meta Ads and TikTok Ads report them in their own interfaces, each with its own attribution window."
+  tr: "Google Ads, Meta Ads ve TikTok Ads’in kendi arayüzlerinde, kendi atıf pencereleriyle bildirdiği dönüşümler."
+model: daily_channel_device
+sum: platform_conversions
+where: { channel: [google_ads, meta_ads, tiktok_ads] }
+dimensions: [day, week, month, channel, device]

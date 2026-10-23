@@ -1,0 +1,13 @@
+id: ga4_revenue
+version: 1
+label: { en: "GA4 revenue", tr: "GA4 geliri" }
+unit: try
+source: ga4
+owner: Bahadır Ölez
+description:
+  en: "Purchase revenue in TRY from GA4 purchase events, counted once per transaction_id."
+  tr: "GA4 purchase etkinliklerinden TRY satın alma geliri; her transaction_id bir kez sayılır."
+model: daily_channel_device
+sum: ga4_revenue
+dimensions: [day, week, month, channel, device]
+check: ga4_rev_vs_revenue

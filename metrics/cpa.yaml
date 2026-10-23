@@ -1,0 +1,13 @@
+id: cpa
+version: 1
+label: { en: "Cost per order", tr: "Sipariş başı maliyet" }
+unit: try
+source: backoffice+ads
+owner: Bahadır Ölez
+description:
+  en: "Channel spend divided by back-office orders attributed to that channel (last non-direct click)."
+  tr: "Kanal harcaması bölü o kanala atanan arka ofis siparişleri (son doğrudan olmayan tıklama)."
+model: daily_channel_device
+ratio: { numerator: ad_spend, denominator: orders }
+where: { channel: [google_ads, meta_ads, tiktok_ads] }
+dimensions: [day, week, month, channel, device]

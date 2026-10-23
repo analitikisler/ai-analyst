@@ -1,0 +1,7 @@
+id: meta_vs_orders
+label: { en: "Meta conversions against back-office orders", tr: "Meta dönüşümleri ile arka ofis siparişleri" }
+expected: { metric: orders, label: { en: "Back-office orders from Meta", tr: "Meta kaynaklı arka ofis siparişi" } }
+measured: { metric: platform_conversions, label: { en: "Meta conversions", tr: "Meta dönüşümü" } }
+where: { channel: [meta_ads] }
+tolerance: 0.2
+breakdown: device

@@ -1,0 +1,13 @@
+id: orders
+version: 3
+label: { en: "Orders", tr: "Sipariş" }
+unit: count
+source: backoffice
+owner: Bahadır Ölez
+description:
+  en: "Orders placed in the back office, by order date in Europe/Istanbul time. Test orders are excluded; cancelled orders are kept."
+  tr: "Arka ofiste oluşan siparişler, İstanbul saatine göre sipariş tarihinde. Test siparişleri hariç, iptal edilen siparişler dahildir."
+model: daily_channel_device
+sum: orders
+dimensions: [day, week, month, channel, device]
+check: ga4_vs_orders

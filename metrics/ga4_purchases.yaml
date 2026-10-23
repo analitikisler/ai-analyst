@@ -1,0 +1,13 @@
+id: ga4_purchases
+version: 2
+label: { en: "GA4 purchases", tr: "GA4 satın almaları" }
+unit: count
+source: ga4
+owner: Bahadır Ölez
+description:
+  en: "Purchase events in the GA4 BigQuery export, counted once per transaction_id."
+  tr: "GA4 BigQuery dışa aktarımındaki purchase etkinlikleri; her transaction_id bir kez sayılır."
+model: daily_channel_device
+sum: ga4_purchases
+dimensions: [day, week, month, channel, device]
+check: ga4_vs_orders

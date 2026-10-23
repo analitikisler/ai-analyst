@@ -1,0 +1,7 @@
+id: gads_vs_orders
+label: { en: "Google Ads conversions against back-office orders", tr: "Google Ads dönüşümleri ile arka ofis siparişleri" }
+expected: { metric: orders, label: { en: "Back-office orders from Google Ads", tr: "Google Ads kaynaklı arka ofis siparişi" } }
+measured: { metric: platform_conversions, label: { en: "Google Ads conversions", tr: "Google Ads dönüşümü" } }
+where: { channel: [google_ads] }
+tolerance: 0.1
+breakdown: device

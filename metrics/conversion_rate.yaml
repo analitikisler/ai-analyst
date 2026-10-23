@@ -1,0 +1,12 @@
+id: conversion_rate
+version: 2
+label: { en: "Conversion rate", tr: "Dönüşüm oranı" }
+unit: pct
+source: backoffice+ga4
+owner: Bahadır Ölez
+description:
+  en: "Back-office orders divided by GA4 sessions. By channel, orders take the channel stored with the order and sessions the GA4 session source."
+  tr: "Arka ofis siparişleri bölü GA4 oturumları. Kanal kırılımında sipariş, siparişle kaydedilen kanala; oturum, GA4 oturum kaynağına göre atanır."
+model: daily_channel_device
+ratio: { numerator: orders, denominator: sessions }
+dimensions: [day, week, month, channel, device]

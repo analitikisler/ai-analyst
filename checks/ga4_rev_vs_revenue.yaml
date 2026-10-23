@@ -1,0 +1,6 @@
+id: ga4_rev_vs_revenue
+label: { en: "GA4 revenue against back-office revenue", tr: "GA4 geliri ile arka ofis cirosu" }
+expected: { metric: revenue, label: { en: "Back-office revenue", tr: "Arka ofis cirosu" } }
+measured: { metric: ga4_revenue, label: { en: "GA4 revenue", tr: "GA4 geliri" } }
+tolerance: 0.05
+breakdown: device

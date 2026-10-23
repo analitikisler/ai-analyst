@@ -1,0 +1,6 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    { "name": "ai-analyst", "runtimeExecutable": "node", "runtimeArgs": ["src/cli.js", "serve", "--port", "8788"], "port": 8788 }
+  ]
+}

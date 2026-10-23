@@ -1,0 +1,12 @@
+id: aov
+version: 1
+label: { en: "Average order value", tr: "Sepet ortalaması" }
+unit: try
+source: backoffice
+owner: Bahadır Ölez
+description:
+  en: "Revenue divided by orders, both from the back office."
+  tr: "Ciro bölü sipariş; ikisi de arka ofisten."
+model: daily_channel_device
+ratio: { numerator: revenue, denominator: orders }
+dimensions: [day, week, month, channel, device]
