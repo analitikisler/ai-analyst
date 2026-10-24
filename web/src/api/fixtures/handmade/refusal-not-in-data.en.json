@@ -1,0 +1,48 @@
+{
+  "handmade": true,
+  "question": "Which products sell most?",
+  "lang": "en",
+  "after": null,
+  "events": [
+    {
+      "event": "turn",
+      "data": {
+        "turn_id": "turn_mvlz9z150g5",
+        "conversation_id": "conv_mvlz9z150g4",
+        "question_text": {
+          "en": "Which products sell most?",
+          "tr": "En çok satan ürünler hangileri?"
+        }
+      }
+    },
+    {
+      "event": "refusal",
+      "data": {
+        "code": "not_in_data",
+        "missing": "product",
+        "heading": {
+          "en": "This workspace has no product-level data",
+          "tr": "Bu çalışma alanında ürün düzeyinde veri yok"
+        },
+        "body": {
+          "en": "The demo data holds orders, revenue, sessions and ad figures by day, channel and device. Products, returns and customers are not in it, so this cannot be answered here.",
+          "tr": "Demo veri sipariş, ciro, oturum ve reklam rakamlarını gün, kanal ve cihaz düzeyinde tutar. Ürün, iade ve müşteri verisi yoktur; bu yüzden soru burada cevaplanamaz."
+        },
+        "nearest": [
+          {
+            "en": "Revenue by channel in the last 28 days",
+            "tr": "Son 28 günde kanallara göre ciro"
+          },
+          {
+            "en": "Average order value by device in the last 28 days",
+            "tr": "Son 28 günde cihaza göre sepet ortalaması"
+          }
+        ]
+      }
+    },
+    {
+      "event": "done",
+      "data": {}
+    }
+  ]
+}

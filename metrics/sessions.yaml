@@ -10,3 +10,11 @@ description:
 model: daily_channel_device
 sum: sessions
 dimensions: [day, week, month, channel, device]
+# Newest first. The pack keeps the version; these notes say what changed and who changed it.
+history:
+  - version: 1
+    date: 2026-03-01
+    actor: Bahadır Ölez
+    change:
+      en: "First version."
+      tr: "İlk sürüm."

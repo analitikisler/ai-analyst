@@ -6,8 +6,22 @@ source: backoffice+ads
 owner: Bahadır Ölez
 description:
   en: "Back-office revenue from orders whose last non-direct click came from the channel, divided by that channel’s spend. Platform-reported conversions are not used."
-  tr: "Son doğrudan olmayan tıklaması kanaldan gelen siparişlerin arka ofis cirosu, bölü o kanalın harcaması. Platformların bildirdiği dönüşümler kullanılmaz."
+  tr: "Son doğrudan olmayan tıklaması kanaldan gelen siparişlerin sipariş paneli cirosu, bölü o kanalın harcaması. Platformların bildirdiği dönüşümler kullanılmaz."
 model: daily_channel_device
 ratio: { numerator: revenue, denominator: ad_spend }
 where: { channel: [google_ads, meta_ads, tiktok_ads] }
 dimensions: [day, week, month, channel, device]
+# Newest first. The pack keeps the version; these notes say what changed and who changed it.
+history:
+  - version: 2
+    date: 2026-06-02
+    actor: Bahadır Ölez
+    change:
+      en: "Revenue by last non-direct click instead of platform conversions."
+      tr: "Platform dönüşümleri yerine son doğrudan olmayan tıklamaya göre ciro."
+  - version: 1
+    date: 2026-03-01
+    actor: Bahadır Ölez
+    change:
+      en: "First version."
+      tr: "İlk sürüm."

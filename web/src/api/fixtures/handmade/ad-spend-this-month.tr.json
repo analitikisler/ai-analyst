@@ -1,0 +1,145 @@
+{
+  "handmade": true,
+  "question": "Bu ay reklama ne kadar harcandı?",
+  "lang": "tr",
+  "after": null,
+  "events": [
+    {
+      "event": "turn",
+      "data": {
+        "turn_id": "turn_mvlz9y9n0fu",
+        "conversation_id": "conv_mvlz9y9n0ft",
+        "question_text": null
+      }
+    },
+    {
+      "event": "step",
+      "data": {
+        "tool": "run_query",
+        "summary": {
+          "en": "Ran a query on ad spend, in total, 1–22 Oct 2026",
+          "tr": "Reklam harcaması için sorgu çalıştırıldı: toplam, 1–22 Eki 2026"
+        },
+        "ok": true
+      }
+    },
+    {
+      "event": "step",
+      "data": {
+        "tool": "publish_answer",
+        "summary": {
+          "en": "Wrote the answer",
+          "tr": "Cevap yazıldı"
+        },
+        "ok": true
+      }
+    },
+    {
+      "event": "answer",
+      "data": {
+        "answer": {
+          "kind": "number",
+          "sentence": {
+            "en": "Ad spend for 1–22 Oct 2026 was 1.04M TL, up 2.2% against 1.02M TL for 1–22 Sep 2026.",
+            "tr": "1–22 Eki 2026 döneminde reklam harcaması 1,04 mn TL; 1–22 Eyl 2026 dönemindeki 1,02 mn TL değerine göre %2,2 arttı."
+          },
+          "title": {
+            "en": "Ad spend · 1–22 Oct 2026",
+            "tr": "Reklam harcaması · 1–22 Eki 2026"
+          },
+          "followups": [
+            {
+              "en": "ROAS by channel in the last 28 days",
+              "tr": "Son 28 günde kanallara göre ROAS"
+            },
+            {
+              "en": "Do GA4 purchases match orders in the last 14 days?",
+              "tr": "Son 14 günde GA4 satın almaları siparişlerle tutuyor mu?"
+            },
+            {
+              "en": "Do Meta conversions match orders this month?",
+              "tr": "Bu ay Meta dönüşümleri siparişlerle tutuyor mu?"
+            }
+          ],
+          "interpretation": {
+            "en": "Read as: ad spend, in total, 1–22 Oct 2026.",
+            "tr": "Soru şöyle okundu: reklam harcaması, toplam, 1–22 Eki 2026."
+          },
+          "query": {
+            "id": "q_mvlz9y9n0fv",
+            "metric": "ad_spend",
+            "metric_version": 1,
+            "group_by": "none",
+            "from": "2026-10-01",
+            "to": "2026-10-22",
+            "filters": {},
+            "unit": "try",
+            "rows": [],
+            "total": 1043239,
+            "sql": "-- metric ad_spend v1\nSELECT\n  SUM(ad_spend) AS value\nFROM daily_channel_device\nWHERE date BETWEEN DATE '2026-10-01' AND DATE '2026-10-22'\n  AND channel IN ('google_ads', 'meta_ads', 'tiktok_ads')",
+            "dialect": "duckdb",
+            "ran_at": "2026-10-24T05:48:23.099Z",
+            "provisional_from": "2026-10-20",
+            "partial": null,
+            "comparison": {
+              "kind": "previous_period",
+              "from": "2026-09-01",
+              "to": "2026-09-22",
+              "shift_days": 30,
+              "total": 1020692,
+              "rows": [],
+              "delta": 22547,
+              "delta_pct": 0.02208991546911311,
+              "sql": "-- metric ad_spend v1\nSELECT\n  SUM(ad_spend) AS value\nFROM daily_channel_device\nWHERE date BETWEEN DATE '2026-09-01' AND DATE '2026-09-22'\n  AND channel IN ('google_ads', 'meta_ads', 'tiktok_ads')"
+            }
+          },
+          "check": null,
+          "metrics": [
+            {
+              "id": "ad_spend",
+              "label": {
+                "en": "Ad spend",
+                "tr": "Reklam harcaması"
+              },
+              "version": 1,
+              "description": {
+                "en": "Cost reported by Google Ads, Meta Ads and TikTok Ads, converted to TRY at the day’s TCMB rate.",
+                "tr": "Google Ads, Meta Ads ve TikTok Ads’in bildirdiği maliyet; günün TCMB kuruyla TRY’ye çevrilir."
+              },
+              "source": "ads"
+            }
+          ],
+          "events": [],
+          "validation": {
+            "ok": true,
+            "unmatched": []
+          },
+          "created_by": "planner",
+          "model_label": {
+            "en": "Built-in planner",
+            "tr": "Yerleşik planlayıcı"
+          },
+          "seconds": 0.3,
+          "handmade": true,
+          "id": "ans_mvlz9yrl0fw",
+          "turn_id": "turn_mvlz9y9n0fu",
+          "question": "Bu ay reklama ne kadar harcandı?",
+          "created_at": "2026-10-24T05:48:23.745Z"
+        }
+      }
+    },
+    {
+      "event": "text",
+      "data": {
+        "text": {
+          "en": "Answered by the built-in planner, without a model.",
+          "tr": "Cevabı yerleşik planlayıcı verdi; model kullanılmadı."
+        }
+      }
+    },
+    {
+      "event": "done",
+      "data": {}
+    }
+  ]
+}

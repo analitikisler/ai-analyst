@@ -2,7 +2,7 @@
 // prototype's generator, ported call for call (same seed, same order of rnd() calls), so
 // the demo shows the same numbers as the prototype. Planted bug: from release v4.12 on
 // 9 Oct 2026, GA4 captures far fewer purchases on mobile.
-import { existsSync, mkdirSync, rmSync } from "node:fs";
+import { chmodSync, existsSync, mkdirSync, rmSync } from "node:fs";
 import path from "node:path";
 import { addDays, parseISO } from "../format.js";
 
@@ -82,7 +82,7 @@ const COLUMNS = ["date", "channel", "device", "sessions", "orders", "revenue", "
 /** Writes the demo mart to a fresh DuckDB file. Returns the row count. */
 export async function buildDemoWarehouse(file, rows = generateFacts()) {
   const { DuckDBInstance } = await import("@duckdb/node-api");
-  mkdirSync(path.dirname(file), { recursive: true });
+  mkdirSync(path.dirname(file), { recursive: true, mode: 0o700 });
   for (const f of [file, `${file}.wal`]) if (existsSync(f)) rmSync(f);
   const instance = await DuckDBInstance.create(file);
   const conn = await instance.connect();
@@ -105,6 +105,7 @@ export async function buildDemoWarehouse(file, rows = generateFacts()) {
     conn.closeSync?.();
     instance.closeSync?.();
   }
+  chmodSync(file, 0o600);
   return rows.length;
 }
 
@@ -114,20 +115,22 @@ export const DEMO_FINDINGS = [
     id: "f_ga4_mobile_safari",
     source: "AI Tag Debugger",
     since: DEMO.release,
+    release: "v4.12",
     checks: ["ga4_vs_orders", "ga4_rev_vs_revenue"],
     text: {
       en: "purchase is not sent on mobile Safari since release v4.12 (9 Oct): the thank-you page loads the tag before dataLayer is ready.",
-      tr: "v4.12 sürümünden (9 Eki) beri mobil Safari’de purchase gitmiyor: teşekkür sayfası tag’i dataLayer hazır olmadan yüklüyor.",
+      tr: "v4.12 sürümünden (9 Ekim) beri mobil Safari’de purchase gitmiyor: teşekkür sayfası tag’i dataLayer hazır olmadan yüklüyor.",
     },
   },
   {
     id: "f_meta_view_through",
     source: "AI Tag Debugger",
     since: null,
+    release: null,
     checks: ["meta_vs_orders"],
     text: {
       en: "Meta counts view-through purchases (1-day view) that the back office attributes to other channels.",
-      tr: "Meta, arka ofisin başka kanallara atadığı görüntüleme sonrası satın almaları da sayıyor (1 günlük görüntüleme).",
+      tr: "Meta, sipariş panelinin başka kanallara atadığı görüntüleme sonrası satın almaları da sayıyor (1 günlük görüntüleme).",
     },
   },
 ];

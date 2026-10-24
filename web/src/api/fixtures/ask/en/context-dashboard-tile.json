@@ -1,0 +1,25 @@
+{
+  "question": "Why is this lower than last week?",
+  "lang": "en",
+  "conversation_id": "conv_deb452ab9c",
+  "turn_id": "turn_3b2578241f",
+  "events": [
+    {
+      "event": "turn",
+      "data": {
+        "turn_id": "turn_3b2578241f",
+        "conversation_id": "conv_deb452ab9c"
+      }
+    },
+    {
+      "event": "text",
+      "data": {
+        "text": "The built-in planner knows orders, revenue, sessions, conversion rate, order value, ad spend, ROAS and the four checks. Try one of the suggested questions."
+      }
+    },
+    {
+      "event": "done",
+      "data": {}
+    }
+  ]
+}

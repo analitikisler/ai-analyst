@@ -6,8 +6,28 @@ source: backoffice
 owner: Bahadır Ölez
 description:
   en: "Orders placed in the back office, by order date in Europe/Istanbul time. Test orders are excluded; cancelled orders are kept."
-  tr: "Arka ofiste oluşan siparişler, İstanbul saatine göre sipariş tarihinde. Test siparişleri hariç, iptal edilen siparişler dahildir."
+  tr: "Sipariş panelinde oluşan siparişler, İstanbul saatine göre sipariş tarihinde. Test siparişleri hariç, iptal edilen siparişler dahildir."
 model: daily_channel_device
 sum: orders
 dimensions: [day, week, month, channel, device]
 check: ga4_vs_orders
+# Newest first. The pack keeps the version; these notes say what changed and who changed it.
+history:
+  - version: 3
+    date: 2026-08-18
+    actor: Bahadır Ölez
+    change:
+      en: "Cancelled orders no longer excluded: an order counts on the day it was placed, as GA4 records the purchase."
+      tr: "İptal edilen siparişler artık hariç tutulmuyor: sipariş, GA4’ün satın almayı kaydettiği gibi verildiği gün sayılıyor."
+  - version: 2
+    date: 2026-06-02
+    actor: Bahadır Ölez
+    change:
+      en: "Channel taken from the last non-direct click instead of the first touch."
+      tr: "Kanal ilk temas yerine son doğrudan olmayan tıklamadan alınıyor."
+  - version: 1
+    date: 2026-03-01
+    actor: Bahadır Ölez
+    change:
+      en: "First version."
+      tr: "İlk sürüm."

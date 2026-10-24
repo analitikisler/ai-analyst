@@ -66,7 +66,7 @@ export function extractNumbers(text) {
 }
 
 /** The values a sentence may cite: plain figures and ratios (cited as percentages). */
-export function groundTruth({ query, check } = {}) {
+export function groundTruth({ query, check, explore } = {}) {
   const plain = [];
   const ratios = [];
   if (query) {
@@ -74,6 +74,23 @@ export function groundTruth({ query, check } = {}) {
     (query.unit === "pct" ? ratios : plain).push(...values);
     // A percentage-unit metric is also often cited as a plain ratio, e.g. "a rate of 0.0198"; keep that too.
     if (query.unit === "pct") plain.push(...values);
+    // The comparison window's figures, and how many rows the result has ("12 complete weeks").
+    const c = query.comparison;
+    if (c) {
+      const cv = [c.total, ...(c.rows ?? []).map((r) => r.value)].filter((v) => typeof v === "number");
+      (query.unit === "pct" ? ratios : plain).push(...cv);
+      plain.push(c.delta);
+      ratios.push(c.delta_pct);
+      if (c.delta_points != null) plain.push(c.delta_points);
+    }
+    plain.push((query.rows ?? []).length);
+  }
+  if (explore) {
+    for (const row of explore.rows ?? []) {
+      const v = row[row.length - 1];
+      if (typeof v === "number") (explore.unit === "pct" ? ratios : plain).push(v);
+    }
+    plain.push((explore.rows ?? []).length);
   }
   if (check) {
     plain.push(check.expected?.value, check.measured?.value, check.delta);
@@ -90,11 +107,16 @@ export function groundTruth({ query, check } = {}) {
 const matches = (n, decimals, scale, values) => values.some((v) => Math.abs(v / scale - n) <= 0.5 * 10 ** -decimals + 1e-9);
 
 /**
- * @param {string} sentence
- * @param {{ query?: object, check?: object|null }} refs
+ * @param {string | { en: string, tr: string }} sentence one language, or both (every language is checked)
+ * @param {{ query?: object, check?: object|null, explore?: object|null }} refs
  * @returns {{ ok: boolean, unmatched: string[] }}
  */
 export function validateSentence(sentence, refs) {
+  if (sentence && typeof sentence === "object") {
+    const all = Object.values(sentence).flatMap((s) => validateSentence(s, refs).unmatched);
+    const unmatched = [...new Set(all)];
+    return { ok: unmatched.length === 0, unmatched };
+  }
   const truth = groundTruth(refs);
   const unmatched = [];
   for (const num of extractNumbers(sentence)) {

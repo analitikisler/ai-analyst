@@ -1,0 +1,18 @@
+{
+  "ok": true,
+  "result": {
+    "name": "Örnek Moda",
+    "demo": true,
+    "dialect": "duckdb",
+    "data_from": "2026-07-25",
+    "data_to": "2026-10-22",
+    "refreshed_at": "2026-10-23T19:38:12.562Z",
+    "counts": {
+      "metrics": 11,
+      "checks": 4,
+      "pins": 3,
+      "alerts": 0,
+      "pending_alerts": 0
+    }
+  }
+}

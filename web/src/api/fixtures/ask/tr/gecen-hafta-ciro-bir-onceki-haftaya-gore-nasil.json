@@ -1,0 +1,176 @@
+{
+  "question": "Geçen hafta ciro bir önceki haftaya göre nasıl?",
+  "lang": "tr",
+  "conversation_id": "conv_57a140d232",
+  "turn_id": "turn_8e43b5bcb2",
+  "events": [
+    {
+      "event": "turn",
+      "data": {
+        "turn_id": "turn_8e43b5bcb2",
+        "conversation_id": "conv_57a140d232"
+      }
+    },
+    {
+      "event": "step",
+      "data": {
+        "tool": "run_query",
+        "summary": "revenue · week · 2026-10-16..2026-10-22 → 1,84 mn TL",
+        "ok": true
+      }
+    },
+    {
+      "event": "step",
+      "data": {
+        "tool": "reconcile",
+        "summary": "ga4_rev_vs_revenue · 2026-10-16..2026-10-22 → Δ −%10,3 tutmuyor",
+        "ok": true
+      }
+    },
+    {
+      "event": "step",
+      "data": {
+        "tool": "publish_answer",
+        "summary": "ans_29bff5798c",
+        "ok": true
+      }
+    },
+    {
+      "event": "answer",
+      "data": {
+        "answer": {
+          "id": "ans_29bff5798c",
+          "turn_id": "turn_8e43b5bcb2",
+          "question": "Geçen hafta ciro bir önceki haftaya göre nasıl?",
+          "sentence": "16–22 Eki 2026 döneminde Ciro: 1,84 mn TL. GA4 geliri kaynaktan −%10,3 farklı; kontrol tutmuyor. Fark mobil tarafında (−%15,9) ve 9 Eki tarihinden beri var.",
+          "title": "Ciro · 16–22 Eki 2026",
+          "followups": [
+            "Fark yalnızca mobilde mi?",
+            "Son 28 günde en yüksek ROAS hangi kanalda?",
+            "Meta dönüşümleri siparişlerle tutuyor mu?"
+          ],
+          "query": {
+            "id": "q_b5cb13ca51",
+            "metric": "revenue",
+            "metric_version": 2,
+            "group_by": "week",
+            "from": "2026-10-16",
+            "to": "2026-10-22",
+            "filters": {},
+            "unit": "try",
+            "rows": [
+              {
+                "key": "2026-10-12",
+                "value": 849083
+              },
+              {
+                "key": "2026-10-19",
+                "value": 988255
+              }
+            ],
+            "total": 1837338,
+            "sql": "-- metric revenue v2\nSELECT\n  CAST(DATE_TRUNC('week', date) AS DATE) AS week,\n  SUM(revenue) AS value\nFROM daily_channel_device\nWHERE date BETWEEN DATE '2026-10-16' AND DATE '2026-10-22'\nGROUP BY week\nORDER BY week",
+            "dialect": "duckdb",
+            "ran_at": "2026-10-23T19:39:19.133Z"
+          },
+          "check": {
+            "id": "c_4ca2ce1e",
+            "check": "ga4_rev_vs_revenue",
+            "label": {
+              "en": "GA4 revenue against back-office revenue",
+              "tr": "GA4 geliri ile arka ofis cirosu"
+            },
+            "from": "2026-10-16",
+            "to": "2026-10-22",
+            "filters": {},
+            "unit": "try",
+            "expected": {
+              "metric": "revenue",
+              "label": {
+                "en": "Back-office revenue",
+                "tr": "Arka ofis cirosu"
+              },
+              "value": 1837338
+            },
+            "measured": {
+              "metric": "ga4_revenue",
+              "label": {
+                "en": "GA4 revenue",
+                "tr": "GA4 geliri"
+              },
+              "value": 1647769
+            },
+            "delta": -189569,
+            "delta_pct": -0.10317589904524915,
+            "tolerance": 0.05,
+            "verdict": "does_not_add_up",
+            "breakdown_by": "device",
+            "breakdown": [
+              {
+                "key": "mobile",
+                "expected": 1074991,
+                "measured": 904148,
+                "delta_pct": -0.15892505146554714,
+                "verdict": "does_not_add_up"
+              },
+              {
+                "key": "desktop",
+                "expected": 762347,
+                "measured": 743621,
+                "delta_pct": -0.024563617355351303,
+                "verdict": "adds_up"
+              }
+            ],
+            "out_of_tolerance_since": "2026-10-09",
+            "findings": [
+              {
+                "id": "f_ga4_mobile_safari",
+                "source": "AI Tag Debugger",
+                "text": {
+                  "en": "purchase is not sent on mobile Safari since release v4.12 (9 Oct): the thank-you page loads the tag before dataLayer is ready.",
+                  "tr": "v4.12 sürümünden (9 Eki) beri mobil Safari’de purchase gitmiyor: teşekkür sayfası tag’i dataLayer hazır olmadan yüklüyor."
+                },
+                "since": "2026-10-09"
+              }
+            ],
+            "sql": {
+              "expected": "-- metric revenue v2\nSELECT\n  date AS day,\n  device,\n  SUM(revenue) AS value\nFROM daily_channel_device\nWHERE date BETWEEN DATE '2026-07-25' AND DATE '2026-10-22'\nGROUP BY day, device\nORDER BY day, device",
+              "measured": "-- metric ga4_revenue v1\nSELECT\n  date AS day,\n  device,\n  SUM(ga4_revenue) AS value\nFROM daily_channel_device\nWHERE date BETWEEN DATE '2026-07-25' AND DATE '2026-10-22'\nGROUP BY day, device\nORDER BY day, device"
+            },
+            "dialect": "duckdb",
+            "ran_at": "2026-10-23T19:39:19.135Z"
+          },
+          "metric": {
+            "id": "revenue",
+            "label": {
+              "en": "Revenue",
+              "tr": "Ciro"
+            },
+            "version": 2,
+            "description": {
+              "en": "Order value in TRY including VAT, excluding shipping, from the back office. Refunds are not subtracted.",
+              "tr": "Arka ofisten, KDV dahil ve kargo hariç TRY sipariş tutarı. İadeler düşülmez."
+            },
+            "source": "backoffice"
+          },
+          "validation": {
+            "ok": true,
+            "unmatched": []
+          },
+          "created_by": "planner",
+          "created_at": "2026-10-23T19:39:19.136Z"
+        }
+      }
+    },
+    {
+      "event": "text",
+      "data": {
+        "text": "Yanıtı yerleşik planlayıcı verdi; model kullanılmadı. Her soruyu sorabilmek için ANTHROPIC_API_KEY tanımlanmalı."
+      }
+    },
+    {
+      "event": "done",
+      "data": {}
+    }
+  ]
+}

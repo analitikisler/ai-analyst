@@ -1,0 +1,192 @@
+{
+  "question": "Hangi kanal daha çok ciro getiriyor?",
+  "lang": "tr",
+  "conversation_id": "conv_1728ab5cd4",
+  "turn_id": "turn_e1633b5f61",
+  "events": [
+    {
+      "event": "turn",
+      "data": {
+        "turn_id": "turn_e1633b5f61",
+        "conversation_id": "conv_1728ab5cd4"
+      }
+    },
+    {
+      "event": "step",
+      "data": {
+        "tool": "run_query",
+        "summary": "revenue · channel · 2026-10-09..2026-10-22 → 4,11 mn TL",
+        "ok": true
+      }
+    },
+    {
+      "event": "step",
+      "data": {
+        "tool": "reconcile",
+        "summary": "ga4_rev_vs_revenue · 2026-10-09..2026-10-22 → Δ −%10,3 tutmuyor",
+        "ok": true
+      }
+    },
+    {
+      "event": "step",
+      "data": {
+        "tool": "publish_answer",
+        "summary": "ans_3cdf2c801b",
+        "ok": true
+      }
+    },
+    {
+      "event": "answer",
+      "data": {
+        "answer": {
+          "id": "ans_3cdf2c801b",
+          "turn_id": "turn_e1633b5f61",
+          "question": "Hangi kanal daha çok ciro getiriyor?",
+          "sentence": "9–22 Eki 2026 döneminde Ciro 4,11 mn TL. En yüksek kanal Organik arama: 1,31 mn TL. GA4 geliri kaynaktan −%10,3 farklı; kontrol tutmuyor. Fark mobil tarafında (−%16,0) ve 9 Eki tarihinden beri var.",
+          "title": "Ciro · 9–22 Eki 2026",
+          "followups": [
+            "Fark yalnızca mobilde mi?",
+            "Son 28 günde en yüksek ROAS hangi kanalda?",
+            "Meta dönüşümleri siparişlerle tutuyor mu?"
+          ],
+          "query": {
+            "id": "q_92cb9d39b8",
+            "metric": "revenue",
+            "metric_version": 2,
+            "group_by": "channel",
+            "from": "2026-10-09",
+            "to": "2026-10-22",
+            "filters": {},
+            "unit": "try",
+            "rows": [
+              {
+                "key": "organic",
+                "value": 1307230
+              },
+              {
+                "key": "direct",
+                "value": 907187
+              },
+              {
+                "key": "google_ads",
+                "value": 866528
+              },
+              {
+                "key": "meta_ads",
+                "value": 501078
+              },
+              {
+                "key": "email",
+                "value": 415087
+              },
+              {
+                "key": "tiktok_ads",
+                "value": 110018
+              }
+            ],
+            "total": 4107128,
+            "sql": "-- metric revenue v2\nSELECT\n  channel,\n  SUM(revenue) AS value\nFROM daily_channel_device\nWHERE date BETWEEN DATE '2026-10-09' AND DATE '2026-10-22'\nGROUP BY channel\nORDER BY value DESC",
+            "dialect": "duckdb",
+            "ran_at": "2026-10-23T19:39:19.138Z"
+          },
+          "check": {
+            "id": "c_550e7f18",
+            "check": "ga4_rev_vs_revenue",
+            "label": {
+              "en": "GA4 revenue against back-office revenue",
+              "tr": "GA4 geliri ile arka ofis cirosu"
+            },
+            "from": "2026-10-09",
+            "to": "2026-10-22",
+            "filters": {},
+            "unit": "try",
+            "expected": {
+              "metric": "revenue",
+              "label": {
+                "en": "Back-office revenue",
+                "tr": "Arka ofis cirosu"
+              },
+              "value": 4107128
+            },
+            "measured": {
+              "metric": "ga4_revenue",
+              "label": {
+                "en": "GA4 revenue",
+                "tr": "GA4 geliri"
+              },
+              "value": 3683158
+            },
+            "delta": -423970,
+            "delta_pct": -0.10322785167640258,
+            "tolerance": 0.05,
+            "verdict": "does_not_add_up",
+            "breakdown_by": "device",
+            "breakdown": [
+              {
+                "key": "mobile",
+                "expected": 2409051,
+                "measured": 2024391,
+                "delta_pct": -0.15967283382543582,
+                "verdict": "does_not_add_up"
+              },
+              {
+                "key": "desktop",
+                "expected": 1698077,
+                "measured": 1658767,
+                "delta_pct": -0.023149715825607438,
+                "verdict": "adds_up"
+              }
+            ],
+            "out_of_tolerance_since": "2026-10-09",
+            "findings": [
+              {
+                "id": "f_ga4_mobile_safari",
+                "source": "AI Tag Debugger",
+                "text": {
+                  "en": "purchase is not sent on mobile Safari since release v4.12 (9 Oct): the thank-you page loads the tag before dataLayer is ready.",
+                  "tr": "v4.12 sürümünden (9 Eki) beri mobil Safari’de purchase gitmiyor: teşekkür sayfası tag’i dataLayer hazır olmadan yüklüyor."
+                },
+                "since": "2026-10-09"
+              }
+            ],
+            "sql": {
+              "expected": "-- metric revenue v2\nSELECT\n  date AS day,\n  device,\n  SUM(revenue) AS value\nFROM daily_channel_device\nWHERE date BETWEEN DATE '2026-07-25' AND DATE '2026-10-22'\nGROUP BY day, device\nORDER BY day, device",
+              "measured": "-- metric ga4_revenue v1\nSELECT\n  date AS day,\n  device,\n  SUM(ga4_revenue) AS value\nFROM daily_channel_device\nWHERE date BETWEEN DATE '2026-07-25' AND DATE '2026-10-22'\nGROUP BY day, device\nORDER BY day, device"
+            },
+            "dialect": "duckdb",
+            "ran_at": "2026-10-23T19:39:19.140Z"
+          },
+          "metric": {
+            "id": "revenue",
+            "label": {
+              "en": "Revenue",
+              "tr": "Ciro"
+            },
+            "version": 2,
+            "description": {
+              "en": "Order value in TRY including VAT, excluding shipping, from the back office. Refunds are not subtracted.",
+              "tr": "Arka ofisten, KDV dahil ve kargo hariç TRY sipariş tutarı. İadeler düşülmez."
+            },
+            "source": "backoffice"
+          },
+          "validation": {
+            "ok": true,
+            "unmatched": []
+          },
+          "created_by": "planner",
+          "created_at": "2026-10-23T19:39:19.141Z"
+        }
+      }
+    },
+    {
+      "event": "text",
+      "data": {
+        "text": "Yanıtı yerleşik planlayıcı verdi; model kullanılmadı. Her soruyu sorabilmek için ANTHROPIC_API_KEY tanımlanmalı."
+      }
+    },
+    {
+      "event": "done",
+      "data": {}
+    }
+  ]
+}

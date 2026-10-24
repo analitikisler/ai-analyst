@@ -1,0 +1,25 @@
+{
+  "question": "Bu ay reklama ne kadar harcandı?",
+  "lang": "tr",
+  "conversation_id": "conv_13f62692a7",
+  "turn_id": "turn_4b91fa3294",
+  "events": [
+    {
+      "event": "turn",
+      "data": {
+        "turn_id": "turn_4b91fa3294",
+        "conversation_id": "conv_13f62692a7"
+      }
+    },
+    {
+      "event": "text",
+      "data": {
+        "text": "Yerleşik planlayıcı sipariş, ciro, oturum, dönüşüm oranı, sepet ortalaması, reklam harcaması, ROAS ve dört kontrolü bilir. Örnek sorulardan biri denenebilir."
+      }
+    },
+    {
+      "event": "done",
+      "data": {}
+    }
+  ]
+}

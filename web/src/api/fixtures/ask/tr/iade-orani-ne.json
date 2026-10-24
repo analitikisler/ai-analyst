@@ -1,0 +1,25 @@
+{
+  "question": "İade oranı ne?",
+  "lang": "tr",
+  "conversation_id": "conv_e8cd5087df",
+  "turn_id": "turn_75a4996268",
+  "events": [
+    {
+      "event": "turn",
+      "data": {
+        "turn_id": "turn_75a4996268",
+        "conversation_id": "conv_e8cd5087df"
+      }
+    },
+    {
+      "event": "text",
+      "data": {
+        "text": "Yerleşik planlayıcı sipariş, ciro, oturum, dönüşüm oranı, sepet ortalaması, reklam harcaması, ROAS ve dört kontrolü bilir. Örnek sorulardan biri denenebilir."
+      }
+    },
+    {
+      "event": "done",
+      "data": {}
+    }
+  ]
+}

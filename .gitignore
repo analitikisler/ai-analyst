@@ -1,3 +1,10 @@
 node_modules/
 data/
 .env
+web-dist/
+secrets.json
+*.duckdb
+*.duckdb.wal
+app.db*
+ai-analyst.config.json
+.DS_Store

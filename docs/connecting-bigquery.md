@@ -230,17 +230,32 @@ and no sessions; the next run fills it. Run the full refresh again after any cha
      --role="roles/bigquery.jobUser"
    ```
 
-4. Configure AI Analyst (env first, then `ai-analyst.config.json`):
+4. Connect AI Analyst. In the web app, Settings › Data source › Connect BigQuery tests the connection in six
+   steps (credentials, running queries in the job project, the dataset, the table, reading it, the cost of a
+   typical question) and saves it to `ai-analyst.config.json` once every step passes. Or set it in the
+   environment, which wins over the file and locks the field in Settings:
 
    | Variable | Value |
    |---|---|
    | `AI_ANALYST_WAREHOUSE` | `bigquery` |
-   | `BIGQUERY_PROJECT` | `{project}`, the project that holds the mart |
+   | `BIGQUERY_PROJECT` | `{project}`, the project that holds the mart (the data project) |
+   | `BIGQUERY_JOB_PROJECT` | the project where queries run and are billed; the data project when unset |
    | `BIGQUERY_DATASET` | `{dataset}` |
    | `BIGQUERY_LOCATION` | the location from step 1, `EU` by default |
-   | `BIGQUERY_MAX_BYTES` | per-query cap in bytes, 2 GB by default (`2147483648`) |
-   | `GOOGLE_APPLICATION_CREDENTIALS` | path to the service account's credentials; AI Analyst never stores them |
+   | `BIGQUERY_MAX_BYTES` | per-query cap in bytes, 2 GB by default (`2147483648`); Settings can lower it, only this raises it |
+   | `GOOGLE_APPLICATION_CREDENTIALS` | path to the service account's key file, if not using `gcloud auth application-default login`; AI Analyst never stores credentials |
    | `AI_ANALYST_WORKSPACE` | the store's name |
+
+Prefer the dataset-scoped reader service account of step 3, or impersonation of it ("Service account to
+impersonate" in Settings), over a personal `gcloud` sign-in: a personal sign-in usually reaches far more than the
+mart. The server only ever reads the mart (the dry run must report it as the only table read), but the narrowest
+identity is the right default. Without a key file and without impersonation, Google's default credential chain
+is used: `GOOGLE_APPLICATION_CREDENTIALS`, then gcloud's application default credentials, then, on a cloud VM,
+the metadata server.
+
+Testing the connection makes real BigQuery calls with the credentials on this machine. A server started with
+`--no-cloud` or `AI_ANALYST_NO_CLOUD=1` (the default for tests, `bun run dev` and the smoke server) refuses them
+with `no_cloud` instead; set `AI_ANALYST_NO_CLOUD=0` to connect from those.
 
 AI Analyst dry-runs every query first and sends it with `maximumBytesBilled` set to `BIGQUERY_MAX_BYTES`, so a
 query over the cap fails instead of being billed. The mart holds 12 rows per day; a year of it is well under

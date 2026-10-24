@@ -1,0 +1,93 @@
+{
+  "ok": true,
+  "result": {
+    "demo": true,
+    "warehouse": {
+      "dialect": "duckdb",
+      "table": "daily_channel_device",
+      "rows": 1080,
+      "data_from": "2026-07-25",
+      "data_to": "2026-10-22",
+      "refreshed_at": "2026-10-23T19:38:12.562Z"
+    },
+    "sources": [
+      {
+        "id": "ga4",
+        "name": {
+          "en": "GA4 BigQuery export",
+          "tr": "GA4 BigQuery dışa aktarımı"
+        },
+        "detail": "analytics_312 · events_*",
+        "connected": true,
+        "rows": 41820000,
+        "synced_at": "06:00"
+      },
+      {
+        "id": "backoffice",
+        "name": {
+          "en": "Back office (ikas)",
+          "tr": "Arka ofis (ikas)"
+        },
+        "detail": "orders, order_items",
+        "connected": true,
+        "rows": 118400,
+        "synced_at": "06:00"
+      },
+      {
+        "id": "google_ads",
+        "name": {
+          "en": "Google Ads",
+          "tr": "Google Ads"
+        },
+        "detail": "campaign, cost, conversions",
+        "connected": true,
+        "rows": 9120,
+        "synced_at": "05:40"
+      },
+      {
+        "id": "meta_ads",
+        "name": {
+          "en": "Meta Ads",
+          "tr": "Meta Ads"
+        },
+        "detail": "campaign, spend, purchases",
+        "connected": true,
+        "rows": 7340,
+        "synced_at": "05:40"
+      },
+      {
+        "id": "tiktok_ads",
+        "name": {
+          "en": "TikTok Ads",
+          "tr": "TikTok Ads"
+        },
+        "detail": "campaign, spend, conversions",
+        "connected": true,
+        "rows": 2210,
+        "synced_at": "05:45"
+      },
+      {
+        "id": "search_console",
+        "name": {
+          "en": "Search Console",
+          "tr": "Search Console"
+        },
+        "detail": "bulk export",
+        "connected": false,
+        "rows": null,
+        "synced_at": null
+      },
+      {
+        "id": "ai_tag_debugger",
+        "name": {
+          "en": "AI Tag Debugger",
+          "tr": "AI Tag Debugger"
+        },
+        "detail": "audit findings",
+        "connected": true,
+        "rows": 14,
+        "synced_at": "06:10"
+      }
+    ]
+  }
+}

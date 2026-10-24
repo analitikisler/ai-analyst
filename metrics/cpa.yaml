@@ -6,8 +6,16 @@ source: backoffice+ads
 owner: Bahadır Ölez
 description:
   en: "Channel spend divided by back-office orders attributed to that channel (last non-direct click)."
-  tr: "Kanal harcaması bölü o kanala atanan arka ofis siparişleri (son doğrudan olmayan tıklama)."
+  tr: "Kanal harcaması bölü o kanala atanan sipariş paneli siparişleri (son doğrudan olmayan tıklama)."
 model: daily_channel_device
 ratio: { numerator: ad_spend, denominator: orders }
 where: { channel: [google_ads, meta_ads, tiktok_ads] }
 dimensions: [day, week, month, channel, device]
+# Newest first. The pack keeps the version; these notes say what changed and who changed it.
+history:
+  - version: 1
+    date: 2026-03-01
+    actor: Bahadır Ölez
+    change:
+      en: "First version."
+      tr: "İlk sürüm."

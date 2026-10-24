@@ -1,0 +1,106 @@
+{
+  "question": "Ad spend by channel in the last 28 days",
+  "lang": "en",
+  "conversation_id": "conv_6eba09fbe1",
+  "turn_id": "turn_e922caa3f4",
+  "events": [
+    {
+      "event": "turn",
+      "data": {
+        "turn_id": "turn_e922caa3f4",
+        "conversation_id": "conv_6eba09fbe1"
+      }
+    },
+    {
+      "event": "step",
+      "data": {
+        "tool": "run_query",
+        "summary": "ad_spend · channel · 2026-09-25..2026-10-22 → 1.31M TL",
+        "ok": true
+      }
+    },
+    {
+      "event": "step",
+      "data": {
+        "tool": "publish_answer",
+        "summary": "ans_7b2f2b9d33",
+        "ok": true
+      }
+    },
+    {
+      "event": "answer",
+      "data": {
+        "answer": {
+          "id": "ans_7b2f2b9d33",
+          "turn_id": "turn_e922caa3f4",
+          "question": "Ad spend by channel in the last 28 days",
+          "sentence": "Ad spend for 25 Sep–22 Oct 2026 is 1.31M TL. The highest channel is Google Ads at 616,342 TL.",
+          "title": "Ad spend · 25 Sep–22 Oct 2026",
+          "followups": [
+            "Is the gap only on mobile?",
+            "Which channel has the highest ROAS in the last 28 days?",
+            "Do Meta conversions match our orders?"
+          ],
+          "query": {
+            "id": "q_0e364674b0",
+            "metric": "ad_spend",
+            "metric_version": 1,
+            "group_by": "channel",
+            "from": "2026-09-25",
+            "to": "2026-10-22",
+            "filters": {},
+            "unit": "try",
+            "rows": [
+              {
+                "key": "google_ads",
+                "value": 616342
+              },
+              {
+                "key": "meta_ads",
+                "value": 513839
+              },
+              {
+                "key": "tiktok_ads",
+                "value": 181820
+              }
+            ],
+            "total": 1312001,
+            "sql": "-- metric ad_spend v1\nSELECT\n  channel,\n  SUM(ad_spend) AS value\nFROM daily_channel_device\nWHERE date BETWEEN DATE '2026-09-25' AND DATE '2026-10-22'\n  AND channel IN ('google_ads', 'meta_ads', 'tiktok_ads')\nGROUP BY channel\nORDER BY value DESC",
+            "dialect": "duckdb",
+            "ran_at": "2026-10-23T19:39:40.711Z"
+          },
+          "check": null,
+          "metric": {
+            "id": "ad_spend",
+            "label": {
+              "en": "Ad spend",
+              "tr": "Reklam harcaması"
+            },
+            "version": 1,
+            "description": {
+              "en": "Cost reported by Google Ads, Meta Ads and TikTok Ads, converted to TRY at the day’s TCMB rate.",
+              "tr": "Google Ads, Meta Ads ve TikTok Ads’in bildirdiği maliyet; günün TCMB kuruyla TRY’ye çevrilir."
+            },
+            "source": "ads"
+          },
+          "validation": {
+            "ok": true,
+            "unmatched": []
+          },
+          "created_by": "planner",
+          "created_at": "2026-10-23T19:39:40.712Z"
+        }
+      }
+    },
+    {
+      "event": "text",
+      "data": {
+        "text": "Answered by the built-in planner, without a model. Set ANTHROPIC_API_KEY to ask anything."
+      }
+    },
+    {
+      "event": "done",
+      "data": {}
+    }
+  ]
+}

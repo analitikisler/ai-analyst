@@ -1,0 +1,67 @@
+{
+  "handmade": true,
+  "question": "Watch the Meta tracking check",
+  "lang": "en",
+  "after": null,
+  "events": [
+    {
+      "event": "turn",
+      "data": {
+        "turn_id": "turn_mvlz9za90g7",
+        "conversation_id": "conv_mvlz9za90g6",
+        "question_text": {
+          "en": "Watch the Meta tracking check",
+          "tr": "Meta ölçüm kontrolünü izle"
+        }
+      }
+    },
+    {
+      "event": "step",
+      "data": {
+        "tool": "watch_check",
+        "summary": {
+          "en": "Proposed watching Meta conversions against back-office orders",
+          "tr": "Meta dönüşümleri ve sipariş panelindeki siparişler için izleme önerildi"
+        },
+        "ok": true
+      }
+    },
+    {
+      "event": "approval",
+      "data": {
+        "proposal": {
+          "id": "prop_mvlz9zj70g8",
+          "kind": "watch",
+          "payload": {
+            "check": "meta_vs_orders"
+          },
+          "title": {
+            "en": "Watch Meta conversions against back-office orders",
+            "tr": "Meta dönüşümleri ve sipariş panelindeki siparişler izlensin"
+          },
+          "body": {
+            "en": "It runs again when AI Analyst starts, every hour while it runs, and on every ai-analyst check. A changed verdict shows under Tracking health on the dashboard and in Settings › Activity. Nothing is emailed.",
+            "tr": "AI Analyst açıldığında, açıkken saatte bir ve her ai-analyst check çalıştığında yeniden çalışır. Sonuç değişirse dashboard’daki Ölçüm sağlığı bölümünde ve Ayarlar › İşlem geçmişi’nde görünür. E-posta gönderilmez."
+          },
+          "status": "pending",
+          "created_by": "agent",
+          "created_at": "2026-10-24T05:48:24.739Z",
+          "conversation_id": "conv_mvlz9za90g6"
+        }
+      }
+    },
+    {
+      "event": "text",
+      "data": {
+        "text": {
+          "en": "Waiting for a decision. Nothing changes until it is approved.",
+          "tr": "Karar bekleniyor. Onaylanana kadar hiçbir şey değişmez."
+        }
+      }
+    },
+    {
+      "event": "done",
+      "data": {}
+    }
+  ]
+}

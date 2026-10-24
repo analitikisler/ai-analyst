@@ -1,0 +1,224 @@
+{
+  "question": "Son 14 günde GA4 satın almaları siparişlerle tutuyor mu?",
+  "lang": "tr",
+  "conversation_id": "conv_689065c5d7",
+  "turn_id": "turn_bb652bb87b",
+  "events": [
+    {
+      "event": "turn",
+      "data": {
+        "turn_id": "turn_bb652bb87b",
+        "conversation_id": "conv_689065c5d7"
+      }
+    },
+    {
+      "event": "step",
+      "data": {
+        "tool": "run_query",
+        "summary": "orders · day · 2026-10-09..2026-10-22 → 2.753",
+        "ok": true
+      }
+    },
+    {
+      "event": "step",
+      "data": {
+        "tool": "reconcile",
+        "summary": "ga4_vs_orders · 2026-10-09..2026-10-22 → Δ −%10,1 tutmuyor",
+        "ok": true
+      }
+    },
+    {
+      "event": "step",
+      "data": {
+        "tool": "publish_answer",
+        "summary": "ans_2f836f3458",
+        "ok": true
+      }
+    },
+    {
+      "event": "answer",
+      "data": {
+        "answer": {
+          "id": "ans_2f836f3458",
+          "turn_id": "turn_bb652bb87b",
+          "question": "Son 14 günde GA4 satın almaları siparişlerle tutuyor mu?",
+          "sentence": "9–22 Eki 2026 döneminde Sipariş: 2.753. GA4 satın alma kaynaktan −%10,1 farklı; kontrol tutmuyor. Fark mobil tarafında (−%15,6) ve 9 Eki tarihinden beri var.",
+          "title": "Sipariş · 9–22 Eki 2026",
+          "followups": [
+            "Fark yalnızca mobilde mi?",
+            "Son 28 günde en yüksek ROAS hangi kanalda?",
+            "Meta dönüşümleri siparişlerle tutuyor mu?"
+          ],
+          "query": {
+            "id": "q_40f7f2cd5b",
+            "metric": "orders",
+            "metric_version": 3,
+            "group_by": "day",
+            "from": "2026-10-09",
+            "to": "2026-10-22",
+            "filters": {},
+            "unit": "count",
+            "rows": [
+              {
+                "key": "2026-10-09",
+                "value": 172
+              },
+              {
+                "key": "2026-10-10",
+                "value": 302
+              },
+              {
+                "key": "2026-10-11",
+                "value": 296
+              },
+              {
+                "key": "2026-10-12",
+                "value": 247
+              },
+              {
+                "key": "2026-10-13",
+                "value": 246
+              },
+              {
+                "key": "2026-10-14",
+                "value": 144
+              },
+              {
+                "key": "2026-10-15",
+                "value": 169
+              },
+              {
+                "key": "2026-10-16",
+                "value": 168
+              },
+              {
+                "key": "2026-10-17",
+                "value": 192
+              },
+              {
+                "key": "2026-10-18",
+                "value": 182
+              },
+              {
+                "key": "2026-10-19",
+                "value": 161
+              },
+              {
+                "key": "2026-10-20",
+                "value": 153
+              },
+              {
+                "key": "2026-10-21",
+                "value": 156
+              },
+              {
+                "key": "2026-10-22",
+                "value": 165
+              }
+            ],
+            "total": 2753,
+            "sql": "-- metric orders v3\nSELECT\n  date AS day,\n  SUM(orders) AS value\nFROM daily_channel_device\nWHERE date BETWEEN DATE '2026-10-09' AND DATE '2026-10-22'\nGROUP BY day\nORDER BY day",
+            "dialect": "duckdb",
+            "ran_at": "2026-10-23T19:39:19.111Z"
+          },
+          "check": {
+            "id": "c_00f0b783",
+            "check": "ga4_vs_orders",
+            "label": {
+              "en": "GA4 purchases against back-office orders",
+              "tr": "GA4 satın almaları ile arka ofis siparişleri"
+            },
+            "from": "2026-10-09",
+            "to": "2026-10-22",
+            "filters": {},
+            "unit": "count",
+            "expected": {
+              "metric": "orders",
+              "label": {
+                "en": "Back-office orders",
+                "tr": "Arka ofis siparişi"
+              },
+              "value": 2753
+            },
+            "measured": {
+              "metric": "ga4_purchases",
+              "label": {
+                "en": "GA4 purchases",
+                "tr": "GA4 satın alma"
+              },
+              "value": 2474
+            },
+            "delta": -279,
+            "delta_pct": -0.10134398837631675,
+            "tolerance": 0.05,
+            "verdict": "does_not_add_up",
+            "breakdown_by": "device",
+            "breakdown": [
+              {
+                "key": "mobile",
+                "expected": 1681,
+                "measured": 1419,
+                "delta_pct": -0.15585960737656157,
+                "verdict": "does_not_add_up"
+              },
+              {
+                "key": "desktop",
+                "expected": 1072,
+                "measured": 1055,
+                "delta_pct": -0.01585820895522388,
+                "verdict": "adds_up"
+              }
+            ],
+            "out_of_tolerance_since": "2026-10-09",
+            "findings": [
+              {
+                "id": "f_ga4_mobile_safari",
+                "source": "AI Tag Debugger",
+                "text": {
+                  "en": "purchase is not sent on mobile Safari since release v4.12 (9 Oct): the thank-you page loads the tag before dataLayer is ready.",
+                  "tr": "v4.12 sürümünden (9 Eki) beri mobil Safari’de purchase gitmiyor: teşekkür sayfası tag’i dataLayer hazır olmadan yüklüyor."
+                },
+                "since": "2026-10-09"
+              }
+            ],
+            "sql": {
+              "expected": "-- metric orders v3\nSELECT\n  date AS day,\n  device,\n  SUM(orders) AS value\nFROM daily_channel_device\nWHERE date BETWEEN DATE '2026-07-25' AND DATE '2026-10-22'\nGROUP BY day, device\nORDER BY day, device",
+              "measured": "-- metric ga4_purchases v2\nSELECT\n  date AS day,\n  device,\n  SUM(ga4_purchases) AS value\nFROM daily_channel_device\nWHERE date BETWEEN DATE '2026-07-25' AND DATE '2026-10-22'\nGROUP BY day, device\nORDER BY day, device"
+            },
+            "dialect": "duckdb",
+            "ran_at": "2026-10-23T19:39:19.112Z"
+          },
+          "metric": {
+            "id": "orders",
+            "label": {
+              "en": "Orders",
+              "tr": "Sipariş"
+            },
+            "version": 3,
+            "description": {
+              "en": "Orders placed in the back office, by order date in Europe/Istanbul time. Test orders are excluded; cancelled orders are kept.",
+              "tr": "Arka ofiste oluşan siparişler, İstanbul saatine göre sipariş tarihinde. Test siparişleri hariç, iptal edilen siparişler dahildir."
+            },
+            "source": "backoffice"
+          },
+          "validation": {
+            "ok": true,
+            "unmatched": []
+          },
+          "created_by": "planner",
+          "created_at": "2026-10-23T19:39:19.113Z"
+        }
+      }
+    },
+    {
+      "event": "text",
+      "data": {
+        "text": "Yanıtı yerleşik planlayıcı verdi; model kullanılmadı. Her soruyu sorabilmek için ANTHROPIC_API_KEY tanımlanmalı."
+      }
+    },
+    {
+      "event": "done",
+      "data": {}
+    }
+  ]
+}

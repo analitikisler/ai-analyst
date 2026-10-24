@@ -1,0 +1,25 @@
+{
+  "question": "What is the return rate?",
+  "lang": "en",
+  "conversation_id": "conv_b665ff8667",
+  "turn_id": "turn_50ed23af27",
+  "events": [
+    {
+      "event": "turn",
+      "data": {
+        "turn_id": "turn_50ed23af27",
+        "conversation_id": "conv_b665ff8667"
+      }
+    },
+    {
+      "event": "text",
+      "data": {
+        "text": "The built-in planner knows orders, revenue, sessions, conversion rate, order value, ad spend, ROAS and the four checks. Try one of the suggested questions."
+      }
+    },
+    {
+      "event": "done",
+      "data": {}
+    }
+  ]
+}

@@ -1,4 +1,5 @@
 // The pack loader and the SQL compiler: identifiers only from the pack, values only from the mart.
+import "./setup.js";
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { mkdtemp, mkdir, writeFile, cp } from "node:fs/promises";

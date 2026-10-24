@@ -1,0 +1,388 @@
+{
+  "handmade": true,
+  "question": "Is the gap only on mobile?",
+  "lang": "en",
+  "after": "Do GA4 purchases match orders in the last 14 days?",
+  "events": [
+    {
+      "event": "turn",
+      "data": {
+        "turn_id": "turn_mvlz9rlk0cw",
+        "conversation_id": "conv_mvlz9qtx0ck",
+        "question_text": {
+          "en": "Is the gap only on mobile?",
+          "tr": "Fark yalnızca mobilde mi?"
+        }
+      }
+    },
+    {
+      "event": "step",
+      "data": {
+        "tool": "run_query",
+        "summary": {
+          "en": "Ran a query on orders, by device, 9–22 Oct 2026",
+          "tr": "Sipariş için sorgu çalıştırıldı: cihaza göre, 9–22 Eki 2026"
+        },
+        "ok": true
+      }
+    },
+    {
+      "event": "step",
+      "data": {
+        "tool": "reconcile",
+        "summary": {
+          "en": "Ran the tracking check GA4 purchases against back-office orders",
+          "tr": "GA4 satın almaları ve sipariş panelindeki siparişler ölçüm kontrolü çalıştırıldı"
+        },
+        "ok": true
+      }
+    },
+    {
+      "event": "step",
+      "data": {
+        "tool": "publish_answer",
+        "summary": {
+          "en": "Wrote the answer",
+          "tr": "Cevap yazıldı"
+        },
+        "ok": true
+      }
+    },
+    {
+      "event": "answer",
+      "data": {
+        "answer": {
+          "kind": "check_split",
+          "sentence": {
+            "en": "Yes. On mobile GA4 recorded 1,419 purchases against 1,681 orders, −15.6%. On desktop 1,055 against 1,072, −1.6%, inside the ±5% tolerance.",
+            "tr": "Evet. Mobilde sipariş panelinde 1.681 sipariş, GA4’te 1.419 satın alma var: −%15,6. Masaüstünde 1.072 siparişe karşı 1.055 satın alma var: −%1,6, kabul edilen ±⁠%5 sapma içinde."
+          },
+          "title": {
+            "en": "GA4 purchases against back-office orders · 9–22 Oct 2026",
+            "tr": "GA4 satın almaları ve sipariş panelindeki siparişler · 9–22 Eki 2026"
+          },
+          "followups": [
+            {
+              "en": "Why do GA4 purchases not match back-office orders for 9–22 Oct?",
+              "tr": "9–22 Eki döneminde GA4 satın almaları neden sipariş panelindeki siparişlerle tutmuyor?"
+            },
+            {
+              "en": "Watch the GA4 tracking check",
+              "tr": "GA4 ölçüm kontrolünü izle"
+            },
+            {
+              "en": "Do Meta conversions match orders this month?",
+              "tr": "Bu ay Meta dönüşümleri siparişlerle tutuyor mu?"
+            }
+          ],
+          "interpretation": {
+            "en": "Read as: orders and GA4 purchases, by device, 9–22 Oct 2026.",
+            "tr": "Soru şöyle okundu: siparişler ve GA4 satın almaları, cihaza göre, 9–22 Eki 2026."
+          },
+          "query": {
+            "id": "q_mvlz9rlt0cz",
+            "metric": "orders",
+            "metric_version": 3,
+            "group_by": "device",
+            "from": "2026-10-09",
+            "to": "2026-10-22",
+            "filters": {},
+            "unit": "count",
+            "rows": [
+              {
+                "key": "mobile",
+                "value": 1681
+              },
+              {
+                "key": "desktop",
+                "value": 1072
+              }
+            ],
+            "total": 2753,
+            "sql": "-- metric orders v3\nSELECT\n  device,\n  SUM(orders) AS value\nFROM daily_channel_device\nWHERE date BETWEEN DATE '2026-10-09' AND DATE '2026-10-22'\nGROUP BY device\nORDER BY value DESC",
+            "dialect": "duckdb",
+            "ran_at": "2026-10-24T05:48:14.465Z",
+            "provisional_from": "2026-10-20",
+            "partial": null
+          },
+          "check": {
+            "id": "c_mvlz9rlt0cy",
+            "check": "ga4_vs_orders",
+            "label": {
+              "en": "GA4 purchases against back-office orders · mobile",
+              "tr": "GA4 satın almaları ve sipariş panelindeki siparişler · mobil"
+            },
+            "from": "2026-10-09",
+            "to": "2026-10-22",
+            "filters": {
+              "device": "mobile"
+            },
+            "unit": "count",
+            "expected": {
+              "metric": "orders",
+              "label": {
+                "en": "Back-office orders",
+                "tr": "Sipariş paneli"
+              },
+              "value": 1681
+            },
+            "measured": {
+              "metric": "ga4_purchases",
+              "label": {
+                "en": "GA4 purchases",
+                "tr": "GA4"
+              },
+              "value": 1419
+            },
+            "delta": -262,
+            "delta_pct": -0.15585960737656157,
+            "tolerance": 0.05,
+            "verdict": "does_not_add_up",
+            "breakdown_by": "device",
+            "breakdown": [
+              {
+                "key": "mobile",
+                "expected": 1681,
+                "measured": 1419,
+                "delta_pct": -0.15585960737656157,
+                "verdict": "does_not_add_up"
+              },
+              {
+                "key": "desktop",
+                "expected": 1072,
+                "measured": 1055,
+                "delta_pct": -0.01585820895522388,
+                "verdict": "adds_up"
+              }
+            ],
+            "out_of_tolerance_since": "2026-10-09",
+            "findings": [
+              {
+                "id": "f_ga4_mobile_safari",
+                "source": "AI Tag Debugger",
+                "text": {
+                  "en": "purchase is not sent on mobile Safari since release v4.12 (9 Oct): the thank-you page loads the tag before dataLayer is ready.",
+                  "tr": "v4.12 sürümünden (9 Ekim) beri mobil Safari’de purchase gitmiyor: teşekkür sayfası tag’i dataLayer hazır olmadan yüklüyor."
+                },
+                "since": "2026-10-09",
+                "release": "v4.12"
+              }
+            ],
+            "sql": {
+              "expected": "-- metric orders v3\nSELECT\n  date AS day,\n  device,\n  SUM(orders) AS value\nFROM daily_channel_device\nWHERE date BETWEEN DATE '2026-07-25' AND DATE '2026-10-22'\n  AND device = 'mobile'\nGROUP BY day, device\nORDER BY day, device",
+              "measured": "-- metric ga4_purchases v2\nSELECT\n  date AS day,\n  device,\n  SUM(ga4_purchases) AS value\nFROM daily_channel_device\nWHERE date BETWEEN DATE '2026-07-25' AND DATE '2026-10-22'\n  AND device = 'mobile'\nGROUP BY day, device\nORDER BY day, device"
+            },
+            "dialect": "duckdb",
+            "ran_at": "2026-10-24T05:48:14.465Z",
+            "series": [
+              {
+                "date": "2026-09-25",
+                "expected": 97,
+                "measured": 96
+              },
+              {
+                "date": "2026-09-26",
+                "expected": 120,
+                "measured": 118
+              },
+              {
+                "date": "2026-09-27",
+                "expected": 108,
+                "measured": 106
+              },
+              {
+                "date": "2026-09-28",
+                "expected": 86,
+                "measured": 85
+              },
+              {
+                "date": "2026-09-29",
+                "expected": 94,
+                "measured": 93
+              },
+              {
+                "date": "2026-09-30",
+                "expected": 97,
+                "measured": 96
+              },
+              {
+                "date": "2026-10-01",
+                "expected": 98,
+                "measured": 96
+              },
+              {
+                "date": "2026-10-02",
+                "expected": 111,
+                "measured": 108
+              },
+              {
+                "date": "2026-10-03",
+                "expected": 118,
+                "measured": 115
+              },
+              {
+                "date": "2026-10-04",
+                "expected": 106,
+                "measured": 104
+              },
+              {
+                "date": "2026-10-05",
+                "expected": 96,
+                "measured": 95
+              },
+              {
+                "date": "2026-10-06",
+                "expected": 81,
+                "measured": 80
+              },
+              {
+                "date": "2026-10-07",
+                "expected": 94,
+                "measured": 92
+              },
+              {
+                "date": "2026-10-08",
+                "expected": 96,
+                "measured": 95
+              },
+              {
+                "date": "2026-10-09",
+                "expected": 100,
+                "measured": 85
+              },
+              {
+                "date": "2026-10-10",
+                "expected": 180,
+                "measured": 151
+              },
+              {
+                "date": "2026-10-11",
+                "expected": 185,
+                "measured": 156
+              },
+              {
+                "date": "2026-10-12",
+                "expected": 156,
+                "measured": 131
+              },
+              {
+                "date": "2026-10-13",
+                "expected": 152,
+                "measured": 127
+              },
+              {
+                "date": "2026-10-14",
+                "expected": 88,
+                "measured": 74
+              },
+              {
+                "date": "2026-10-15",
+                "expected": 103,
+                "measured": 87
+              },
+              {
+                "date": "2026-10-16",
+                "expected": 102,
+                "measured": 86
+              },
+              {
+                "date": "2026-10-17",
+                "expected": 118,
+                "measured": 100
+              },
+              {
+                "date": "2026-10-18",
+                "expected": 111,
+                "measured": 94
+              },
+              {
+                "date": "2026-10-19",
+                "expected": 98,
+                "measured": 84
+              },
+              {
+                "date": "2026-10-20",
+                "expected": 93,
+                "measured": 79
+              },
+              {
+                "date": "2026-10-21",
+                "expected": 95,
+                "measured": 81
+              },
+              {
+                "date": "2026-10-22",
+                "expected": 100,
+                "measured": 84
+              }
+            ],
+            "series_from": "2026-09-25",
+            "provisional_from": "2026-10-20"
+          },
+          "metrics": [
+            {
+              "id": "orders",
+              "label": {
+                "en": "Orders",
+                "tr": "Sipariş"
+              },
+              "version": 3,
+              "description": {
+                "en": "Orders placed in the back office, by order date in Europe/Istanbul time. Test orders are excluded; cancelled orders are kept.",
+                "tr": "Sipariş panelinde oluşan siparişler, İstanbul saatine göre sipariş tarihinde. Test siparişleri hariç, iptal edilen siparişler dahildir."
+              },
+              "source": "backoffice"
+            },
+            {
+              "id": "ga4_purchases",
+              "label": {
+                "en": "GA4 purchases",
+                "tr": "GA4 satın almaları"
+              },
+              "version": 2,
+              "description": {
+                "en": "Purchase events in the GA4 BigQuery export, counted once per transaction_id.",
+                "tr": "GA4 BigQuery dışa aktarımındaki purchase etkinlikleri; her transaction_id bir kez sayılır."
+              },
+              "source": "ga4"
+            }
+          ],
+          "events": [],
+          "validation": {
+            "ok": true,
+            "unmatched": []
+          },
+          "created_by": "planner",
+          "model_label": {
+            "en": "Built-in planner",
+            "tr": "Yerleşik planlayıcı"
+          },
+          "seconds": 0.4,
+          "handmade": true,
+          "overall": {
+            "delta_pct": -0.10134398837631675,
+            "verdict": "does_not_add_up"
+          },
+          "why": null,
+          "id": "ans_mvlz9scm0d0",
+          "turn_id": "turn_mvlz9rlk0cw",
+          "question": "Is the gap only on mobile?",
+          "created_at": "2026-10-24T05:48:15.430Z"
+        }
+      }
+    },
+    {
+      "event": "text",
+      "data": {
+        "text": {
+          "en": "Answered by the built-in planner, without a model.",
+          "tr": "Cevabı yerleşik planlayıcı verdi; model kullanılmadı."
+        }
+      }
+    },
+    {
+      "event": "done",
+      "data": {}
+    }
+  ]
+}

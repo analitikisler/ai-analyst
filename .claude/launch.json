@@ -1,6 +1,8 @@
 {
   "version": "0.0.1",
   "configurations": [
-    { "name": "ai-analyst", "runtimeExecutable": "node", "runtimeArgs": ["src/cli.js", "serve", "--port", "8788"], "port": 8788 }
+    { "name": "ai-analyst", "runtimeExecutable": "node", "runtimeArgs": ["src/cli.js", "serve", "--port", "8788"], "port": 8788 },
+    { "name": "ai-analyst-8790", "runtimeExecutable": "node", "runtimeArgs": ["src/cli.js", "serve", "--port", "8790"], "port": 8790 },
+    { "name": "mockups", "runtimeExecutable": "python3", "runtimeArgs": ["-m", "http.server", "8791", "--bind", "127.0.0.1"], "port": 8791 }
   ]
 }

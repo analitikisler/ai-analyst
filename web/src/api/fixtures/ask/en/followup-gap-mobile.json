@@ -1,0 +1,254 @@
+{
+  "conversation_id": "conv_eff30f4204",
+  "turns": [
+    {
+      "question": "Do GA4 purchases match orders in the last 14 days?",
+      "lang": "en",
+      "conversation_id": "conv_eff30f4204",
+      "turn_id": "turn_4993d877c7",
+      "events": [
+        {
+          "event": "turn",
+          "data": {
+            "turn_id": "turn_4993d877c7",
+            "conversation_id": "conv_eff30f4204"
+          }
+        },
+        {
+          "event": "step",
+          "data": {
+            "tool": "run_query",
+            "summary": "orders · day · 2026-10-09..2026-10-22 → 2,753",
+            "ok": true
+          }
+        },
+        {
+          "event": "step",
+          "data": {
+            "tool": "reconcile",
+            "summary": "ga4_vs_orders · 2026-10-09..2026-10-22 → Δ −10.1% does not add up",
+            "ok": true
+          }
+        },
+        {
+          "event": "step",
+          "data": {
+            "tool": "publish_answer",
+            "summary": "ans_7e74eb48ea",
+            "ok": true
+          }
+        },
+        {
+          "event": "answer",
+          "data": {
+            "answer": {
+              "id": "ans_7e74eb48ea",
+              "turn_id": "turn_4993d877c7",
+              "question": "Do GA4 purchases match orders in the last 14 days?",
+              "sentence": "Orders for 9–22 Oct 2026: 2,753. GA4 purchases: −10.1% against the source, so the check does not add up. The gap is on mobile (−15.6%) and starts on 9 Oct.",
+              "title": "Orders · 9–22 Oct 2026",
+              "followups": [
+                "Is the gap only on mobile?",
+                "Which channel has the highest ROAS in the last 28 days?",
+                "Do Meta conversions match our orders?"
+              ],
+              "query": {
+                "id": "q_7a9c4d2891",
+                "metric": "orders",
+                "metric_version": 3,
+                "group_by": "day",
+                "from": "2026-10-09",
+                "to": "2026-10-22",
+                "filters": {},
+                "unit": "count",
+                "rows": [
+                  {
+                    "key": "2026-10-09",
+                    "value": 172
+                  },
+                  {
+                    "key": "2026-10-10",
+                    "value": 302
+                  },
+                  {
+                    "key": "2026-10-11",
+                    "value": 296
+                  },
+                  {
+                    "key": "2026-10-12",
+                    "value": 247
+                  },
+                  {
+                    "key": "2026-10-13",
+                    "value": 246
+                  },
+                  {
+                    "key": "2026-10-14",
+                    "value": 144
+                  },
+                  {
+                    "key": "2026-10-15",
+                    "value": 169
+                  },
+                  {
+                    "key": "2026-10-16",
+                    "value": 168
+                  },
+                  {
+                    "key": "2026-10-17",
+                    "value": 192
+                  },
+                  {
+                    "key": "2026-10-18",
+                    "value": 182
+                  },
+                  {
+                    "key": "2026-10-19",
+                    "value": 161
+                  },
+                  {
+                    "key": "2026-10-20",
+                    "value": 153
+                  },
+                  {
+                    "key": "2026-10-21",
+                    "value": 156
+                  },
+                  {
+                    "key": "2026-10-22",
+                    "value": 165
+                  }
+                ],
+                "total": 2753,
+                "sql": "-- metric orders v3\nSELECT\n  date AS day,\n  SUM(orders) AS value\nFROM daily_channel_device\nWHERE date BETWEEN DATE '2026-10-09' AND DATE '2026-10-22'\nGROUP BY day\nORDER BY day",
+                "dialect": "duckdb",
+                "ran_at": "2026-10-23T19:39:19.156Z"
+              },
+              "check": {
+                "id": "c_e3d5907d",
+                "check": "ga4_vs_orders",
+                "label": {
+                  "en": "GA4 purchases against back-office orders",
+                  "tr": "GA4 satın almaları ile arka ofis siparişleri"
+                },
+                "from": "2026-10-09",
+                "to": "2026-10-22",
+                "filters": {},
+                "unit": "count",
+                "expected": {
+                  "metric": "orders",
+                  "label": {
+                    "en": "Back-office orders",
+                    "tr": "Arka ofis siparişi"
+                  },
+                  "value": 2753
+                },
+                "measured": {
+                  "metric": "ga4_purchases",
+                  "label": {
+                    "en": "GA4 purchases",
+                    "tr": "GA4 satın alma"
+                  },
+                  "value": 2474
+                },
+                "delta": -279,
+                "delta_pct": -0.10134398837631675,
+                "tolerance": 0.05,
+                "verdict": "does_not_add_up",
+                "breakdown_by": "device",
+                "breakdown": [
+                  {
+                    "key": "mobile",
+                    "expected": 1681,
+                    "measured": 1419,
+                    "delta_pct": -0.15585960737656157,
+                    "verdict": "does_not_add_up"
+                  },
+                  {
+                    "key": "desktop",
+                    "expected": 1072,
+                    "measured": 1055,
+                    "delta_pct": -0.01585820895522388,
+                    "verdict": "adds_up"
+                  }
+                ],
+                "out_of_tolerance_since": "2026-10-09",
+                "findings": [
+                  {
+                    "id": "f_ga4_mobile_safari",
+                    "source": "AI Tag Debugger",
+                    "text": {
+                      "en": "purchase is not sent on mobile Safari since release v4.12 (9 Oct): the thank-you page loads the tag before dataLayer is ready.",
+                      "tr": "v4.12 sürümünden (9 Eki) beri mobil Safari’de purchase gitmiyor: teşekkür sayfası tag’i dataLayer hazır olmadan yüklüyor."
+                    },
+                    "since": "2026-10-09"
+                  }
+                ],
+                "sql": {
+                  "expected": "-- metric orders v3\nSELECT\n  date AS day,\n  device,\n  SUM(orders) AS value\nFROM daily_channel_device\nWHERE date BETWEEN DATE '2026-07-25' AND DATE '2026-10-22'\nGROUP BY day, device\nORDER BY day, device",
+                  "measured": "-- metric ga4_purchases v2\nSELECT\n  date AS day,\n  device,\n  SUM(ga4_purchases) AS value\nFROM daily_channel_device\nWHERE date BETWEEN DATE '2026-07-25' AND DATE '2026-10-22'\nGROUP BY day, device\nORDER BY day, device"
+                },
+                "dialect": "duckdb",
+                "ran_at": "2026-10-23T19:39:19.158Z"
+              },
+              "metric": {
+                "id": "orders",
+                "label": {
+                  "en": "Orders",
+                  "tr": "Sipariş"
+                },
+                "version": 3,
+                "description": {
+                  "en": "Orders placed in the back office, by order date in Europe/Istanbul time. Test orders are excluded; cancelled orders are kept.",
+                  "tr": "Arka ofiste oluşan siparişler, İstanbul saatine göre sipariş tarihinde. Test siparişleri hariç, iptal edilen siparişler dahildir."
+                },
+                "source": "backoffice"
+              },
+              "validation": {
+                "ok": true,
+                "unmatched": []
+              },
+              "created_by": "planner",
+              "created_at": "2026-10-23T19:39:19.159Z"
+            }
+          }
+        },
+        {
+          "event": "text",
+          "data": {
+            "text": "Answered by the built-in planner, without a model. Set ANTHROPIC_API_KEY to ask anything."
+          }
+        },
+        {
+          "event": "done",
+          "data": {}
+        }
+      ]
+    },
+    {
+      "question": "Is the gap only on mobile?",
+      "lang": "en",
+      "conversation_id": "conv_eff30f4204",
+      "turn_id": "turn_88b8cc34a6",
+      "events": [
+        {
+          "event": "turn",
+          "data": {
+            "turn_id": "turn_88b8cc34a6",
+            "conversation_id": "conv_eff30f4204"
+          }
+        },
+        {
+          "event": "text",
+          "data": {
+            "text": "The built-in planner knows orders, revenue, sessions, conversion rate, order value, ad spend, ROAS and the four checks. Try one of the suggested questions."
+          }
+        },
+        {
+          "event": "done",
+          "data": {}
+        }
+      ]
+    }
+  ]
+}

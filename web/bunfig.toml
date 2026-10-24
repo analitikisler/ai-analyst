@@ -1,0 +1,4 @@
+# Exact versions, and nothing newer than two weeks (house rule: pinned, at least 14 days old).
+[install]
+exact = true
+minimumReleaseAge = 1209600

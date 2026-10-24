@@ -2,6 +2,9 @@
 import "./catalogue.js";
 import "./data.js";
 import "./answers.js";
-import "./alerts.js";
+import "./workspace.js";
+import "./dashboards.js";
+import "./events.js";
+import "./settings.js";
 
-export { actionsFor, callAction, inputJsonSchema, registry, toolDefinitions } from "./registry.js";
+export { actionsFor, callAction, contextFor, inputJsonSchema, registry, toolDefinitions } from "./registry.js";

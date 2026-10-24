@@ -1,0 +1,163 @@
+/* =====================================================================
+   AI Analyst: design tokens (08-art.md §1.2). Tally values, named the Overt way so Overt's components port
+   unchanged; shadcn/ui names are bridged onto them in src/index.css.
+
+   No product colour: the one data blue is Tally `accent`, so chart-1 = accent. Overt's cobalt and ember are
+   not used. Red only for a gap, with a glyph and a word. One orange mark per section.
+
+   Theme convention (Tally products.md §2, what the page host needs): light on :root; dark twice, under
+   `@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) }` and under `:root[data-theme="dark"]`.
+   The two dark blocks must stay identical. src/lib/theme.ts sets data-theme.
+
+   Do not wrap this file in @layer: the shadow mapping only works because these unlayered values beat
+   Tailwind's layered theme (Overt BRAND §11).
+   ===================================================================== */
+
+:root {
+  color-scheme: light;
+  /* surfaces: well < bg < surface < surface-2 */
+  --well: #e9eef5;  --bg: #f4f6fa;  --surface: #ffffff;  --surface-2: #ecf1f8;
+  /* lines */
+  --border: #d5dde8;  --border-strong: #78869a;
+  /* ink */
+  --text-strong: #071529;  --text: #142338;  --text-muted: #566479;  --text-subtle: #566479;
+  /* interactive (Tally action / accent) */
+  --primary: #1259b1;  --primary-hover: #0e4896;  --primary-fg: #ffffff;  --primary-soft: #deedff;
+  --accent: #1161bb;  --accent-ink: #0f56a8;  --accent-soft: #deedff;
+  --ring: #1161bb;  --selection: #c6defc;
+  /* the answer mark: one 3px bar per section. Never a status, a series, a button or text. */
+  --mark: #d46700;  --mark-ink: #b14c00;
+  /* status (Tally ok / warn / bad; info = accent); tints = status 10% into surface (oklab) */
+  --success: #197746;  --warning: #8b6200;  --danger: #c12d30;  --info: #1161bb;
+  --success-soft: #e9f1eb;  --warning-soft: #f3efe7;  --danger-soft: #fcebe9;  --info-soft: #deedff;
+  /* Tally placeholder hatch */
+  --ph: #b3c0d2;  --ph-ink: #071529;
+  /* code on well */
+  --code-keyword: #1161bb;  --code-string: #197746;  --code-comment: #566479;
+  /* charts. chart-1 = the one data blue = accent. 2..6 = channel slots (08-art.md §5.1, validated) */
+  --chart-1: #1161bb;  --chart-2: #9f7100;  --chart-3: #cf4fb9;  --chart-4: #818c01;  --chart-5: #8658e1;  --chart-6: #0794b0;
+  --chart-other: #566479;
+  --chart-ref: #566479;         /* the system that owns the number (back office) drawn as a line */
+  --chart-ref-edge: #78869a;    /* the same system drawn as a hollow bar or tally track (= border-strong) */
+  --chart-provisional: #deedff; /* fill of "may change" bars (= accent-soft), always with a chart-1 edge */
+  /* overlays: the only shadow */
+  --overlay: rgb(7 21 41 / 0.48);
+  --shadow-overlay: 0 16px 48px rgb(7 21 41 / 0.14);
+  --shadow-sm: 0 0 #0000;  --shadow-md: var(--shadow-overlay);  --shadow-lg: var(--shadow-overlay);
+}
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --well: #040e1f;  --bg: #071529;  --surface: #0e1e34;  --surface-2: #15263f;
+  --border: #22354e;  --border-strong: #607695;
+  --text-strong: #f9fbff;  --text: #e1e8f3;  --text-muted: #a2b1c6;  --text-subtle: #a2b1c6;
+  --primary: #69b1ff;  --primary-hover: #8bc8ff;  --primary-fg: #071529;  --primary-soft: #0c325b;
+  --accent: #69b1ff;  --accent-ink: #8bc8ff;  --accent-soft: #0c325b;
+  --ring: #69b1ff;  --selection: #123f6f;
+  --mark: #fa8c31;  --mark-ink: #fa8c31;
+  --success: #5ad093;  --warning: #f4cf5a;  --danger: #fa6b6d;  --info: #69b1ff;
+  --success-soft: #183744;  --warning-soft: #2e3840;  --danger-soft: #332c3f;  --info-soft: #0c325b;
+  --ph: #3a5170;  --ph-ink: #f9fbff;
+  --code-keyword: #69b1ff;  --code-string: #5ad093;  --code-comment: #a2b1c6;
+  --chart-1: #69b1ff;  --chart-2: #b3821a;  --chart-3: #cf4fb9;  --chart-4: #818c01;  --chart-5: #976ef1;  --chart-6: #0794b0;
+  --chart-other: #657386;
+  --chart-ref: #a2b1c6;  --chart-ref-edge: #607695;  --chart-provisional: #0c325b;
+  --overlay: rgb(2 8 18 / 0.72);
+  --shadow-overlay: 0 16px 48px rgb(2 8 18 / 0.55);
+  --shadow-sm: 0 0 #0000;  --shadow-md: var(--shadow-overlay);  --shadow-lg: var(--shadow-overlay);
+  --font-grade: -25;
+}
+
+/* Same values as above, for the system preference. Keep in step. */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+      color-scheme: dark;
+      --well: #040e1f;  --bg: #071529;  --surface: #0e1e34;  --surface-2: #15263f;
+      --border: #22354e;  --border-strong: #607695;
+      --text-strong: #f9fbff;  --text: #e1e8f3;  --text-muted: #a2b1c6;  --text-subtle: #a2b1c6;
+      --primary: #69b1ff;  --primary-hover: #8bc8ff;  --primary-fg: #071529;  --primary-soft: #0c325b;
+      --accent: #69b1ff;  --accent-ink: #8bc8ff;  --accent-soft: #0c325b;
+      --ring: #69b1ff;  --selection: #123f6f;
+      --mark: #fa8c31;  --mark-ink: #fa8c31;
+      --success: #5ad093;  --warning: #f4cf5a;  --danger: #fa6b6d;  --info: #69b1ff;
+      --success-soft: #183744;  --warning-soft: #2e3840;  --danger-soft: #332c3f;  --info-soft: #0c325b;
+      --ph: #3a5170;  --ph-ink: #f9fbff;
+      --code-keyword: #69b1ff;  --code-string: #5ad093;  --code-comment: #a2b1c6;
+      --chart-1: #69b1ff;  --chart-2: #b3821a;  --chart-3: #cf4fb9;  --chart-4: #818c01;  --chart-5: #976ef1;  --chart-6: #0794b0;
+      --chart-other: #657386;
+      --chart-ref: #a2b1c6;  --chart-ref-edge: #607695;  --chart-provisional: #0c325b;
+      --overlay: rgb(2 8 18 / 0.72);
+      --shadow-overlay: 0 16px 48px rgb(2 8 18 / 0.55);
+      --shadow-sm: 0 0 #0000;  --shadow-md: var(--shadow-overlay);  --shadow-lg: var(--shadow-overlay);
+      --font-grade: -25;
+  }
+}
+
+@theme inline {
+  --color-well: var(--well);
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-border: var(--border);
+  --color-border-strong: var(--border-strong);
+  --color-text-strong: var(--text-strong);
+  --color-text: var(--text);
+  --color-text-muted: var(--text-muted);
+  --color-text-subtle: var(--text-subtle);
+  --color-primary: var(--primary);
+  --color-primary-hover: var(--primary-hover);
+  --color-primary-fg: var(--primary-fg);
+  --color-primary-soft: var(--primary-soft);
+  --color-accent: var(--accent);
+  --color-accent-ink: var(--accent-ink);
+  --color-accent-soft: var(--accent-soft);
+  --color-ring: var(--ring);
+  --color-selection: var(--selection);
+  --color-mark: var(--mark);
+  --color-mark-ink: var(--mark-ink);
+  --color-success: var(--success);
+  --color-warning: var(--warning);
+  --color-danger: var(--danger);
+  --color-info: var(--info);
+  --color-success-soft: var(--success-soft);
+  --color-warning-soft: var(--warning-soft);
+  --color-danger-soft: var(--danger-soft);
+  --color-info-soft: var(--info-soft);
+  --color-ph: var(--ph);
+  --color-ph-ink: var(--ph-ink);
+  --color-code-keyword: var(--code-keyword);
+  --color-code-string: var(--code-string);
+  --color-code-comment: var(--code-comment);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+  --color-chart-6: var(--chart-6);
+  --color-chart-other: var(--chart-other);
+  --color-chart-ref: var(--chart-ref);
+  --color-chart-ref-edge: var(--chart-ref-edge);
+  --color-chart-provisional: var(--chart-provisional);
+  --color-overlay: var(--overlay);
+
+  --font-sans: "Google Sans", "Segoe UI Variable Text", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-display: "Google Sans Flex", "Google Sans", "Segoe UI Variable Display", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-mono: "Google Sans Code", ui-monospace, "SF Mono", "Cascadia Mono", Menlo, Consolas, monospace;
+
+  --shadow-sm: var(--shadow-sm);
+  --shadow-md: var(--shadow-md);
+  --shadow-lg: var(--shadow-lg);
+}
+
+@theme {
+  --text-2xs: 0.75rem;
+  --text-2xs--line-height: 1rem; /* 12px floor */
+  --font-weight-heading: 570; /* display face */
+  --ease-out: cubic-bezier(0.2, 0, 0, 1);
+  --default-transition-duration: 160ms;
+  --default-transition-timing-function: cubic-bezier(0.2, 0, 0, 1);
+  /* motion tokens (Tally §9) */
+  --duration-fast: 160ms;
+  --duration-base: 220ms;
+  --duration-slow: 400ms;
+}

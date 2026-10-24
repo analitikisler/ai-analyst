@@ -1,0 +1,290 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "../brand/tokens.css";
+
+/* Components never branch on the theme (no `dark:` classes): every colour is a token that switches by itself.
+   scripts/check-tokens.mjs fails the build on `dark:` or a hex colour in src/. */
+
+/* Google Sans family (Tally type), self-hosted. One merged Latin + Latin-1 + Latin Extended-A WOFF2 per face,
+   so Turkish renders from the font; OFL-1.1 texts next to the files in public/fonts. With base "./" Vite
+   rewrites these URLs relative to the stylesheet, so the build works from any sub-path. */
+@font-face {
+  font-family: "Google Sans Flex";
+  src: url("/fonts/google-sans-flex-display.woff2") format("woff2");
+  font-weight: 540 600;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Google Sans";
+  src: url("/fonts/google-sans-text.woff2") format("woff2");
+  font-weight: 400 600;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Google Sans Code";
+  src: url("/fonts/google-sans-code.woff2") format("woff2");
+  font-weight: 400 600;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* The Tally token bridge for shadcn/ui. shadcn components speak `background`, `muted`, `popover`… ; these map
+   each name onto a brand token, so a copied component is on brand without edits. `accent` is not bridged:
+   in Tally it is the link blue (brand/tokens.css), and scripts/tally-shadcn.mjs rewrites shadcn's
+   hover-ground `accent` to `surface-2`. */
+@theme inline {
+  --color-background: var(--bg);
+  --color-foreground: var(--text);
+  --color-card: var(--surface);
+  --color-card-foreground: var(--text);
+  --color-popover: var(--surface);
+  --color-popover-foreground: var(--text);
+  --color-primary-foreground: var(--primary-fg);
+  --color-secondary: var(--surface-2);
+  --color-secondary-foreground: var(--text-strong);
+  --color-muted: var(--surface-2);
+  --color-muted-foreground: var(--text-muted);
+  --color-destructive: var(--danger);
+  --color-destructive-foreground: var(--surface);
+  --color-input: var(--border-strong);
+
+  /* Tally radii, pinned (no `--radius` arithmetic): 1 px cells, 2 px chips, 4 px controls, 6 px cards and
+     panels. Every larger step resolves to 6 px, so no class can grow past a card. rounded-full stays for
+     status dots. */
+  --radius: 6px;
+  --radius-xs: 1px;
+  --radius-sm: 2px;
+  --radius-md: 4px;
+  --radius-lg: 6px;
+  --radius-xl: 6px;
+  --radius-2xl: 6px;
+  --radius-3xl: 6px;
+  --radius-4xl: 6px;
+
+  /* Nothing at rest has a shadow; overlays carry the one overlay shadow. */
+  --shadow-2xs: 0 0 #0000;
+  --shadow-xs: 0 0 #0000;
+}
+
+@layer base {
+  * {
+    border-color: var(--color-border);
+  }
+  html {
+    background: var(--color-bg);
+    color: var(--color-text);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+    /* The faces ship 400 to 600; never fake a heavier weight. */
+    font-synthesis: none;
+    /* Dark theme thins the text face (GRAD axis) so light text on navy does not look bolder. */
+    font-variation-settings: "GRAD" var(--font-grade, 0);
+  }
+  body {
+    min-height: 100dvh;
+    background: var(--color-bg);
+    color: var(--color-text);
+    font-size: 0.875rem;
+    line-height: 1.25rem;
+  }
+  ::selection {
+    background: var(--color-selection);
+    color: var(--color-text);
+  }
+  /* Page titles in the display face; smaller headings stay in the text face (classes can opt in). */
+  h1 {
+    font-family: var(--font-display);
+    font-weight: var(--font-weight-heading);
+  }
+  h1,
+  h2,
+  h3,
+  h4 {
+    text-wrap: balance;
+  }
+  button:not(:disabled),
+  [role="button"]:not([aria-disabled="true"]) {
+    cursor: pointer;
+  }
+  /* One focus treatment everywhere (Tally): 2 px ring in accent, 2 px off the element, never removed. */
+  :focus-visible {
+    outline: 2px solid var(--color-ring);
+    outline-offset: 2px;
+  }
+  :focus:not(:focus-visible) {
+    outline: none;
+  }
+  code,
+  kbd,
+  samp,
+  pre {
+    font-family: var(--font-mono);
+    font-variation-settings: normal;
+    /* Show code exactly as written (no "<!--" or "=>" ligatures). */
+    font-variant-ligatures: none;
+  }
+  /* Recharts draws its own focus box on the surface; the hover layer is enough. */
+  .recharts-wrapper:focus,
+  .recharts-surface:focus,
+  .recharts-wrapper *:focus {
+    outline: none;
+  }
+
+  /* Thin, token-coloured scrollbars. */
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: var(--color-border-strong) transparent;
+  }
+  *::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+  *::-webkit-scrollbar-thumb {
+    background: var(--color-border-strong);
+    border-radius: 2px;
+    border: 3px solid transparent;
+    background-clip: content-box;
+  }
+  *::-webkit-scrollbar-track {
+    background: transparent;
+  }
+}
+
+/** Tabular, slashed-zero digits for numbers that must line up. */
+@utility tnum {
+  font-variant-numeric: tabular-nums slashed-zero;
+}
+/** Small label over a group or a figure: 12 px, 500, muted ink, sentence case. No caps, no tracking. */
+@utility eyebrow {
+  font-size: var(--text-2xs);
+  line-height: 1rem;
+  font-weight: 500;
+  color: var(--color-text-subtle);
+}
+/* Utilities the shadcn chat primitives (message-scroller, trace) expect from shadcn's own stylesheet, written here
+   on Tally tokens. `shimmer` is a slow opacity pulse on the text of a running step (no gradient sweep). */
+@utility shimmer {
+  animation: aia-shimmer 1.6s ease-in-out infinite;
+}
+@utility shimmer-none {
+  animation: none;
+}
+@utility scrollbar-thin {
+  scrollbar-width: thin;
+}
+@utility scrollbar-gutter-stable {
+  scrollbar-gutter: stable;
+}
+@utility scrollbar-thumb-transparent {
+  scrollbar-color: transparent transparent;
+}
+@utility scrollbar-track-transparent {
+  scrollbar-color: var(--color-border-strong) transparent;
+}
+/** A soft fade under the last visible line of a scroller, so a cut-off message reads as "more below". */
+@utility scroll-fade-b {
+  mask-image: linear-gradient(to bottom, black calc(100% - 16px), transparent);
+}
+@utility scrollbar-none {
+  scrollbar-width: none;
+  &::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+/* Motion (Tally): 160 ms or 220 ms on cubic-bezier(.2, 0, 0, 1), colour and opacity; nothing scales or bounces.
+   Nothing moves when the person asks for less. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+@keyframes aia-fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+@keyframes aia-pop-in {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes aia-draw {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(1);
+  }
+}
+@keyframes aia-grow {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(1);
+  }
+}
+@keyframes aia-outline {
+  0%,
+  80% {
+    outline-color: var(--color-ring);
+  }
+  100% {
+    outline-color: transparent;
+  }
+}
+@keyframes aia-shimmer {
+  0% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.55;
+  }
+  100% {
+    opacity: 1;
+  }
+}
+@keyframes aia-indeterminate {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(250%);
+  }
+}
+
+/* Print: dashboards and answers print on white, without app chrome. */
+@media print {
+  :root {
+    color-scheme: light;
+  }
+  html,
+  body {
+    background: #fff !important;
+  }
+  [data-print="hide"] {
+    display: none !important;
+  }
+  [data-print="avoid-break"] {
+    break-inside: avoid;
+  }
+}

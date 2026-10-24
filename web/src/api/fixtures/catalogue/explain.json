@@ -1,0 +1,396 @@
+{
+  "ad_spend": {
+    "id": "ad_spend",
+    "label": {
+      "en": "Ad spend",
+      "tr": "Reklam harcaması"
+    },
+    "unit": "try",
+    "version": 1,
+    "source": "ads",
+    "owner": "Bahadır Ölez",
+    "description": {
+      "en": "Cost reported by Google Ads, Meta Ads and TikTok Ads, converted to TRY at the day’s TCMB rate.",
+      "tr": "Google Ads, Meta Ads ve TikTok Ads’in bildirdiği maliyet; günün TCMB kuruyla TRY’ye çevrilir."
+    },
+    "dimensions": [
+      "day",
+      "week",
+      "month",
+      "channel",
+      "device"
+    ],
+    "where": {
+      "channel": [
+        "google_ads",
+        "meta_ads",
+        "tiktok_ads"
+      ]
+    },
+    "check": null,
+    "definition": {
+      "sum": "ad_spend"
+    },
+    "model": "daily_channel_device",
+    "sql_example": "-- metric ad_spend v1\nSELECT\n  SUM(ad_spend) AS value\nFROM daily_channel_device\nWHERE date BETWEEN DATE '2026-09-25' AND DATE '2026-10-22'\n  AND channel IN ('google_ads', 'meta_ads', 'tiktok_ads')",
+    "dialect": "duckdb"
+  },
+  "aov": {
+    "id": "aov",
+    "label": {
+      "en": "Average order value",
+      "tr": "Sepet ortalaması"
+    },
+    "unit": "try",
+    "version": 1,
+    "source": "backoffice",
+    "owner": "Bahadır Ölez",
+    "description": {
+      "en": "Revenue divided by orders, both from the back office.",
+      "tr": "Ciro bölü sipariş; ikisi de arka ofisten."
+    },
+    "dimensions": [
+      "day",
+      "week",
+      "month",
+      "channel",
+      "device"
+    ],
+    "where": null,
+    "check": null,
+    "definition": {
+      "ratio": {
+        "numerator": "revenue",
+        "denominator": "orders"
+      }
+    },
+    "model": "daily_channel_device",
+    "sql_example": "-- metric aov v1\nSELECT\n  SUM(revenue) AS numerator,\n  SUM(orders) AS denominator,\n  SUM(revenue) / NULLIF(SUM(orders), 0) AS value\nFROM daily_channel_device\nWHERE date BETWEEN DATE '2026-09-25' AND DATE '2026-10-22'",
+    "dialect": "duckdb"
+  },
+  "conversion_rate": {
+    "id": "conversion_rate",
+    "label": {
+      "en": "Conversion rate",
+      "tr": "Dönüşüm oranı"
+    },
+    "unit": "pct",
+    "version": 2,
+    "source": "backoffice+ga4",
+    "owner": "Bahadır Ölez",
+    "description": {
+      "en": "Back-office orders divided by GA4 sessions. By channel, orders take the channel stored with the order and sessions the GA4 session source.",
+      "tr": "Arka ofis siparişleri bölü GA4 oturumları. Kanal kırılımında sipariş, siparişle kaydedilen kanala; oturum, GA4 oturum kaynağına göre atanır."
+    },
+    "dimensions": [
+      "day",
+      "week",
+      "month",
+      "channel",
+      "device"
+    ],
+    "where": null,
+    "check": null,
+    "definition": {
+      "ratio": {
+        "numerator": "orders",
+        "denominator": "sessions"
+      }
+    },
+    "model": "daily_channel_device",
+    "sql_example": "-- metric conversion_rate v2\nSELECT\n  SUM(orders) AS numerator,\n  SUM(sessions) AS denominator,\n  SUM(orders) / NULLIF(SUM(sessions), 0) AS value\nFROM daily_channel_device\nWHERE date BETWEEN DATE '2026-09-25' AND DATE '2026-10-22'",
+    "dialect": "duckdb"
+  },
+  "cpa": {
+    "id": "cpa",
+    "label": {
+      "en": "Cost per order",
+      "tr": "Sipariş başı maliyet"
+    },
+    "unit": "try",
+    "version": 1,
+    "source": "backoffice+ads",
+    "owner": "Bahadır Ölez",
+    "description": {
+      "en": "Channel spend divided by back-office orders attributed to that channel (last non-direct click).",
+      "tr": "Kanal harcaması bölü o kanala atanan arka ofis siparişleri (son doğrudan olmayan tıklama)."
+    },
+    "dimensions": [
+      "day",
+      "week",
+      "month",
+      "channel",
+      "device"
+    ],
+    "where": {
+      "channel": [
+        "google_ads",
+        "meta_ads",
+        "tiktok_ads"
+      ]
+    },
+    "check": null,
+    "definition": {
+      "ratio": {
+        "numerator": "ad_spend",
+        "denominator": "orders"
+      }
+    },
+    "model": "daily_channel_device",
+    "sql_example": "-- metric cpa v1\nSELECT\n  SUM(ad_spend) AS numerator,\n  SUM(orders) AS denominator,\n  SUM(ad_spend) / NULLIF(SUM(orders), 0) AS value\nFROM daily_channel_device\nWHERE date BETWEEN DATE '2026-09-25' AND DATE '2026-10-22'\n  AND channel IN ('google_ads', 'meta_ads', 'tiktok_ads')",
+    "dialect": "duckdb"
+  },
+  "ga4_purchases": {
+    "id": "ga4_purchases",
+    "label": {
+      "en": "GA4 purchases",
+      "tr": "GA4 satın almaları"
+    },
+    "unit": "count",
+    "version": 2,
+    "source": "ga4",
+    "owner": "Bahadır Ölez",
+    "description": {
+      "en": "Purchase events in the GA4 BigQuery export, counted once per transaction_id.",
+      "tr": "GA4 BigQuery dışa aktarımındaki purchase etkinlikleri; her transaction_id bir kez sayılır."
+    },
+    "dimensions": [
+      "day",
+      "week",
+      "month",
+      "channel",
+      "device"
+    ],
+    "where": null,
+    "check": {
+      "id": "ga4_vs_orders",
+      "label": {
+        "en": "GA4 purchases against back-office orders",
+        "tr": "GA4 satın almaları ile arka ofis siparişleri"
+      },
+      "tolerance": 0.05
+    },
+    "definition": {
+      "sum": "ga4_purchases"
+    },
+    "model": "daily_channel_device",
+    "sql_example": "-- metric ga4_purchases v2\nSELECT\n  SUM(ga4_purchases) AS value\nFROM daily_channel_device\nWHERE date BETWEEN DATE '2026-09-25' AND DATE '2026-10-22'",
+    "dialect": "duckdb"
+  },
+  "ga4_revenue": {
+    "id": "ga4_revenue",
+    "label": {
+      "en": "GA4 revenue",
+      "tr": "GA4 geliri"
+    },
+    "unit": "try",
+    "version": 1,
+    "source": "ga4",
+    "owner": "Bahadır Ölez",
+    "description": {
+      "en": "Purchase revenue in TRY from GA4 purchase events, counted once per transaction_id.",
+      "tr": "GA4 purchase etkinliklerinden TRY satın alma geliri; her transaction_id bir kez sayılır."
+    },
+    "dimensions": [
+      "day",
+      "week",
+      "month",
+      "channel",
+      "device"
+    ],
+    "where": null,
+    "check": {
+      "id": "ga4_rev_vs_revenue",
+      "label": {
+        "en": "GA4 revenue against back-office revenue",
+        "tr": "GA4 geliri ile arka ofis cirosu"
+      },
+      "tolerance": 0.05
+    },
+    "definition": {
+      "sum": "ga4_revenue"
+    },
+    "model": "daily_channel_device",
+    "sql_example": "-- metric ga4_revenue v1\nSELECT\n  SUM(ga4_revenue) AS value\nFROM daily_channel_device\nWHERE date BETWEEN DATE '2026-09-25' AND DATE '2026-10-22'",
+    "dialect": "duckdb"
+  },
+  "orders": {
+    "id": "orders",
+    "label": {
+      "en": "Orders",
+      "tr": "Sipariş"
+    },
+    "unit": "count",
+    "version": 3,
+    "source": "backoffice",
+    "owner": "Bahadır Ölez",
+    "description": {
+      "en": "Orders placed in the back office, by order date in Europe/Istanbul time. Test orders are excluded; cancelled orders are kept.",
+      "tr": "Arka ofiste oluşan siparişler, İstanbul saatine göre sipariş tarihinde. Test siparişleri hariç, iptal edilen siparişler dahildir."
+    },
+    "dimensions": [
+      "day",
+      "week",
+      "month",
+      "channel",
+      "device"
+    ],
+    "where": null,
+    "check": {
+      "id": "ga4_vs_orders",
+      "label": {
+        "en": "GA4 purchases against back-office orders",
+        "tr": "GA4 satın almaları ile arka ofis siparişleri"
+      },
+      "tolerance": 0.05
+    },
+    "definition": {
+      "sum": "orders"
+    },
+    "model": "daily_channel_device",
+    "sql_example": "-- metric orders v3\nSELECT\n  SUM(orders) AS value\nFROM daily_channel_device\nWHERE date BETWEEN DATE '2026-09-25' AND DATE '2026-10-22'",
+    "dialect": "duckdb"
+  },
+  "platform_conversions": {
+    "id": "platform_conversions",
+    "label": {
+      "en": "Platform-reported conversions",
+      "tr": "Platformun bildirdiği dönüşüm"
+    },
+    "unit": "count",
+    "version": 1,
+    "source": "ads",
+    "owner": "Bahadır Ölez",
+    "description": {
+      "en": "Conversions as Google Ads, Meta Ads and TikTok Ads report them in their own interfaces, each with its own attribution window.",
+      "tr": "Google Ads, Meta Ads ve TikTok Ads’in kendi arayüzlerinde, kendi atıf pencereleriyle bildirdiği dönüşümler."
+    },
+    "dimensions": [
+      "day",
+      "week",
+      "month",
+      "channel",
+      "device"
+    ],
+    "where": {
+      "channel": [
+        "google_ads",
+        "meta_ads",
+        "tiktok_ads"
+      ]
+    },
+    "check": null,
+    "definition": {
+      "sum": "platform_conversions"
+    },
+    "model": "daily_channel_device",
+    "sql_example": "-- metric platform_conversions v1\nSELECT\n  SUM(platform_conversions) AS value\nFROM daily_channel_device\nWHERE date BETWEEN DATE '2026-09-25' AND DATE '2026-10-22'\n  AND channel IN ('google_ads', 'meta_ads', 'tiktok_ads')",
+    "dialect": "duckdb"
+  },
+  "revenue": {
+    "id": "revenue",
+    "label": {
+      "en": "Revenue",
+      "tr": "Ciro"
+    },
+    "unit": "try",
+    "version": 2,
+    "source": "backoffice",
+    "owner": "Bahadır Ölez",
+    "description": {
+      "en": "Order value in TRY including VAT, excluding shipping, from the back office. Refunds are not subtracted.",
+      "tr": "Arka ofisten, KDV dahil ve kargo hariç TRY sipariş tutarı. İadeler düşülmez."
+    },
+    "dimensions": [
+      "day",
+      "week",
+      "month",
+      "channel",
+      "device"
+    ],
+    "where": null,
+    "check": {
+      "id": "ga4_rev_vs_revenue",
+      "label": {
+        "en": "GA4 revenue against back-office revenue",
+        "tr": "GA4 geliri ile arka ofis cirosu"
+      },
+      "tolerance": 0.05
+    },
+    "definition": {
+      "sum": "revenue"
+    },
+    "model": "daily_channel_device",
+    "sql_example": "-- metric revenue v2\nSELECT\n  SUM(revenue) AS value\nFROM daily_channel_device\nWHERE date BETWEEN DATE '2026-09-25' AND DATE '2026-10-22'",
+    "dialect": "duckdb"
+  },
+  "roas": {
+    "id": "roas",
+    "label": {
+      "en": "ROAS",
+      "tr": "ROAS"
+    },
+    "unit": "ratio",
+    "version": 2,
+    "source": "backoffice+ads",
+    "owner": "Bahadır Ölez",
+    "description": {
+      "en": "Back-office revenue from orders whose last non-direct click came from the channel, divided by that channel’s spend. Platform-reported conversions are not used.",
+      "tr": "Son doğrudan olmayan tıklaması kanaldan gelen siparişlerin arka ofis cirosu, bölü o kanalın harcaması. Platformların bildirdiği dönüşümler kullanılmaz."
+    },
+    "dimensions": [
+      "day",
+      "week",
+      "month",
+      "channel",
+      "device"
+    ],
+    "where": {
+      "channel": [
+        "google_ads",
+        "meta_ads",
+        "tiktok_ads"
+      ]
+    },
+    "check": null,
+    "definition": {
+      "ratio": {
+        "numerator": "revenue",
+        "denominator": "ad_spend"
+      }
+    },
+    "model": "daily_channel_device",
+    "sql_example": "-- metric roas v2\nSELECT\n  SUM(revenue) AS numerator,\n  SUM(ad_spend) AS denominator,\n  SUM(revenue) / NULLIF(SUM(ad_spend), 0) AS value\nFROM daily_channel_device\nWHERE date BETWEEN DATE '2026-09-25' AND DATE '2026-10-22'\n  AND channel IN ('google_ads', 'meta_ads', 'tiktok_ads')",
+    "dialect": "duckdb"
+  },
+  "sessions": {
+    "id": "sessions",
+    "label": {
+      "en": "Sessions",
+      "tr": "Oturum"
+    },
+    "unit": "count",
+    "version": 1,
+    "source": "ga4",
+    "owner": "Bahadır Ölez",
+    "description": {
+      "en": "GA4 sessions: distinct user_pseudo_id and ga_session_id pairs in the BigQuery export, on the day the session starts.",
+      "tr": "GA4 oturumları: BigQuery dışa aktarımındaki benzersiz user_pseudo_id ve ga_session_id çiftleri; oturumun başladığı güne yazılır."
+    },
+    "dimensions": [
+      "day",
+      "week",
+      "month",
+      "channel",
+      "device"
+    ],
+    "where": null,
+    "check": null,
+    "definition": {
+      "sum": "sessions"
+    },
+    "model": "daily_channel_device",
+    "sql_example": "-- metric sessions v1\nSELECT\n  SUM(sessions) AS value\nFROM daily_channel_device\nWHERE date BETWEEN DATE '2026-09-25' AND DATE '2026-10-22'",
+    "dialect": "duckdb"
+  }
+}

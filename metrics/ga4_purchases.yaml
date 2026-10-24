@@ -11,3 +11,17 @@ model: daily_channel_device
 sum: ga4_purchases
 dimensions: [day, week, month, channel, device]
 check: ga4_vs_orders
+# Newest first. The pack keeps the version; these notes say what changed and who changed it.
+history:
+  - version: 2
+    date: 2026-07-01
+    actor: Bahadır Ölez
+    change:
+      en: "Counted once per transaction_id, so a reloaded thank-you page no longer counts twice."
+      tr: "transaction_id başına bir kez sayılıyor; yenilenen teşekkür sayfası artık iki kez sayılmıyor."
+  - version: 1
+    date: 2026-03-01
+    actor: Bahadır Ölez
+    change:
+      en: "First version."
+      tr: "İlk sürüm."

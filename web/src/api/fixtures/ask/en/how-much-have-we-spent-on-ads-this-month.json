@@ -1,0 +1,25 @@
+{
+  "question": "How much have we spent on ads this month?",
+  "lang": "en",
+  "conversation_id": "conv_7ce6e55ca5",
+  "turn_id": "turn_276a76bcda",
+  "events": [
+    {
+      "event": "turn",
+      "data": {
+        "turn_id": "turn_276a76bcda",
+        "conversation_id": "conv_7ce6e55ca5"
+      }
+    },
+    {
+      "event": "text",
+      "data": {
+        "text": "The built-in planner knows orders, revenue, sessions, conversion rate, order value, ad spend, ROAS and the four checks. Try one of the suggested questions."
+      }
+    },
+    {
+      "event": "done",
+      "data": {}
+    }
+  ]
+}

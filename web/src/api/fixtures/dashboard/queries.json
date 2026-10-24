@@ -1,0 +1,970 @@
+{
+  "revenue_7d": {
+    "id": "q_55acf8f158",
+    "metric": "revenue",
+    "metric_version": 2,
+    "group_by": "none",
+    "from": "2026-10-16",
+    "to": "2026-10-22",
+    "filters": {},
+    "unit": "try",
+    "rows": [],
+    "total": 1837338,
+    "sql": "-- metric revenue v2\nSELECT\n  SUM(revenue) AS value\nFROM daily_channel_device\nWHERE date BETWEEN DATE '2026-10-16' AND DATE '2026-10-22'",
+    "dialect": "duckdb",
+    "ran_at": "2026-10-23T19:39:19.043Z"
+  },
+  "revenue_7d_daily": {
+    "id": "q_a610139676",
+    "metric": "revenue",
+    "metric_version": 2,
+    "group_by": "day",
+    "from": "2026-10-16",
+    "to": "2026-10-22",
+    "filters": {},
+    "unit": "try",
+    "rows": [
+      {
+        "key": "2026-10-16",
+        "value": 259229
+      },
+      {
+        "key": "2026-10-17",
+        "value": 305607
+      },
+      {
+        "key": "2026-10-18",
+        "value": 284247
+      },
+      {
+        "key": "2026-10-19",
+        "value": 249823
+      },
+      {
+        "key": "2026-10-20",
+        "value": 234105
+      },
+      {
+        "key": "2026-10-21",
+        "value": 245196
+      },
+      {
+        "key": "2026-10-22",
+        "value": 259131
+      }
+    ],
+    "total": 1837338,
+    "sql": "-- metric revenue v2\nSELECT\n  date AS day,\n  SUM(revenue) AS value\nFROM daily_channel_device\nWHERE date BETWEEN DATE '2026-10-16' AND DATE '2026-10-22'\nGROUP BY day\nORDER BY day",
+    "dialect": "duckdb",
+    "ran_at": "2026-10-23T19:39:19.045Z"
+  },
+  "revenue_prev_7d": {
+    "id": "q_378b5e897e",
+    "metric": "revenue",
+    "metric_version": 2,
+    "group_by": "none",
+    "from": "2026-10-09",
+    "to": "2026-10-15",
+    "filters": {},
+    "unit": "try",
+    "rows": [],
+    "total": 2269790,
+    "sql": "-- metric revenue v2\nSELECT\n  SUM(revenue) AS value\nFROM daily_channel_device\nWHERE date BETWEEN DATE '2026-10-09' AND DATE '2026-10-15'",
+    "dialect": "duckdb",
+    "ran_at": "2026-10-23T19:39:19.046Z"
+  },
+  "orders_7d": {
+    "id": "q_277ad596a8",
+    "metric": "orders",
+    "metric_version": 3,
+    "group_by": "none",
+    "from": "2026-10-16",
+    "to": "2026-10-22",
+    "filters": {},
+    "unit": "count",
+    "rows": [],
+    "total": 1177,
+    "sql": "-- metric orders v3\nSELECT\n  SUM(orders) AS value\nFROM daily_channel_device\nWHERE date BETWEEN DATE '2026-10-16' AND DATE '2026-10-22'",
+    "dialect": "duckdb",
+    "ran_at": "2026-10-23T19:39:19.046Z"
+  },
+  "orders_7d_daily": {
+    "id": "q_e3eadb7dbe",
+    "metric": "orders",
+    "metric_version": 3,
+    "group_by": "day",
+    "from": "2026-10-16",
+    "to": "2026-10-22",
+    "filters": {},
+    "unit": "count",
+    "rows": [
+      {
+        "key": "2026-10-16",
+        "value": 168
+      },
+      {
+        "key": "2026-10-17",
+        "value": 192
+      },
+      {
+        "key": "2026-10-18",
+        "value": 182
+      },
+      {
+        "key": "2026-10-19",
+        "value": 161
+      },
+      {
+        "key": "2026-10-20",
+        "value": 153
+      },
+      {
+        "key": "2026-10-21",
+        "value": 156
+      },
+      {
+        "key": "2026-10-22",
+        "value": 165
+      }
+    ],
+    "total": 1177,
+    "sql": "-- metric orders v3\nSELECT\n  date AS day,\n  SUM(orders) AS value\nFROM daily_channel_device\nWHERE date BETWEEN DATE '2026-10-16' AND DATE '2026-10-22'\nGROUP BY day\nORDER BY day",
+    "dialect": "duckdb",
+    "ran_at": "2026-10-23T19:39:19.047Z"
+  },
+  "orders_prev_7d": {
+    "id": "q_9b771a5840",
+    "metric": "orders",
+    "metric_version": 3,
+    "group_by": "none",
+    "from": "2026-10-09",
+    "to": "2026-10-15",
+    "filters": {},
+    "unit": "count",
+    "rows": [],
+    "total": 1576,
+    "sql": "-- metric orders v3\nSELECT\n  SUM(orders) AS value\nFROM daily_channel_device\nWHERE date BETWEEN DATE '2026-10-09' AND DATE '2026-10-15'",
+    "dialect": "duckdb",
+    "ran_at": "2026-10-23T19:39:19.051Z"
+  },
+  "revenue_weekly_13w": {
+    "id": "q_297f4cc8d6",
+    "metric": "revenue",
+    "metric_version": 2,
+    "group_by": "week",
+    "from": "2026-07-27",
+    "to": "2026-10-18",
+    "filters": {},
+    "unit": "try",
+    "rows": [
+      {
+        "key": "2026-07-27",
+        "value": 1543681
+      },
+      {
+        "key": "2026-08-03",
+        "value": 1562444
+      },
+      {
+        "key": "2026-08-10",
+        "value": 1541049
+      },
+      {
+        "key": "2026-08-17",
+        "value": 1626845
+      },
+      {
+        "key": "2026-08-24",
+        "value": 1561194
+      },
+      {
+        "key": "2026-08-31",
+        "value": 1743879
+      },
+      {
+        "key": "2026-09-07",
+        "value": 1736912
+      },
+      {
+        "key": "2026-09-14",
+        "value": 1732151
+      },
+      {
+        "key": "2026-09-21",
+        "value": 1724938
+      },
+      {
+        "key": "2026-09-28",
+        "value": 1773053
+      },
+      {
+        "key": "2026-10-05",
+        "value": 2040719
+      },
+      {
+        "key": "2026-10-12",
+        "value": 2016865
+      }
+    ],
+    "total": 20603730,
+    "sql": "-- metric revenue v2\nSELECT\n  CAST(DATE_TRUNC('week', date) AS DATE) AS week,\n  SUM(revenue) AS value\nFROM daily_channel_device\nWHERE date BETWEEN DATE '2026-07-27' AND DATE '2026-10-18'\nGROUP BY week\nORDER BY week",
+    "dialect": "duckdb",
+    "ran_at": "2026-10-23T19:39:19.053Z"
+  },
+  "roas_channel_28d": {
+    "id": "q_86155b4931",
+    "metric": "roas",
+    "metric_version": 2,
+    "group_by": "channel",
+    "from": "2026-09-25",
+    "to": "2026-10-22",
+    "filters": {},
+    "unit": "ratio",
+    "rows": [
+      {
+        "key": "google_ads",
+        "value": 2.657109202358431
+      },
+      {
+        "key": "meta_ads",
+        "value": 1.7544075089668165
+      },
+      {
+        "key": "tiktok_ads",
+        "value": 1.0896931030689694
+      }
+    ],
+    "total": 2.086354354912839,
+    "sql": "-- metric roas v2\nSELECT\n  channel,\n  SUM(revenue) AS numerator,\n  SUM(ad_spend) AS denominator,\n  SUM(revenue) / NULLIF(SUM(ad_spend), 0) AS value\nFROM daily_channel_device\nWHERE date BETWEEN DATE '2026-09-25' AND DATE '2026-10-22'\n  AND channel IN ('google_ads', 'meta_ads', 'tiktok_ads')\nGROUP BY channel\nORDER BY value DESC",
+    "dialect": "duckdb",
+    "ran_at": "2026-10-23T19:39:19.055Z"
+  },
+  "revenue_daily_28d": {
+    "id": "q_099c587676",
+    "metric": "revenue",
+    "metric_version": 2,
+    "group_by": "day",
+    "from": "2026-09-25",
+    "to": "2026-10-22",
+    "filters": {},
+    "unit": "try",
+    "rows": [
+      {
+        "key": "2026-09-25",
+        "value": 255902
+      },
+      {
+        "key": "2026-09-26",
+        "value": 286362
+      },
+      {
+        "key": "2026-09-27",
+        "value": 265550
+      },
+      {
+        "key": "2026-09-28",
+        "value": 212703
+      },
+      {
+        "key": "2026-09-29",
+        "value": 232910
+      },
+      {
+        "key": "2026-09-30",
+        "value": 244156
+      },
+      {
+        "key": "2026-10-01",
+        "value": 248111
+      },
+      {
+        "key": "2026-10-02",
+        "value": 277392
+      },
+      {
+        "key": "2026-10-03",
+        "value": 296440
+      },
+      {
+        "key": "2026-10-04",
+        "value": 261341
+      },
+      {
+        "key": "2026-10-05",
+        "value": 234411
+      },
+      {
+        "key": "2026-10-06",
+        "value": 215451
+      },
+      {
+        "key": "2026-10-07",
+        "value": 236689
+      },
+      {
+        "key": "2026-10-08",
+        "value": 252160
+      },
+      {
+        "key": "2026-10-09",
+        "value": 262607
+      },
+      {
+        "key": "2026-10-10",
+        "value": 422977
+      },
+      {
+        "key": "2026-10-11",
+        "value": 416424
+      },
+      {
+        "key": "2026-10-12",
+        "value": 340228
+      },
+      {
+        "key": "2026-10-13",
+        "value": 342887
+      },
+      {
+        "key": "2026-10-14",
+        "value": 225184
+      },
+      {
+        "key": "2026-10-15",
+        "value": 259483
+      },
+      {
+        "key": "2026-10-16",
+        "value": 259229
+      },
+      {
+        "key": "2026-10-17",
+        "value": 305607
+      },
+      {
+        "key": "2026-10-18",
+        "value": 284247
+      },
+      {
+        "key": "2026-10-19",
+        "value": 249823
+      },
+      {
+        "key": "2026-10-20",
+        "value": 234105
+      },
+      {
+        "key": "2026-10-21",
+        "value": 245196
+      },
+      {
+        "key": "2026-10-22",
+        "value": 259131
+      }
+    ],
+    "total": 7626706,
+    "sql": "-- metric revenue v2\nSELECT\n  date AS day,\n  SUM(revenue) AS value\nFROM daily_channel_device\nWHERE date BETWEEN DATE '2026-09-25' AND DATE '2026-10-22'\nGROUP BY day\nORDER BY day",
+    "dialect": "duckdb",
+    "ran_at": "2026-10-23T19:39:19.056Z"
+  },
+  "revenue_daily_prev_28d": {
+    "id": "q_2b9c66bf7e",
+    "metric": "revenue",
+    "metric_version": 2,
+    "group_by": "day",
+    "from": "2026-08-28",
+    "to": "2026-09-24",
+    "filters": {},
+    "unit": "try",
+    "rows": [
+      {
+        "key": "2026-08-28",
+        "value": 248250
+      },
+      {
+        "key": "2026-08-29",
+        "value": 244895
+      },
+      {
+        "key": "2026-08-30",
+        "value": 244949
+      },
+      {
+        "key": "2026-08-31",
+        "value": 195238
+      },
+      {
+        "key": "2026-09-01",
+        "value": 203128
+      },
+      {
+        "key": "2026-09-02",
+        "value": 212890
+      },
+      {
+        "key": "2026-09-03",
+        "value": 209608
+      },
+      {
+        "key": "2026-09-04",
+        "value": 230562
+      },
+      {
+        "key": "2026-09-05",
+        "value": 363278
+      },
+      {
+        "key": "2026-09-06",
+        "value": 329175
+      },
+      {
+        "key": "2026-09-07",
+        "value": 278274
+      },
+      {
+        "key": "2026-09-08",
+        "value": 219015
+      },
+      {
+        "key": "2026-09-09",
+        "value": 222001
+      },
+      {
+        "key": "2026-09-10",
+        "value": 237914
+      },
+      {
+        "key": "2026-09-11",
+        "value": 227051
+      },
+      {
+        "key": "2026-09-12",
+        "value": 293732
+      },
+      {
+        "key": "2026-09-13",
+        "value": 258925
+      },
+      {
+        "key": "2026-09-14",
+        "value": 222673
+      },
+      {
+        "key": "2026-09-15",
+        "value": 231004
+      },
+      {
+        "key": "2026-09-16",
+        "value": 210882
+      },
+      {
+        "key": "2026-09-17",
+        "value": 240318
+      },
+      {
+        "key": "2026-09-18",
+        "value": 251993
+      },
+      {
+        "key": "2026-09-19",
+        "value": 307259
+      },
+      {
+        "key": "2026-09-20",
+        "value": 268022
+      },
+      {
+        "key": "2026-09-21",
+        "value": 234260
+      },
+      {
+        "key": "2026-09-22",
+        "value": 212892
+      },
+      {
+        "key": "2026-09-23",
+        "value": 230178
+      },
+      {
+        "key": "2026-09-24",
+        "value": 239794
+      }
+    ],
+    "total": 6868160,
+    "sql": "-- metric revenue v2\nSELECT\n  date AS day,\n  SUM(revenue) AS value\nFROM daily_channel_device\nWHERE date BETWEEN DATE '2026-08-28' AND DATE '2026-09-24'\nGROUP BY day\nORDER BY day",
+    "dialect": "duckdb",
+    "ran_at": "2026-10-23T19:39:19.057Z"
+  },
+  "orders_daily_28d": {
+    "id": "q_4e0f0c2f86",
+    "metric": "orders",
+    "metric_version": 3,
+    "group_by": "day",
+    "from": "2026-09-25",
+    "to": "2026-10-22",
+    "filters": {},
+    "unit": "count",
+    "rows": [
+      {
+        "key": "2026-09-25",
+        "value": 162
+      },
+      {
+        "key": "2026-09-26",
+        "value": 188
+      },
+      {
+        "key": "2026-09-27",
+        "value": 178
+      },
+      {
+        "key": "2026-09-28",
+        "value": 140
+      },
+      {
+        "key": "2026-09-29",
+        "value": 151
+      },
+      {
+        "key": "2026-09-30",
+        "value": 159
+      },
+      {
+        "key": "2026-10-01",
+        "value": 160
+      },
+      {
+        "key": "2026-10-02",
+        "value": 179
+      },
+      {
+        "key": "2026-10-03",
+        "value": 188
+      },
+      {
+        "key": "2026-10-04",
+        "value": 168
+      },
+      {
+        "key": "2026-10-05",
+        "value": 152
+      },
+      {
+        "key": "2026-10-06",
+        "value": 137
+      },
+      {
+        "key": "2026-10-07",
+        "value": 154
+      },
+      {
+        "key": "2026-10-08",
+        "value": 160
+      },
+      {
+        "key": "2026-10-09",
+        "value": 172
+      },
+      {
+        "key": "2026-10-10",
+        "value": 302
+      },
+      {
+        "key": "2026-10-11",
+        "value": 296
+      },
+      {
+        "key": "2026-10-12",
+        "value": 247
+      },
+      {
+        "key": "2026-10-13",
+        "value": 246
+      },
+      {
+        "key": "2026-10-14",
+        "value": 144
+      },
+      {
+        "key": "2026-10-15",
+        "value": 169
+      },
+      {
+        "key": "2026-10-16",
+        "value": 168
+      },
+      {
+        "key": "2026-10-17",
+        "value": 192
+      },
+      {
+        "key": "2026-10-18",
+        "value": 182
+      },
+      {
+        "key": "2026-10-19",
+        "value": 161
+      },
+      {
+        "key": "2026-10-20",
+        "value": 153
+      },
+      {
+        "key": "2026-10-21",
+        "value": 156
+      },
+      {
+        "key": "2026-10-22",
+        "value": 165
+      }
+    ],
+    "total": 5029,
+    "sql": "-- metric orders v3\nSELECT\n  date AS day,\n  SUM(orders) AS value\nFROM daily_channel_device\nWHERE date BETWEEN DATE '2026-09-25' AND DATE '2026-10-22'\nGROUP BY day\nORDER BY day",
+    "dialect": "duckdb",
+    "ran_at": "2026-10-23T19:39:19.058Z"
+  },
+  "ga4_purchases_daily_28d": {
+    "id": "q_e2f5b8dc18",
+    "metric": "ga4_purchases",
+    "metric_version": 2,
+    "group_by": "day",
+    "from": "2026-09-25",
+    "to": "2026-10-22",
+    "filters": {},
+    "unit": "count",
+    "rows": [
+      {
+        "key": "2026-09-25",
+        "value": 160
+      },
+      {
+        "key": "2026-09-26",
+        "value": 186
+      },
+      {
+        "key": "2026-09-27",
+        "value": 174
+      },
+      {
+        "key": "2026-09-28",
+        "value": 139
+      },
+      {
+        "key": "2026-09-29",
+        "value": 150
+      },
+      {
+        "key": "2026-09-30",
+        "value": 157
+      },
+      {
+        "key": "2026-10-01",
+        "value": 158
+      },
+      {
+        "key": "2026-10-02",
+        "value": 175
+      },
+      {
+        "key": "2026-10-03",
+        "value": 184
+      },
+      {
+        "key": "2026-10-04",
+        "value": 165
+      },
+      {
+        "key": "2026-10-05",
+        "value": 150
+      },
+      {
+        "key": "2026-10-06",
+        "value": 136
+      },
+      {
+        "key": "2026-10-07",
+        "value": 151
+      },
+      {
+        "key": "2026-10-08",
+        "value": 158
+      },
+      {
+        "key": "2026-10-09",
+        "value": 156
+      },
+      {
+        "key": "2026-10-10",
+        "value": 269
+      },
+      {
+        "key": "2026-10-11",
+        "value": 265
+      },
+      {
+        "key": "2026-10-12",
+        "value": 221
+      },
+      {
+        "key": "2026-10-13",
+        "value": 219
+      },
+      {
+        "key": "2026-10-14",
+        "value": 130
+      },
+      {
+        "key": "2026-10-15",
+        "value": 153
+      },
+      {
+        "key": "2026-10-16",
+        "value": 151
+      },
+      {
+        "key": "2026-10-17",
+        "value": 173
+      },
+      {
+        "key": "2026-10-18",
+        "value": 163
+      },
+      {
+        "key": "2026-10-19",
+        "value": 147
+      },
+      {
+        "key": "2026-10-20",
+        "value": 138
+      },
+      {
+        "key": "2026-10-21",
+        "value": 141
+      },
+      {
+        "key": "2026-10-22",
+        "value": 148
+      }
+    ],
+    "total": 4717,
+    "sql": "-- metric ga4_purchases v2\nSELECT\n  date AS day,\n  SUM(ga4_purchases) AS value\nFROM daily_channel_device\nWHERE date BETWEEN DATE '2026-09-25' AND DATE '2026-10-22'\nGROUP BY day\nORDER BY day",
+    "dialect": "duckdb",
+    "ran_at": "2026-10-23T19:39:19.059Z"
+  },
+  "sessions_channel_28d": {
+    "id": "q_9e4d86cdf6",
+    "metric": "sessions",
+    "metric_version": 1,
+    "group_by": "channel",
+    "from": "2026-09-25",
+    "to": "2026-10-22",
+    "filters": {},
+    "unit": "count",
+    "rows": [
+      {
+        "key": "organic",
+        "value": 97888
+      },
+      {
+        "key": "google_ads",
+        "value": 58927
+      },
+      {
+        "key": "direct",
+        "value": 52656
+      },
+      {
+        "key": "meta_ads",
+        "value": 48975
+      },
+      {
+        "key": "email",
+        "value": 20399
+      },
+      {
+        "key": "tiktok_ads",
+        "value": 15463
+      }
+    ],
+    "total": 294308,
+    "sql": "-- metric sessions v1\nSELECT\n  channel,\n  SUM(sessions) AS value\nFROM daily_channel_device\nWHERE date BETWEEN DATE '2026-09-25' AND DATE '2026-10-22'\nGROUP BY channel\nORDER BY value DESC",
+    "dialect": "duckdb",
+    "ran_at": "2026-10-23T19:39:19.060Z"
+  },
+  "conversion_rate_device_28d": {
+    "id": "q_a3d11c5b9e",
+    "metric": "conversion_rate",
+    "metric_version": 2,
+    "group_by": "device",
+    "from": "2026-09-25",
+    "to": "2026-10-22",
+    "filters": {},
+    "unit": "pct",
+    "rows": [
+      {
+        "key": "desktop",
+        "value": 0.02276129877421166
+      },
+      {
+        "key": "mobile",
+        "value": 0.014764477137329273
+      }
+    ],
+    "total": 0.017087540943501366,
+    "sql": "-- metric conversion_rate v2\nSELECT\n  device,\n  SUM(orders) AS numerator,\n  SUM(sessions) AS denominator,\n  SUM(orders) / NULLIF(SUM(sessions), 0) AS value\nFROM daily_channel_device\nWHERE date BETWEEN DATE '2026-09-25' AND DATE '2026-10-22'\nGROUP BY device\nORDER BY value DESC",
+    "dialect": "duckdb",
+    "ran_at": "2026-10-23T19:39:19.062Z"
+  },
+  "ad_spend_channel_28d": {
+    "id": "q_2316d60628",
+    "metric": "ad_spend",
+    "metric_version": 1,
+    "group_by": "channel",
+    "from": "2026-09-25",
+    "to": "2026-10-22",
+    "filters": {},
+    "unit": "try",
+    "rows": [
+      {
+        "key": "google_ads",
+        "value": 616342
+      },
+      {
+        "key": "meta_ads",
+        "value": 513839
+      },
+      {
+        "key": "tiktok_ads",
+        "value": 181820
+      }
+    ],
+    "total": 1312001,
+    "sql": "-- metric ad_spend v1\nSELECT\n  channel,\n  SUM(ad_spend) AS value\nFROM daily_channel_device\nWHERE date BETWEEN DATE '2026-09-25' AND DATE '2026-10-22'\n  AND channel IN ('google_ads', 'meta_ads', 'tiktok_ads')\nGROUP BY channel\nORDER BY value DESC",
+    "dialect": "duckdb",
+    "ran_at": "2026-10-23T19:39:19.063Z"
+  },
+  "cpa_channel_28d": {
+    "id": "q_6894322afc",
+    "metric": "cpa",
+    "metric_version": 1,
+    "group_by": "channel",
+    "from": "2026-09-25",
+    "to": "2026-10-22",
+    "filters": {},
+    "unit": "try",
+    "rows": [
+      {
+        "key": "tiktok_ads",
+        "value": 1398.6153846153845
+      },
+      {
+        "key": "meta_ads",
+        "value": 859.2625418060201
+      },
+      {
+        "key": "google_ads",
+        "value": 573.3413953488372
+      }
+    ],
+    "total": 727.6766500277315,
+    "sql": "-- metric cpa v1\nSELECT\n  channel,\n  SUM(ad_spend) AS numerator,\n  SUM(orders) AS denominator,\n  SUM(ad_spend) / NULLIF(SUM(orders), 0) AS value\nFROM daily_channel_device\nWHERE date BETWEEN DATE '2026-09-25' AND DATE '2026-10-22'\n  AND channel IN ('google_ads', 'meta_ads', 'tiktok_ads')\nGROUP BY channel\nORDER BY value DESC",
+    "dialect": "duckdb",
+    "ran_at": "2026-10-23T19:39:19.064Z"
+  },
+  "aov_week_13w": {
+    "id": "q_64abaaa322",
+    "metric": "aov",
+    "metric_version": 1,
+    "group_by": "week",
+    "from": "2026-07-27",
+    "to": "2026-10-18",
+    "filters": {},
+    "unit": "try",
+    "rows": [
+      {
+        "key": "2026-07-27",
+        "value": 1560.850353892821
+      },
+      {
+        "key": "2026-08-03",
+        "value": 1542.3928923988153
+      },
+      {
+        "key": "2026-08-10",
+        "value": 1545.6860581745236
+      },
+      {
+        "key": "2026-08-17",
+        "value": 1543.4962049335863
+      },
+      {
+        "key": "2026-08-24",
+        "value": 1548.8035714285713
+      },
+      {
+        "key": "2026-08-31",
+        "value": 1469.1482729570346
+      },
+      {
+        "key": "2026-09-07",
+        "value": 1514.3086312118571
+      },
+      {
+        "key": "2026-09-14",
+        "value": 1556.2902066486972
+      },
+      {
+        "key": "2026-09-21",
+        "value": 1534.6423487544484
+      },
+      {
+        "key": "2026-09-28",
+        "value": 1548.517903930131
+      },
+      {
+        "key": "2026-10-05",
+        "value": 1486.321194464676
+      },
+      {
+        "key": "2026-10-12",
+        "value": 1496.190652818991
+      }
+    ],
+    "total": 1526.428359757001,
+    "sql": "-- metric aov v1\nSELECT\n  CAST(DATE_TRUNC('week', date) AS DATE) AS week,\n  SUM(revenue) AS numerator,\n  SUM(orders) AS denominator,\n  SUM(revenue) / NULLIF(SUM(orders), 0) AS value\nFROM daily_channel_device\nWHERE date BETWEEN DATE '2026-07-27' AND DATE '2026-10-18'\nGROUP BY week\nORDER BY week",
+    "dialect": "duckdb",
+    "ran_at": "2026-10-23T19:39:19.065Z"
+  },
+  "orders_month": {
+    "id": "q_6090ebdb2c",
+    "metric": "orders",
+    "metric_version": 3,
+    "group_by": "month",
+    "from": "2026-07-25",
+    "to": "2026-10-22",
+    "filters": {},
+    "unit": "count",
+    "rows": [
+      {
+        "key": "2026-07-01",
+        "value": 978
+      },
+      {
+        "key": "2026-08-01",
+        "value": 4517
+      },
+      {
+        "key": "2026-09-01",
+        "value": 4894
+      },
+      {
+        "key": "2026-10-01",
+        "value": 4051
+      }
+    ],
+    "total": 14440,
+    "sql": "-- metric orders v3\nSELECT\n  CAST(DATE_TRUNC('month', date) AS DATE) AS month,\n  SUM(orders) AS value\nFROM daily_channel_device\nWHERE date BETWEEN DATE '2026-07-25' AND DATE '2026-10-22'\nGROUP BY month\nORDER BY month",
+    "dialect": "duckdb",
+    "ran_at": "2026-10-23T19:39:19.066Z"
+  }
+}

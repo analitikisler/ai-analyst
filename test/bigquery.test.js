@@ -1,4 +1,5 @@
 // BigQuery cannot run here, so this checks the SQL target, the job options and the dry-run cap with a fake client.
+import "./setup.js";
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { normalizeRow, openBigQuery, queryOptions, tableName } from "../src/warehouse/bigquery.js";
@@ -6,13 +7,13 @@ import { loadConfig } from "../src/config.js";
 
 const cfg = { project: "ornek-moda", dataset: "marts", location: "EU", maxBytes: 2 * 1024 ** 3 };
 
-function fakeClient({ bytes = 1000, rows = [] } = {}) {
+function fakeClient({ bytes = 1000, rows = [], refs = null } = {}) {
   const calls = [];
   return {
     calls,
     async createQueryJob(opts) {
       calls.push(["dry", opts]);
-      return [{ metadata: { statistics: { totalBytesProcessed: String(bytes) } } }];
+      return [{ metadata: { statistics: { totalBytesProcessed: String(bytes), ...(refs ? { query: { statementType: "SELECT", referencedTables: refs } } : {}) } } }];
     },
     async query(opts) {
       calls.push(["run", opts]);
@@ -70,4 +71,29 @@ test("config: env first, then the config file, with the CONTRACT defaults", () =
   const e = loadConfig({ env: { AI_ANALYST_WAREHOUSE: "bigquery", BIGQUERY_PROJECT: "p-12345", AI_ANALYST_MODEL: "claude-sonnet-5-5", PORT: "9000" }, cwd: "/nonexistent" });
   assert.deepEqual([e.warehouse, e.bigquery.project, e.model, e.port], ["bigquery", "p-12345", "claude-sonnet-5-5", 9000]);
   assert.throws(() => loadConfig({ env: { AI_ANALYST_WAREHOUSE: "snowflake" }, cwd: "/nonexistent" }), /duckdb or bigquery/);
+});
+
+test("config: the help email is on by default, can be redirected or turned off; Cloud needs env only", () => {
+  assert.deepEqual(loadConfig({ env: {}, cwd: "/nonexistent" }).help, { email: "hello@analitikisler.com" });
+  assert.deepEqual(loadConfig({ env: { AI_ANALYST_HELP_EMAIL: "data@shop.test" }, cwd: "/nonexistent" }).help, { email: "data@shop.test" });
+  assert.equal(loadConfig({ env: { AI_ANALYST_HELP: "off" }, cwd: "/nonexistent" }).help, null);
+  const c = loadConfig({ env: { AI_ANALYST_CLOUD_URL: "https://cloud.example.test/v1", AI_ANALYST_CLOUD_TOKEN: "t" }, cwd: "/nonexistent" });
+  assert.deepEqual(c.cloud, { url: "https://cloud.example.test/v1", token: "t" });
+});
+
+test("exploratory SQL on BigQuery: dry run first, then the run with the bytes cap, standard SQL and a job timeout", async () => {
+  const client = fakeClient({ bytes: 4096, rows: [{ channel: "meta_ads", revenue: { toString: () => "1250.5" } }], refs: [{ projectId: "ornek-moda", datasetId: "marts", tableId: "daily_channel_device" }] });
+  const wh = await openBigQuery({ ...cfg, jobTimeoutMs: 60000 }, { client });
+  const out = await wh.explore("SELECT * FROM (SELECT channel, SUM(revenue) AS revenue FROM `ornek-moda.marts.daily_channel_device` GROUP BY channel) AS q LIMIT 1000", { timeoutMs: 20000 });
+  assert.deepEqual(client.calls.map(([k]) => k), ["dry", "run"]);
+  assert.deepEqual([client.calls[1][1].maximumBytesBilled, client.calls[1][1].useLegacySql, client.calls[1][1].jobTimeoutMs], ["2147483648", false, 20000]);
+  assert.deepEqual(out, { rows: [{ channel: "meta_ads", revenue: 1250.5 }], columns: ["channel", "revenue"], bytes: 4096 });
+  const over = await openBigQuery(cfg, { client: fakeClient({ bytes: 3 * 1024 ** 3, refs: [{ projectId: "ornek-moda", datasetId: "marts", tableId: "daily_channel_device" }] }) });
+  await assert.rejects(over.explore("SELECT 1"), (e) => e.code === "bytes_cap");
+});
+
+test("config: a data project and a separate job project; the file can lower the cap, not raise it", () => {
+  const c = loadConfig({ env: { BIGQUERY_PROJECT: "ornek-data", BIGQUERY_JOB_PROJECT: "ornek-jobs", BIGQUERY_DATASET: "ai_analyst" }, cwd: "/nonexistent" });
+  assert.deepEqual([c.bigquery.project, c.bigquery.jobProject, c.bigquery.ceiling], ["ornek-data", "ornek-jobs", 2 * 1024 ** 3]);
+  assert.equal(loadConfig({ env: { BIGQUERY_PROJECT: "ornek-data" }, cwd: "/nonexistent" }).bigquery.jobProject, "ornek-data", "the job project defaults to the data project");
 });

@@ -1,0 +1,212 @@
+[
+  {
+    "lang": "en",
+    "question": "Ad spend by channel in the last 28 days",
+    "file": "en/ad-spend-by-channel-in-the-last-28-days.json",
+    "turn": 0,
+    "answered": true
+  },
+  {
+    "lang": "en",
+    "question": "Why is this lower than last week?",
+    "file": "en/context-dashboard-tile.json",
+    "turn": 0,
+    "answered": false
+  },
+  {
+    "lang": "en",
+    "question": "Conversion rate by device in the last 28 days",
+    "file": "en/conversion-rate-by-device-in-the-last-28-days.json",
+    "turn": 0,
+    "answered": true
+  },
+  {
+    "lang": "en",
+    "question": "Do GA4 purchases match orders in the last 14 days?",
+    "file": "en/do-ga4-purchases-match-orders-in-the-last-14-days.json",
+    "turn": 0,
+    "answered": true
+  },
+  {
+    "lang": "en",
+    "question": "Do Google Ads conversions match orders in the last 14 days?",
+    "file": "en/do-google-ads-conversions-match-orders-in-the-last-14-days.json",
+    "turn": 0,
+    "answered": true
+  },
+  {
+    "lang": "en",
+    "question": "Do Meta conversions match orders this month?",
+    "file": "en/do-meta-conversions-match-orders-this-month.json",
+    "turn": 0,
+    "answered": true
+  },
+  {
+    "lang": "en",
+    "question": "Do GA4 purchases match orders in the last 14 days?",
+    "file": "en/followup-gap-mobile.json",
+    "turn": 0,
+    "answered": true
+  },
+  {
+    "lang": "en",
+    "question": "Is the gap only on mobile?",
+    "file": "en/followup-gap-mobile.json",
+    "turn": 1,
+    "answered": false
+  },
+  {
+    "lang": "en",
+    "question": "How many orders did we get yesterday?",
+    "file": "en/how-many-orders-did-we-get-yesterday.json",
+    "turn": 0,
+    "answered": true
+  },
+  {
+    "lang": "en",
+    "question": "How much have we spent on ads this month?",
+    "file": "en/how-much-have-we-spent-on-ads-this-month.json",
+    "turn": 0,
+    "answered": false
+  },
+  {
+    "lang": "en",
+    "question": "Is mobile converting worse than desktop?",
+    "file": "en/is-mobile-converting-worse-than-desktop.json",
+    "turn": 0,
+    "answered": false
+  },
+  {
+    "lang": "en",
+    "question": "Revenue by week for the last 90 days",
+    "file": "en/revenue-by-week-for-the-last-90-days.json",
+    "turn": 0,
+    "answered": true
+  },
+  {
+    "lang": "en",
+    "question": "Revenue last week against the week before",
+    "file": "en/revenue-last-week-against-the-week-before.json",
+    "turn": 0,
+    "answered": true
+  },
+  {
+    "lang": "en",
+    "question": "What is the return rate?",
+    "file": "en/what-is-the-return-rate.json",
+    "turn": 0,
+    "answered": false
+  },
+  {
+    "lang": "en",
+    "question": "Which channel brings the most revenue?",
+    "file": "en/which-channel-brings-the-most-revenue.json",
+    "turn": 0,
+    "answered": true
+  },
+  {
+    "lang": "en",
+    "question": "Which channel has the highest ROAS in the last 28 days?",
+    "file": "en/which-channel-has-the-highest-roas-in-the-last-28-days.json",
+    "turn": 0,
+    "answered": true
+  },
+  {
+    "lang": "tr",
+    "question": "Bu ay Meta dönüşümleri siparişlerle tutuyor mu?",
+    "file": "tr/bu-ay-meta-donusumleri-siparislerle-tutuyor-mu.json",
+    "turn": 0,
+    "answered": true
+  },
+  {
+    "lang": "tr",
+    "question": "Bu ay reklama ne kadar harcandı?",
+    "file": "tr/bu-ay-reklama-ne-kadar-harcandi.json",
+    "turn": 0,
+    "answered": false
+  },
+  {
+    "lang": "tr",
+    "question": "Dün kaç sipariş geldi?",
+    "file": "tr/dun-kac-siparis-geldi.json",
+    "turn": 0,
+    "answered": true
+  },
+  {
+    "lang": "tr",
+    "question": "Son 14 günde GA4 satın almaları siparişlerle tutuyor mu?",
+    "file": "tr/followup-gap-mobile.json",
+    "turn": 0,
+    "answered": true
+  },
+  {
+    "lang": "tr",
+    "question": "Fark sadece mobilde mi?",
+    "file": "tr/followup-gap-mobile.json",
+    "turn": 1,
+    "answered": false
+  },
+  {
+    "lang": "tr",
+    "question": "Geçen hafta ciro bir önceki haftaya göre nasıl?",
+    "file": "tr/gecen-hafta-ciro-bir-onceki-haftaya-gore-nasil.json",
+    "turn": 0,
+    "answered": true
+  },
+  {
+    "lang": "tr",
+    "question": "Hangi kanal daha çok ciro getiriyor?",
+    "file": "tr/hangi-kanal-daha-cok-ciro-getiriyor.json",
+    "turn": 0,
+    "answered": true
+  },
+  {
+    "lang": "tr",
+    "question": "İade oranı ne?",
+    "file": "tr/iade-orani-ne.json",
+    "turn": 0,
+    "answered": false
+  },
+  {
+    "lang": "tr",
+    "question": "Mobilde dönüşüm oranı masaüstünden düşük mü?",
+    "file": "tr/mobilde-donusum-orani-masaustunden-dusuk-mu.json",
+    "turn": 0,
+    "answered": true
+  },
+  {
+    "lang": "tr",
+    "question": "Son 14 günde GA4 satın almaları siparişlerle tutuyor mu?",
+    "file": "tr/son-14-gunde-ga4-satin-almalari-siparislerle-tutuyor-mu.json",
+    "turn": 0,
+    "answered": true
+  },
+  {
+    "lang": "tr",
+    "question": "Son 14 günde Google Ads dönüşümleri siparişlerle tutuyor mu?",
+    "file": "tr/son-14-gunde-google-ads-donusumleri-siparislerle-tutuyor-mu.json",
+    "turn": 0,
+    "answered": true
+  },
+  {
+    "lang": "tr",
+    "question": "Son 28 günde en yüksek ROAS hangi kanalda?",
+    "file": "tr/son-28-gunde-en-yuksek-roas-hangi-kanalda.json",
+    "turn": 0,
+    "answered": true
+  },
+  {
+    "lang": "tr",
+    "question": "Son 28 günde kanallara göre reklam harcaması",
+    "file": "tr/son-28-gunde-kanallara-gore-reklam-harcamasi.json",
+    "turn": 0,
+    "answered": true
+  },
+  {
+    "lang": "tr",
+    "question": "Son 90 günün haftalık cirosu",
+    "file": "tr/son-90-gunun-haftalik-cirosu.json",
+    "turn": 0,
+    "answered": true
+  }
+]

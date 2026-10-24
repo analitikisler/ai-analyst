@@ -1,6 +1,6 @@
 id: ga4_vs_orders
-label: { en: "GA4 purchases against back-office orders", tr: "GA4 satın almaları ile arka ofis siparişleri" }
-expected: { metric: orders, label: { en: "Back-office orders", tr: "Arka ofis siparişi" } }
-measured: { metric: ga4_purchases, label: { en: "GA4 purchases", tr: "GA4 satın alma" } }
+label: { en: "GA4 purchases against back-office orders", tr: "GA4 satın almaları ve sipariş panelindeki siparişler" }
+expected: { metric: orders, label: { en: "Back-office orders", tr: "Sipariş paneli" } }
+measured: { metric: ga4_purchases, label: { en: "GA4 purchases", tr: "GA4" } }
 tolerance: 0.05
 breakdown: device

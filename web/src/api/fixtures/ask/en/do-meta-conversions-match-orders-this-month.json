@@ -1,0 +1,258 @@
+{
+  "question": "Do Meta conversions match orders this month?",
+  "lang": "en",
+  "conversation_id": "conv_8ad65d3e8b",
+  "turn_id": "turn_310d3462cc",
+  "events": [
+    {
+      "event": "turn",
+      "data": {
+        "turn_id": "turn_310d3462cc",
+        "conversation_id": "conv_8ad65d3e8b"
+      }
+    },
+    {
+      "event": "step",
+      "data": {
+        "tool": "run_query",
+        "summary": "orders · day · 2026-10-01..2026-10-22 · channel=meta_ads → 483",
+        "ok": true
+      }
+    },
+    {
+      "event": "step",
+      "data": {
+        "tool": "reconcile",
+        "summary": "meta_vs_orders · 2026-10-01..2026-10-22 → Δ +36.2% does not add up",
+        "ok": true
+      }
+    },
+    {
+      "event": "step",
+      "data": {
+        "tool": "publish_answer",
+        "summary": "ans_463b33fc58",
+        "ok": true
+      }
+    },
+    {
+      "event": "answer",
+      "data": {
+        "answer": {
+          "id": "ans_463b33fc58",
+          "turn_id": "turn_310d3462cc",
+          "question": "Do Meta conversions match orders this month?",
+          "sentence": "Orders from Meta Ads for 1–22 Oct 2026: 483. Meta conversions: +36.2% against the source, so the check does not add up.",
+          "title": "Orders · Meta Ads · 1–22 Oct 2026",
+          "followups": [
+            "Is the gap only on mobile?",
+            "Which channel has the highest ROAS in the last 28 days?",
+            "Do Meta conversions match our orders?"
+          ],
+          "query": {
+            "id": "q_4b87273c54",
+            "metric": "orders",
+            "metric_version": 3,
+            "group_by": "day",
+            "from": "2026-10-01",
+            "to": "2026-10-22",
+            "filters": {
+              "channel": "meta_ads"
+            },
+            "unit": "count",
+            "rows": [
+              {
+                "key": "2026-10-01",
+                "value": 18
+              },
+              {
+                "key": "2026-10-02",
+                "value": 21
+              },
+              {
+                "key": "2026-10-03",
+                "value": 20
+              },
+              {
+                "key": "2026-10-04",
+                "value": 20
+              },
+              {
+                "key": "2026-10-05",
+                "value": 16
+              },
+              {
+                "key": "2026-10-06",
+                "value": 14
+              },
+              {
+                "key": "2026-10-07",
+                "value": 20
+              },
+              {
+                "key": "2026-10-08",
+                "value": 18
+              },
+              {
+                "key": "2026-10-09",
+                "value": 20
+              },
+              {
+                "key": "2026-10-10",
+                "value": 43
+              },
+              {
+                "key": "2026-10-11",
+                "value": 40
+              },
+              {
+                "key": "2026-10-12",
+                "value": 34
+              },
+              {
+                "key": "2026-10-13",
+                "value": 30
+              },
+              {
+                "key": "2026-10-14",
+                "value": 16
+              },
+              {
+                "key": "2026-10-15",
+                "value": 20
+              },
+              {
+                "key": "2026-10-16",
+                "value": 18
+              },
+              {
+                "key": "2026-10-17",
+                "value": 21
+              },
+              {
+                "key": "2026-10-18",
+                "value": 21
+              },
+              {
+                "key": "2026-10-19",
+                "value": 19
+              },
+              {
+                "key": "2026-10-20",
+                "value": 19
+              },
+              {
+                "key": "2026-10-21",
+                "value": 17
+              },
+              {
+                "key": "2026-10-22",
+                "value": 18
+              }
+            ],
+            "total": 483,
+            "sql": "-- metric orders v3\nSELECT\n  date AS day,\n  SUM(orders) AS value\nFROM daily_channel_device\nWHERE date BETWEEN DATE '2026-10-01' AND DATE '2026-10-22'\n  AND channel = 'meta_ads'\nGROUP BY day\nORDER BY day",
+            "dialect": "duckdb",
+            "ran_at": "2026-10-23T19:39:19.077Z"
+          },
+          "check": {
+            "id": "c_55a95ba3",
+            "check": "meta_vs_orders",
+            "label": {
+              "en": "Meta conversions against back-office orders",
+              "tr": "Meta dönüşümleri ile arka ofis siparişleri"
+            },
+            "from": "2026-10-01",
+            "to": "2026-10-22",
+            "filters": {},
+            "unit": "count",
+            "expected": {
+              "metric": "orders",
+              "label": {
+                "en": "Back-office orders from Meta",
+                "tr": "Meta kaynaklı arka ofis siparişi"
+              },
+              "value": 483
+            },
+            "measured": {
+              "metric": "platform_conversions",
+              "label": {
+                "en": "Meta conversions",
+                "tr": "Meta dönüşümü"
+              },
+              "value": 658
+            },
+            "delta": 175,
+            "delta_pct": 0.36231884057971014,
+            "tolerance": 0.2,
+            "verdict": "does_not_add_up",
+            "breakdown_by": "device",
+            "breakdown": [
+              {
+                "key": "mobile",
+                "expected": 297,
+                "measured": 404,
+                "delta_pct": 0.3602693602693603,
+                "verdict": "does_not_add_up"
+              },
+              {
+                "key": "desktop",
+                "expected": 186,
+                "measured": 254,
+                "delta_pct": 0.3655913978494624,
+                "verdict": "does_not_add_up"
+              }
+            ],
+            "out_of_tolerance_since": "2026-07-25",
+            "findings": [
+              {
+                "id": "f_meta_view_through",
+                "source": "AI Tag Debugger",
+                "text": {
+                  "en": "Meta counts view-through purchases (1-day view) that the back office attributes to other channels.",
+                  "tr": "Meta, arka ofisin başka kanallara atadığı görüntüleme sonrası satın almaları da sayıyor (1 günlük görüntüleme)."
+                },
+                "since": null
+              }
+            ],
+            "sql": {
+              "expected": "-- metric orders v3\nSELECT\n  date AS day,\n  device,\n  SUM(orders) AS value\nFROM daily_channel_device\nWHERE date BETWEEN DATE '2026-07-25' AND DATE '2026-10-22'\n  AND channel = 'meta_ads'\nGROUP BY day, device\nORDER BY day, device",
+              "measured": "-- metric platform_conversions v1\nSELECT\n  date AS day,\n  device,\n  SUM(platform_conversions) AS value\nFROM daily_channel_device\nWHERE date BETWEEN DATE '2026-07-25' AND DATE '2026-10-22'\n  AND channel = 'meta_ads'\nGROUP BY day, device\nORDER BY day, device"
+            },
+            "dialect": "duckdb",
+            "ran_at": "2026-10-23T19:39:19.079Z"
+          },
+          "metric": {
+            "id": "orders",
+            "label": {
+              "en": "Orders",
+              "tr": "Sipariş"
+            },
+            "version": 3,
+            "description": {
+              "en": "Orders placed in the back office, by order date in Europe/Istanbul time. Test orders are excluded; cancelled orders are kept.",
+              "tr": "Arka ofiste oluşan siparişler, İstanbul saatine göre sipariş tarihinde. Test siparişleri hariç, iptal edilen siparişler dahildir."
+            },
+            "source": "backoffice"
+          },
+          "validation": {
+            "ok": true,
+            "unmatched": []
+          },
+          "created_by": "planner",
+          "created_at": "2026-10-23T19:39:19.079Z"
+        }
+      }
+    },
+    {
+      "event": "text",
+      "data": {
+        "text": "Answered by the built-in planner, without a model. Set ANTHROPIC_API_KEY to ask anything."
+      }
+    },
+    {
+      "event": "done",
+      "data": {}
+    }
+  ]
+}

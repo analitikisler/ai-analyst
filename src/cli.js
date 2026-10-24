@@ -1,7 +1,8 @@
 #!/usr/bin/env node
-// ai-analyst: serve [--port 8787] · seed-demo · mcp · ask "<question>" [--lang tr] · check [--days 14]
+// ai-analyst: serve · seed-demo · mcp · ask "<question>" · check
 import { parseArgs } from "node:util";
 import { callAction } from "./actions/index.js";
+import { runAllChecks } from "./actions/data.js";
 import { runTurn } from "./agent/agent.js";
 import { loadConfig } from "./config.js";
 import { fmtPct } from "./format.js";
@@ -12,13 +13,16 @@ import { openWorkspace, resetDemo } from "./workspace.js";
 const HELP = `ai-analyst · agent-native analytics by Analitik İşler
 
 Usage:
-  ai-analyst serve [--port 8787] [--host 127.0.0.1]   web app and HTTP API (seeds the demo on first run)
-  ai-analyst seed-demo                                rebuild the demo warehouse and start a fresh workspace
-  ai-analyst mcp                                      MCP server on stdio, for chat apps
-  ai-analyst ask "<question>" [--lang en|tr]           answer one question in the terminal
-  ai-analyst check [--days 14]                        run every check; exits 1 if one does not add up
+  ai-analyst serve [--port 8787] [--host 127.0.0.1] [--data-dir ./data] [--no-cloud]   web app and HTTP API (seeds the demo on first run)
+  ai-analyst seed-demo [--data-dir ./data]                               rebuild the demo warehouse and start a fresh workspace
+  ai-analyst mcp [--data-dir ./data]                                     MCP server on stdio, for chat apps
+  ai-analyst ask "<question>" [--lang en|tr]                             answer one question in the terminal
+  ai-analyst check [--days 14]                                           run every tracking check; exits 1 if one does not add up
 
-Configuration: environment, then ai-analyst.config.json. See docs/CONTRACT.md.`;
+Configuration: environment, then ai-analyst.config.json, then <data_dir>/secrets.json. See docs/CONTRACT.md.
+A host other than 127.0.0.1 needs AI_ANALYST_TOKEN. --no-cloud (or AI_ANALYST_NO_CLOUD=1) refuses every call to BigQuery and model providers.`;
+
+const HOUR = 60 * 60 * 1000;
 
 async function main(argv) {
   const { values, positionals } = parseArgs({
@@ -27,6 +31,8 @@ async function main(argv) {
     options: {
       port: { type: "string" },
       host: { type: "string" },
+      "data-dir": { type: "string" },
+      "no-cloud": { type: "boolean" },
       lang: { type: "string", default: "en" },
       days: { type: "string", default: "14" },
       help: { type: "boolean", short: "h" },
@@ -37,17 +43,19 @@ async function main(argv) {
     console.log(HELP);
     return 0;
   }
-  const config = loadConfig();
-  if (values.port) config.port = Number(values.port);
-  if (values.host) config.host = values.host;
-  const lang = values.lang === "tr" ? "tr" : "en";
+  // --no-cloud: no calls to outside services (the smoke server); AI_ANALYST_NO_CLOUD=0 in the environment overrides it.
+  if (values["no-cloud"] && process.env.AI_ANALYST_NO_CLOUD !== "0") process.env.AI_ANALYST_NO_CLOUD = "1";
+  const env = { ...process.env, ...(values["data-dir"] ? { AI_ANALYST_DATA_DIR: values["data-dir"] } : {}), ...(values.port ? { PORT: values.port } : {}), ...(values.host ? { HOST: values.host } : {}) };
+  const config = loadConfig({ env });
+  const lang = values.lang === "tr" ? "tr" : config.language;
+  const person = (ws) => ({ actor: "person", lang, app: ws, turn: null });
 
   if (command === "seed-demo") {
     const rows = await resetDemo(config);
     const ws = await openWorkspace({ ...config, warehouse: "duckdb" }, { seed: true });
     const run = ws.store.latestCheckRun();
     console.log(`Demo warehouse: ${rows} rows in ${config.dataDir}/demo.duckdb`);
-    console.log(`Workspace seeded: ${run.results.length} checks run, ${ws.store.listPins().length} pins, 1 answered question.`);
+    console.log(`Workspace seeded: ${run.results.length} tracking checks run, the example dashboard and the demo events.`);
     ws.close();
     return 0;
   }
@@ -58,9 +66,21 @@ async function main(argv) {
     if (ws.seeded.workspace) console.log("Seeded the demo workspace.");
     const server = await startServer(ws);
     const { port } = server.address();
-    console.log(`ai analyst · ${ws.config.workspace} · ${ws.warehouse.dialect} · agent: ${config.anthropicApiKey ? config.model : "built-in planner"}`);
-    console.log(`Open http://${config.host === "0.0.0.0" ? "127.0.0.1" : config.host}:${port}/`);
+    const mode = ws.config.provider.value === "planner" ? "built-in planner" : `${ws.config.provider.value} · ${ws.config.model}`;
+    if (process.env.AI_ANALYST_NO_CLOUD === "1") console.log("No calls to outside services (AI_ANALYST_NO_CLOUD=1): BigQuery and model providers are refused.");
+    console.log(`ai analyst · ${ws.config.workspace} · ${ws.warehouse.dialect} · answers: ${mode}`);
+    const shown = ["0.0.0.0", "::"].includes(config.host) ? "127.0.0.1" : config.host;
+    console.log(`Open http://${shown.includes(":") ? `[${shown}]` : shown}:${port}/${config.token ? "?token=<AI_ANALYST_TOKEN>" : ""}`);
+    // Watched checks run again at start and every hour while the server runs.
+    const watched = async () => {
+      if (!ws.store.list("watches").length) return;
+      await runAllChecks({ store: ws.store, warehouse: ws.warehouse, pack: ws.pack }, 14, "system").catch((err) => console.error("[ai-analyst] watched checks:", err.message));
+    };
+    if (!ws.seeded.workspace) await watched();
+    const timer = setInterval(watched, HOUR);
+    timer.unref();
     const stop = () => {
+      clearInterval(timer);
       server.close();
       ws.close();
       process.exit(0);
@@ -72,27 +92,26 @@ async function main(argv) {
 
   if (command === "mcp") {
     const ws = await openWorkspace(config, { seed: true });
-    await startMcp({ ...ws, lang });
+    await startMcp(ws, { lang });
     return null;
   }
 
   if (command === "ask") {
     const question = rest.join(" ").trim();
-    if (!question) throw new Error('Give a question: ai-analyst ask "Do GA4 purchases match our orders in the last 14 days?"');
+    if (!question) throw new Error('Give a question: ai-analyst ask "Do GA4 purchases match orders in the last 14 days?"');
     const ws = await openWorkspace(config, { seed: true });
     const turn = await runTurn({
       question,
       lang,
-      store: ws.store,
-      warehouse: ws.warehouse,
-      pack: ws.pack,
-      config,
+      app: ws,
+      conversationId: "new",
       emit: (type, data) => {
-        if (type === "step") console.error(`  ${data.ok ? "·" : "×"} ${data.tool} ${data.summary}`);
+        if (type === "step") console.error(`  ${data.ok ? "·" : "×"} ${data.tool} · ${data.summary[lang]}`);
       },
     });
-    for (const a of turn.answers) console.log(`\n${a.sentence}\n\n${a.query.sql}\n`);
-    if (turn.text) console.log(turn.text);
+    for (const a of turn.answers) console.log(`\n${a.sentence[lang]}\n\n${a.query.sql}\n`);
+    if (turn.refusal) console.log(`${turn.refusal.heading[lang]}\n${turn.refusal.body[lang]}`);
+    if (turn.text) console.log(turn.text[lang]);
     if (turn.error) console.error(turn.error.message);
     ws.close();
     return turn.error ? 1 : 0;
@@ -100,9 +119,9 @@ async function main(argv) {
 
   if (command === "check") {
     const ws = await openWorkspace(config, { seed: true });
-    const run = await callAction("run_all_checks", { days: Number(values.days) }, { actor: "person", lang, store: ws.store, warehouse: ws.warehouse, pack: ws.pack, config, turn: null });
+    const run = await callAction("run_all_checks", { days: Number(values.days) }, person(ws));
     const words = { adds_up: "adds up", does_not_add_up: "does not add up", insufficient_data: "not enough data" };
-    console.log(`Checks, ${run.from} to ${run.to}:`);
+    console.log(`Tracking checks, ${run.from} to ${run.to}:`);
     for (const r of run.results) {
       const delta = r.delta_pct == null ? "–" : fmtPct(r.delta_pct, 1, true);
       console.log(`  ${r.verdict === "adds_up" ? "✓" : "×"} ${r.check.padEnd(22)} Δ ${delta.padStart(7)}  ${words[r.verdict]}${r.out_of_tolerance_since && r.verdict !== "adds_up" ? ` since ${r.out_of_tolerance_since}` : ""}`);

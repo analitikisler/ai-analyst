@@ -1,0 +1,206 @@
+{
+  "question": "Son 90 günün haftalık cirosu",
+  "lang": "tr",
+  "conversation_id": "conv_147db72479",
+  "turn_id": "turn_75a8434ec6",
+  "events": [
+    {
+      "event": "turn",
+      "data": {
+        "turn_id": "turn_75a8434ec6",
+        "conversation_id": "conv_147db72479"
+      }
+    },
+    {
+      "event": "step",
+      "data": {
+        "tool": "run_query",
+        "summary": "revenue · week · 2026-07-27..2026-10-18 → 20,60 mn TL",
+        "ok": true
+      }
+    },
+    {
+      "event": "step",
+      "data": {
+        "tool": "reconcile",
+        "summary": "ga4_rev_vs_revenue · 2026-07-27..2026-10-18 → Δ −%3,7 tutuyor",
+        "ok": true
+      }
+    },
+    {
+      "event": "step",
+      "data": {
+        "tool": "publish_answer",
+        "summary": "ans_804954193e",
+        "ok": true
+      }
+    },
+    {
+      "event": "answer",
+      "data": {
+        "answer": {
+          "id": "ans_804954193e",
+          "turn_id": "turn_75a8434ec6",
+          "question": "Son 90 günün haftalık cirosu",
+          "sentence": "27 Tem–18 Eki 2026 döneminde Ciro: 20,60 mn TL. GA4 geliri kaynaktan −%3,7 farklı; kontrol tutuyor.",
+          "title": "Ciro · 27 Tem–18 Eki 2026",
+          "followups": [
+            "Fark yalnızca mobilde mi?",
+            "Son 28 günde en yüksek ROAS hangi kanalda?",
+            "Meta dönüşümleri siparişlerle tutuyor mu?"
+          ],
+          "query": {
+            "id": "q_1f220dd9a6",
+            "metric": "revenue",
+            "metric_version": 2,
+            "group_by": "week",
+            "from": "2026-07-27",
+            "to": "2026-10-18",
+            "filters": {},
+            "unit": "try",
+            "rows": [
+              {
+                "key": "2026-07-27",
+                "value": 1543681
+              },
+              {
+                "key": "2026-08-03",
+                "value": 1562444
+              },
+              {
+                "key": "2026-08-10",
+                "value": 1541049
+              },
+              {
+                "key": "2026-08-17",
+                "value": 1626845
+              },
+              {
+                "key": "2026-08-24",
+                "value": 1561194
+              },
+              {
+                "key": "2026-08-31",
+                "value": 1743879
+              },
+              {
+                "key": "2026-09-07",
+                "value": 1736912
+              },
+              {
+                "key": "2026-09-14",
+                "value": 1732151
+              },
+              {
+                "key": "2026-09-21",
+                "value": 1724938
+              },
+              {
+                "key": "2026-09-28",
+                "value": 1773053
+              },
+              {
+                "key": "2026-10-05",
+                "value": 2040719
+              },
+              {
+                "key": "2026-10-12",
+                "value": 2016865
+              }
+            ],
+            "total": 20603730,
+            "sql": "-- metric revenue v2\nSELECT\n  CAST(DATE_TRUNC('week', date) AS DATE) AS week,\n  SUM(revenue) AS value\nFROM daily_channel_device\nWHERE date BETWEEN DATE '2026-07-27' AND DATE '2026-10-18'\nGROUP BY week\nORDER BY week",
+            "dialect": "duckdb",
+            "ran_at": "2026-10-23T19:39:19.126Z"
+          },
+          "check": {
+            "id": "c_f3f359e6",
+            "check": "ga4_rev_vs_revenue",
+            "label": {
+              "en": "GA4 revenue against back-office revenue",
+              "tr": "GA4 geliri ile arka ofis cirosu"
+            },
+            "from": "2026-07-27",
+            "to": "2026-10-18",
+            "filters": {},
+            "unit": "try",
+            "expected": {
+              "metric": "revenue",
+              "label": {
+                "en": "Back-office revenue",
+                "tr": "Arka ofis cirosu"
+              },
+              "value": 20603730
+            },
+            "measured": {
+              "metric": "ga4_revenue",
+              "label": {
+                "en": "GA4 revenue",
+                "tr": "GA4 geliri"
+              },
+              "value": 19836685
+            },
+            "delta": -767045,
+            "delta_pct": -0.0372284532946219,
+            "tolerance": 0.05,
+            "verdict": "adds_up",
+            "breakdown_by": "device",
+            "breakdown": [
+              {
+                "key": "mobile",
+                "expected": 12073423,
+                "measured": 11502825,
+                "delta_pct": -0.047260665016043917,
+                "verdict": "adds_up"
+              },
+              {
+                "key": "desktop",
+                "expected": 8530307,
+                "measured": 8333860,
+                "delta_pct": -0.0230293001178035,
+                "verdict": "adds_up"
+              }
+            ],
+            "out_of_tolerance_since": "2026-10-09",
+            "findings": [],
+            "sql": {
+              "expected": "-- metric revenue v2\nSELECT\n  date AS day,\n  device,\n  SUM(revenue) AS value\nFROM daily_channel_device\nWHERE date BETWEEN DATE '2026-07-25' AND DATE '2026-10-18'\nGROUP BY day, device\nORDER BY day, device",
+              "measured": "-- metric ga4_revenue v1\nSELECT\n  date AS day,\n  device,\n  SUM(ga4_revenue) AS value\nFROM daily_channel_device\nWHERE date BETWEEN DATE '2026-07-25' AND DATE '2026-10-18'\nGROUP BY day, device\nORDER BY day, device"
+            },
+            "dialect": "duckdb",
+            "ran_at": "2026-10-23T19:39:19.128Z"
+          },
+          "metric": {
+            "id": "revenue",
+            "label": {
+              "en": "Revenue",
+              "tr": "Ciro"
+            },
+            "version": 2,
+            "description": {
+              "en": "Order value in TRY including VAT, excluding shipping, from the back office. Refunds are not subtracted.",
+              "tr": "Arka ofisten, KDV dahil ve kargo hariç TRY sipariş tutarı. İadeler düşülmez."
+            },
+            "source": "backoffice"
+          },
+          "validation": {
+            "ok": true,
+            "unmatched": []
+          },
+          "created_by": "planner",
+          "created_at": "2026-10-23T19:39:19.129Z"
+        }
+      }
+    },
+    {
+      "event": "text",
+      "data": {
+        "text": "Yanıtı yerleşik planlayıcı verdi; model kullanılmadı. Her soruyu sorabilmek için ANTHROPIC_API_KEY tanımlanmalı."
+      }
+    },
+    {
+      "event": "done",
+      "data": {}
+    }
+  ]
+}

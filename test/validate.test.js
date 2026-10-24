@@ -1,4 +1,5 @@
 // Number grounding: every number in a sentence must be one the query or the check returned.
+import "./setup.js";
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { extractNumbers, groundTruth, validateSentence } from "../src/agent/validate.js";

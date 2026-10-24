@@ -1,95 +1,106 @@
-// The built-in planner: fixed plans, the same tools, grounded sentences.
+// The built-in planner: how it reads questions, the periods it picks, refusals, follow-ups that never repeat a
+// question, and grounded sentences in both languages. Full sentence parity with the prototype is in parity.test.js.
+import "./setup.js";
 import { test, before, after } from "node:test";
 import assert from "node:assert/strict";
 import { runTurn } from "../src/agent/agent.js";
-import { periodFrom, plan, plannerSentence, SUGGEST } from "../src/agent/planner.js";
-import { seedFindings } from "../src/demo/seed.js";
+import { periodOf, route } from "../src/agent/planner.js";
 import { demoWorkspace } from "./helpers.js";
 
 let ws;
-before(async () => {
-  ws = await demoWorkspace({ seed: false });
-  seedFindings(ws.store);
-});
+before(async () => (ws = await demoWorkspace({ seed: true })));
 after(() => ws.close());
 
-const LAST = "2026-10-22";
-const ask = (question, lang = "en", events = []) =>
-  runTurn({ question, lang, store: ws.store, warehouse: ws.warehouse, pack: ws.pack, config: ws.config, emit: (type, data) => events.push([type, data]) });
-
-test("periods: N days, this month, last month, week, quarter, default 14 days", () => {
-  assert.deepEqual(periodFrom("last 14 days", LAST), { from: "2026-10-09", to: LAST });
-  assert.deepEqual(periodFrom("son 28 günde", LAST), { from: "2026-09-25", to: LAST });
-  assert.deepEqual(periodFrom("this month", LAST), { from: "2026-10-01", to: LAST });
-  assert.deepEqual(periodFrom("geçen ay", LAST), { from: "2026-09-01", to: "2026-09-30" });
-  assert.deepEqual(periodFrom("this week", LAST), { from: "2026-10-16", to: LAST });
-  assert.deepEqual(periodFrom("the quarter", LAST), { from: "2026-07-25", to: LAST });
-  assert.deepEqual(periodFrom("anything", LAST), { from: "2026-10-09", to: LAST });
-});
-
-test("plans for the suggested questions, in both languages", () => {
-  assert.deepEqual(plan(SUGGEST.en[0], LAST), { metric: "orders", group_by: "day", check: "ga4_vs_orders", from: "2026-10-09", to: LAST, alert: false, pin: false });
-  assert.deepEqual(plan(SUGGEST.tr[1], LAST), { metric: "roas", group_by: "channel", from: "2026-09-25", to: LAST, alert: false, pin: false });
-  assert.equal(plan(SUGGEST.en[2], LAST).check, "meta_vs_orders");
-  assert.equal(plan(SUGGEST.tr[2], LAST).channel, "meta_ads");
-  assert.deepEqual(plan(SUGGEST.en[3], LAST), { metric: "revenue", group_by: "week", check: "ga4_rev_vs_revenue", from: "2026-07-25", to: LAST, alert: false, pin: false });
-  assert.equal(plan("Orders by day for the last 90 days", LAST).group_by, "week", "long daily series become weekly");
-  assert.equal(plan("What is the weather?", LAST), null);
-  assert.equal(plan("Make an alert for the GA4 check and pin it", LAST).alert, true);
-});
-
-test("the seeded question: same tools, the prototype's numbers, a grounded sentence", async () => {
+const DATA = { from: "2026-07-25", to: "2026-10-22" };
+const pc = (extra = {}) => ({ pack: ws.pack, data: DATA, demo: true, events: [], context: null, lastAnswer: null, lastCheck: null, ...extra });
+const ask = async (question, lang = "en", conversationId = "new") => {
   const events = [];
-  const turn = await ask(SUGGEST.en[0], "en", events);
+  const turn = await runTurn({ question, lang, conversationId, app: ws, emit: (type, data) => events.push([type, data]) });
+  return { turn, events };
+};
+
+test("periods: last N days, yesterday, last week as the last complete Monday to Sunday week, this and last month", () => {
+  const p = (s, d = 14) => {
+    const { from, to } = periodOf(s, d, DATA);
+    return [from, to];
+  };
+  assert.deepEqual(p("in the last 14 days"), ["2026-10-09", "2026-10-22"]);
+  assert.deepEqual(p("son 28 günde"), ["2026-09-25", "2026-10-22"]);
+  assert.deepEqual(p("how many orders yesterday"), ["2026-10-22", "2026-10-22"]);
+  assert.deepEqual(p("dün kaç sipariş"), ["2026-10-22", "2026-10-22"]);
+  assert.deepEqual(p("revenue last week"), ["2026-10-12", "2026-10-18"], "22 Oct is a Thursday, so the last complete week is 12–18 Oct");
+  assert.deepEqual(p("geçen hafta ciro"), ["2026-10-12", "2026-10-18"]);
+  assert.deepEqual(p("this month"), ["2026-10-01", "2026-10-22"]);
+  assert.deepEqual(p("geçen ay"), ["2026-09-01", "2026-09-30"]);
+  assert.deepEqual(p("for 9–22 oct"), ["2026-10-09", "2026-10-22"]);
+  assert.deepEqual(p("anything", 7), ["2026-10-16", "2026-10-22"]);
+  assert.deepEqual(p("in the last 400 days"), ["2026-07-25", "2026-10-22"], "clamped to the data");
+});
+
+test("routes: checks, the device follow-up, why, metrics, proposals and refusals", () => {
+  assert.deepEqual(route("Do GA4 purchases match orders in the last 14 days?", pc()).check, "ga4_vs_orders");
+  assert.equal(route("Does GA4 revenue match?", pc()).check, "ga4_rev_vs_revenue");
+  assert.equal(route("Bu ay Meta dönüşümleri siparişlerle tutuyor mu?", pc()).check, "meta_vs_orders");
+  const last = { check: "meta_vs_orders", from: "2026-10-01", to: "2026-10-22" };
+  assert.deepEqual(route("Is the gap only on mobile?", pc({ lastCheck: last })), { kind: "check_split", check: "meta_vs_orders", period: { from: "2026-10-01", to: "2026-10-22" } });
+  assert.equal(route("Why does it not match?", pc({ lastCheck: last })).kind, "why");
+  assert.deepEqual(route("ROAS by channel in the last 28 days", pc()).group, "channel");
+  assert.equal(route("Son 90 günün haftalık cirosu", pc()).group, "week");
+  assert.equal(route("Watch the Meta tracking check", pc()).kind, "propose_watch");
+  assert.equal(route("Pin this to the dashboard", pc()).kind, "refusal", "nothing to pin yet");
+  assert.equal(route("Pin this to the dashboard", pc({ lastAnswer: { id: "a" } })).kind, "propose_pin");
+  assert.equal(route("Add the v4.12 release as an event", pc()).kind, "propose_event");
+  assert.equal(route("Add the v4.12 release as an event", pc({ events: [{ type: "release", date: "2026-10-09" }] })).kind, "refusal", "it is there already");
+  assert.equal(route("Add the v4.12 release as an event", pc({ demo: false })).kind, "refusal", "the demo's release is not proposed on own data");
+  assert.equal(route("Which products sell most?", pc()).refusal.code, "not_in_data");
+  assert.equal(route("İade oranı ne?", pc()).refusal.missing, "return");
+  const weekday = route("Which weekday brings the most revenue?", pc()).refusal;
+  assert.equal(weekday.code, "planner_unknown");
+  assert.match(weekday.body.en, /With a model added, an exploratory answer is possible/);
+  assert.equal(route("Turn this into a metric", pc({ demo: false })).refusal.body.en.startsWith("Metrics live in metrics/*.yaml next to the BigQuery connection"), true);
+  // On a metric page the question is about that metric unless it names another.
+  assert.equal(route("What about last week?", pc({ context: { view: "metric", kind: "metric", id: "aov" } })).metric, "aov");
+});
+
+test("the seeded question: steps, an answer with a check, the planner's note, a grounded sentence in both languages", async () => {
+  const { turn, events } = await ask("Do GA4 purchases match orders in the last 14 days?");
   assert.deepEqual(events.map(([t]) => t), ["turn", "step", "step", "step", "answer", "text", "done"]);
-  assert.deepEqual(turn.steps.map((s) => [s.tool, s.ok]), [["run_query", true], ["reconcile", true], ["publish_answer", true]]);
+  assert.deepEqual(events[0][1].question_text, { en: "Do GA4 purchases match orders in the last 14 days?", tr: "Son 14 günde GA4 satın almaları siparişlerle tutuyor mu?" });
   const [a] = turn.answers;
-  assert.equal(a.created_by, "planner");
-  assert.equal(a.sentence, "Orders for 9–22 Oct 2026: 2,753. GA4 purchases: −10.1% against the source, so the check does not add up. The gap is on mobile (−15.6%) and starts on 9 Oct.");
+  assert.deepEqual([a.kind, a.created_by, a.model_label.en, a.check.verdict], ["check", "planner", "Built-in planner", "does_not_add_up"]);
+  assert.match(a.sentence.tr, /^Tutmuyor\. 9–22 Eki 2026 döneminde sipariş panelinde 2\.753 sipariş, GA4’te 2\.474 satın alma var/);
   assert.deepEqual(a.validation, { ok: true, unmatched: [] });
-  assert.deepEqual(a.check.findings.map((f) => [f.id, f.source, f.since]), [["f_ga4_mobile_safari", "AI Tag Debugger", "2026-10-09"]]);
-  assert.deepEqual(a.followups, ["Is the gap only on mobile?", "Which channel has the highest ROAS in the last 28 days?", "Do Meta conversions match our orders?"]);
-  assert.equal(turn.created_by, "planner");
-  assert.match(turn.text, /built-in planner/);
+  assert.deepEqual(turn.text, { en: "Answered by the built-in planner, without a model.", tr: "Cevabı yerleşik planlayıcı verdi; model kullanılmadı." });
+  assert.equal(turn.status, "done");
+  assert.equal(turn.created_by, "person");
 });
 
-test("Turkish: numbers and dates in Turkish formats, still grounded", async () => {
-  const turn = await ask(SUGGEST.tr[0], "tr");
-  const [a] = turn.answers;
-  assert.equal(a.sentence, "9–22 Eki 2026 döneminde Sipariş: 2.753. GA4 satın alma kaynaktan −%10,1 farklı; kontrol tutmuyor. Fark mobil tarafında (−%15,6) ve 9 Eki tarihinden beri var.");
-  assert.equal(a.validation.ok, true);
-  assert.equal(a.title, "Sipariş · 9–22 Eki 2026");
-});
-
-test("every suggested question gets a grounded answer", async () => {
-  for (const lang of ["en", "tr"]) {
-    for (const q of SUGGEST[lang]) {
-      const turn = await ask(q, lang);
-      assert.equal(turn.error, null, q);
-      assert.equal(turn.answers.length, 1, q);
-      assert.deepEqual(turn.answers[0].validation, { ok: true, unmatched: [] }, `${q}: ${turn.answers[0].sentence}`);
-    }
+test("follow-ups never repeat a question already asked in the conversation", async () => {
+  const first = await ask("Do GA4 purchases match orders in the last 14 days?");
+  const conv = first.turn.conversation_id;
+  const asked = ["Do GA4 purchases match orders in the last 14 days?"];
+  for (const q of ["Is the gap only on mobile?", "Do Meta conversions match orders this month?", "ROAS by channel in the last 28 days"]) {
+    asked.push(q);
+    const { turn } = await ask(q, "en", conv);
+    for (const f of turn.answers[0].followups) assert.ok(!asked.includes(f.en), `${q} → ${f.en}`);
+    assert.ok(turn.answers[0].followups.length <= 3);
   }
 });
 
-test("asking to be told proposes a pending alert; asking to pin pins it", async () => {
-  const events = [];
-  const turn = await ask("Pin the GA4 check and make an alert for it", "en", events);
-  assert.equal(turn.approvals.length, 1);
-  assert.equal(turn.approvals[0].status, "pending");
-  assert.ok(events.some(([t, d]) => t === "approval" && d.alert.id === turn.approvals[0].id));
-  assert.ok(ws.store.pinForAnswer(turn.answers[0].id));
+test("yesterday compares with the same weekday a week before; last week with the week before", async () => {
+  const y = (await ask("How many orders did we get yesterday?")).turn.answers[0];
+  assert.deepEqual([y.query.from, y.query.to, y.query.comparison.from], ["2026-10-22", "2026-10-22", "2026-10-15"]);
+  const w = (await ask("Geçen hafta ciro, bir önceki haftaya göre", "tr")).turn.answers[0];
+  assert.deepEqual([w.kind, w.query.from, w.query.to, w.query.comparison.from, w.query.comparison.to], ["number", "2026-10-12", "2026-10-18", "2026-10-05", "2026-10-11"]);
+  assert.equal(w.validation.ok, true);
 });
 
-test("a question the planner does not know gets a plain note, no answer", async () => {
-  const turn = await ask("What will the weather be tomorrow?");
-  assert.equal(turn.answers.length, 0);
-  assert.match(turn.text, /built-in planner knows orders/);
-  assert.equal(turn.error, null);
-});
-
-test("plannerSentence names the top channel for a channel query", async () => {
-  const q = { metric: "roas", group_by: "channel", from: "2026-09-25", to: LAST, filters: {}, unit: "ratio", total: 2.0912, rows: [{ key: "google_ads", value: 2.6634 }] };
-  assert.equal(plannerSentence(ws.pack, q, null, "en"), "ROAS for 25 Sep–22 Oct 2026 is 2.09×. The highest channel is Google Ads at 2.66×.");
-  assert.equal(plannerSentence(ws.pack, q, null, "tr"), "25 Eyl–22 Eki 2026 döneminde ROAS 2,09×. En yüksek kanal Google Ads: 2,66×.");
+test("a refusal says a model could answer and offers nearby questions; a watch is proposed, not made", async () => {
+  const { turn, events } = await ask("Which channel's revenue grew on weekdays?");
+  assert.deepEqual(events.map(([t]) => t), ["turn", "refusal", "done"]);
+  assert.equal(turn.refusal.nearest.length, 3);
+  const watch = await ask("Watch the Google Ads tracking check");
+  assert.deepEqual(watch.events.map(([t]) => t), ["turn", "step", "approval", "text", "done"]);
+  assert.equal(ws.store.list("watches").some((w) => w.check === "gads_vs_orders"), false);
+  assert.equal(watch.turn.approvals.length, 1);
 });

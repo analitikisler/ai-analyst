@@ -17,6 +17,7 @@ export const MART = {
   groupBy: ["none", "day", "week", "month", "channel", "device"],
 };
 
+// Display names; the bilingual server strings (src/text.js) hold the rest.
 export const NAMES = {
   channel: {
     organic: { en: "Organic search", tr: "Organik arama" },
@@ -28,7 +29,7 @@ export const NAMES = {
   },
   device: { mobile: { en: "Mobile", tr: "Mobil" }, desktop: { en: "Desktop", tr: "Masaüstü" } },
   source: {
-    backoffice: { en: "Back office (ikas)", tr: "Arka ofis (ikas)" },
+    backoffice: { en: "Back office (ikas)", tr: "Sipariş paneli (ikas)" },
     ga4: { en: "GA4 BigQuery export", tr: "GA4 BigQuery dışa aktarımı" },
     ads: { en: "Google Ads, Meta Ads, TikTok Ads", tr: "Google Ads, Meta Ads, TikTok Ads" },
   },
@@ -59,6 +60,9 @@ const metricSchema = z
     where: where.optional(),
     dimensions: z.array(z.enum(["day", "week", "month", "channel", "device"])).min(1),
     check: id.optional(),
+    history: z
+      .array(z.object({ version: z.number().int().positive(), date: z.union([z.string(), z.date()]).transform((d) => (d instanceof Date ? d.toISOString().slice(0, 10) : d)), actor: z.string().min(1), change: label }).strict())
+      .optional(),
   })
   .strict()
   .refine((m) => Boolean(m.sum) !== Boolean(m.ratio), { message: "a metric has either sum or ratio, not both" });

@@ -1,0 +1,7 @@
+node_modules
+dist
+dist-demo
+.capture
+*.log
+.DS_Store
+.smoke

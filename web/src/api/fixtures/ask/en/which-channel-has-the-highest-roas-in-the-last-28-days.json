@@ -1,0 +1,106 @@
+{
+  "question": "Which channel has the highest ROAS in the last 28 days?",
+  "lang": "en",
+  "conversation_id": "conv_a4eef350ee",
+  "turn_id": "turn_d764c27b0f",
+  "events": [
+    {
+      "event": "turn",
+      "data": {
+        "turn_id": "turn_d764c27b0f",
+        "conversation_id": "conv_a4eef350ee"
+      }
+    },
+    {
+      "event": "step",
+      "data": {
+        "tool": "run_query",
+        "summary": "roas · channel · 2026-09-25..2026-10-22 → 2.09×",
+        "ok": true
+      }
+    },
+    {
+      "event": "step",
+      "data": {
+        "tool": "publish_answer",
+        "summary": "ans_15da462fdb",
+        "ok": true
+      }
+    },
+    {
+      "event": "answer",
+      "data": {
+        "answer": {
+          "id": "ans_15da462fdb",
+          "turn_id": "turn_d764c27b0f",
+          "question": "Which channel has the highest ROAS in the last 28 days?",
+          "sentence": "ROAS for 25 Sep–22 Oct 2026 is 2.09×. The highest channel is Google Ads at 2.66×.",
+          "title": "ROAS · 25 Sep–22 Oct 2026",
+          "followups": [
+            "Is the gap only on mobile?",
+            "Do Meta conversions match our orders?",
+            "Make an alert for the GA4 check"
+          ],
+          "query": {
+            "id": "q_233b0f1351",
+            "metric": "roas",
+            "metric_version": 2,
+            "group_by": "channel",
+            "from": "2026-09-25",
+            "to": "2026-10-22",
+            "filters": {},
+            "unit": "ratio",
+            "rows": [
+              {
+                "key": "google_ads",
+                "value": 2.657109202358431
+              },
+              {
+                "key": "meta_ads",
+                "value": 1.7544075089668165
+              },
+              {
+                "key": "tiktok_ads",
+                "value": 1.0896931030689694
+              }
+            ],
+            "total": 2.086354354912839,
+            "sql": "-- metric roas v2\nSELECT\n  channel,\n  SUM(revenue) AS numerator,\n  SUM(ad_spend) AS denominator,\n  SUM(revenue) / NULLIF(SUM(ad_spend), 0) AS value\nFROM daily_channel_device\nWHERE date BETWEEN DATE '2026-09-25' AND DATE '2026-10-22'\n  AND channel IN ('google_ads', 'meta_ads', 'tiktok_ads')\nGROUP BY channel\nORDER BY value DESC",
+            "dialect": "duckdb",
+            "ran_at": "2026-10-23T19:39:19.082Z"
+          },
+          "check": null,
+          "metric": {
+            "id": "roas",
+            "label": {
+              "en": "ROAS",
+              "tr": "ROAS"
+            },
+            "version": 2,
+            "description": {
+              "en": "Back-office revenue from orders whose last non-direct click came from the channel, divided by that channel’s spend. Platform-reported conversions are not used.",
+              "tr": "Son doğrudan olmayan tıklaması kanaldan gelen siparişlerin arka ofis cirosu, bölü o kanalın harcaması. Platformların bildirdiği dönüşümler kullanılmaz."
+            },
+            "source": "backoffice+ads"
+          },
+          "validation": {
+            "ok": true,
+            "unmatched": []
+          },
+          "created_by": "planner",
+          "created_at": "2026-10-23T19:39:19.082Z"
+        }
+      }
+    },
+    {
+      "event": "text",
+      "data": {
+        "text": "Answered by the built-in planner, without a model. Set ANTHROPIC_API_KEY to ask anything."
+      }
+    },
+    {
+      "event": "done",
+      "data": {}
+    }
+  ]
+}

@@ -1,0 +1,216 @@
+{
+  "question": "Son 14 günde Google Ads dönüşümleri siparişlerle tutuyor mu?",
+  "lang": "tr",
+  "conversation_id": "conv_4fe283f0de",
+  "turn_id": "turn_b6c9c937bc",
+  "events": [
+    {
+      "event": "turn",
+      "data": {
+        "turn_id": "turn_b6c9c937bc",
+        "conversation_id": "conv_4fe283f0de"
+      }
+    },
+    {
+      "event": "step",
+      "data": {
+        "tool": "run_query",
+        "summary": "orders · day · 2026-10-09..2026-10-22 · channel=google_ads → 577",
+        "ok": true
+      }
+    },
+    {
+      "event": "step",
+      "data": {
+        "tool": "reconcile",
+        "summary": "gads_vs_orders · 2026-10-09..2026-10-22 → Δ +%4,5 tutuyor",
+        "ok": true
+      }
+    },
+    {
+      "event": "step",
+      "data": {
+        "tool": "publish_answer",
+        "summary": "ans_970ccf6918",
+        "ok": true
+      }
+    },
+    {
+      "event": "answer",
+      "data": {
+        "answer": {
+          "id": "ans_970ccf6918",
+          "turn_id": "turn_b6c9c937bc",
+          "question": "Son 14 günde Google Ads dönüşümleri siparişlerle tutuyor mu?",
+          "sentence": "9–22 Eki 2026 döneminde Google Ads kaynaklı sipariş: 577. Google Ads dönüşümü kaynaktan +%4,5 farklı; kontrol tutuyor.",
+          "title": "Sipariş · Google Ads · 9–22 Eki 2026",
+          "followups": [
+            "Fark yalnızca mobilde mi?",
+            "Son 28 günde en yüksek ROAS hangi kanalda?",
+            "Meta dönüşümleri siparişlerle tutuyor mu?"
+          ],
+          "query": {
+            "id": "q_a5714d0de1",
+            "metric": "orders",
+            "metric_version": 3,
+            "group_by": "day",
+            "from": "2026-10-09",
+            "to": "2026-10-22",
+            "filters": {
+              "channel": "google_ads"
+            },
+            "unit": "count",
+            "rows": [
+              {
+                "key": "2026-10-09",
+                "value": 38
+              },
+              {
+                "key": "2026-10-10",
+                "value": 68
+              },
+              {
+                "key": "2026-10-11",
+                "value": 52
+              },
+              {
+                "key": "2026-10-12",
+                "value": 54
+              },
+              {
+                "key": "2026-10-13",
+                "value": 51
+              },
+              {
+                "key": "2026-10-14",
+                "value": 29
+              },
+              {
+                "key": "2026-10-15",
+                "value": 37
+              },
+              {
+                "key": "2026-10-16",
+                "value": 37
+              },
+              {
+                "key": "2026-10-17",
+                "value": 40
+              },
+              {
+                "key": "2026-10-18",
+                "value": 39
+              },
+              {
+                "key": "2026-10-19",
+                "value": 32
+              },
+              {
+                "key": "2026-10-20",
+                "value": 31
+              },
+              {
+                "key": "2026-10-21",
+                "value": 36
+              },
+              {
+                "key": "2026-10-22",
+                "value": 33
+              }
+            ],
+            "total": 577,
+            "sql": "-- metric orders v3\nSELECT\n  date AS day,\n  SUM(orders) AS value\nFROM daily_channel_device\nWHERE date BETWEEN DATE '2026-10-09' AND DATE '2026-10-22'\n  AND channel = 'google_ads'\nGROUP BY day\nORDER BY day",
+            "dialect": "duckdb",
+            "ran_at": "2026-10-23T19:39:40.721Z"
+          },
+          "check": {
+            "id": "c_885a81ba",
+            "check": "gads_vs_orders",
+            "label": {
+              "en": "Google Ads conversions against back-office orders",
+              "tr": "Google Ads dönüşümleri ile arka ofis siparişleri"
+            },
+            "from": "2026-10-09",
+            "to": "2026-10-22",
+            "filters": {},
+            "unit": "count",
+            "expected": {
+              "metric": "orders",
+              "label": {
+                "en": "Back-office orders from Google Ads",
+                "tr": "Google Ads kaynaklı arka ofis siparişi"
+              },
+              "value": 577
+            },
+            "measured": {
+              "metric": "platform_conversions",
+              "label": {
+                "en": "Google Ads conversions",
+                "tr": "Google Ads dönüşümü"
+              },
+              "value": 603
+            },
+            "delta": 26,
+            "delta_pct": 0.045060658578856154,
+            "tolerance": 0.1,
+            "verdict": "adds_up",
+            "breakdown_by": "device",
+            "breakdown": [
+              {
+                "key": "mobile",
+                "expected": 346,
+                "measured": 360,
+                "delta_pct": 0.04046242774566474,
+                "verdict": "adds_up"
+              },
+              {
+                "key": "desktop",
+                "expected": 231,
+                "measured": 243,
+                "delta_pct": 0.05194805194805195,
+                "verdict": "adds_up"
+              }
+            ],
+            "out_of_tolerance_since": null,
+            "findings": [],
+            "sql": {
+              "expected": "-- metric orders v3\nSELECT\n  date AS day,\n  device,\n  SUM(orders) AS value\nFROM daily_channel_device\nWHERE date BETWEEN DATE '2026-07-25' AND DATE '2026-10-22'\n  AND channel = 'google_ads'\nGROUP BY day, device\nORDER BY day, device",
+              "measured": "-- metric platform_conversions v1\nSELECT\n  date AS day,\n  device,\n  SUM(platform_conversions) AS value\nFROM daily_channel_device\nWHERE date BETWEEN DATE '2026-07-25' AND DATE '2026-10-22'\n  AND channel = 'google_ads'\nGROUP BY day, device\nORDER BY day, device"
+            },
+            "dialect": "duckdb",
+            "ran_at": "2026-10-23T19:39:40.723Z"
+          },
+          "metric": {
+            "id": "orders",
+            "label": {
+              "en": "Orders",
+              "tr": "Sipariş"
+            },
+            "version": 3,
+            "description": {
+              "en": "Orders placed in the back office, by order date in Europe/Istanbul time. Test orders are excluded; cancelled orders are kept.",
+              "tr": "Arka ofiste oluşan siparişler, İstanbul saatine göre sipariş tarihinde. Test siparişleri hariç, iptal edilen siparişler dahildir."
+            },
+            "source": "backoffice"
+          },
+          "validation": {
+            "ok": true,
+            "unmatched": []
+          },
+          "created_by": "planner",
+          "created_at": "2026-10-23T19:39:40.724Z"
+        }
+      }
+    },
+    {
+      "event": "text",
+      "data": {
+        "text": "Yanıtı yerleşik planlayıcı verdi; model kullanılmadı. Her soruyu sorabilmek için ANTHROPIC_API_KEY tanımlanmalı."
+      }
+    },
+    {
+      "event": "done",
+      "data": {}
+    }
+  ]
+}

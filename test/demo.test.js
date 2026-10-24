@@ -1,4 +1,5 @@
 // The demo must show the prototype's numbers: same generator, same seed, same order of rnd() calls.
+import "./setup.js";
 import { test, before, after } from "node:test";
 import assert from "node:assert/strict";
 import { DEMO, generateFacts } from "../src/demo/seed.js";

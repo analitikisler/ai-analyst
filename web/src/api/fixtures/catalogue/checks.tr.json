@@ -1,0 +1,143 @@
+{
+  "ok": true,
+  "result": [
+    {
+      "id": "ga4_rev_vs_revenue",
+      "label": {
+        "en": "GA4 revenue against back-office revenue",
+        "tr": "GA4 geliri ile arka ofis cirosu"
+      },
+      "expected": {
+        "metric": "revenue",
+        "label": {
+          "en": "Back-office revenue",
+          "tr": "Arka ofis cirosu"
+        }
+      },
+      "measured": {
+        "metric": "ga4_revenue",
+        "label": {
+          "en": "GA4 revenue",
+          "tr": "GA4 geliri"
+        }
+      },
+      "where": null,
+      "tolerance": 0.05,
+      "breakdown": "device",
+      "findings": [
+        {
+          "id": "f_ga4_mobile_safari",
+          "source": "AI Tag Debugger",
+          "text": {
+            "en": "purchase is not sent on mobile Safari since release v4.12 (9 Oct): the thank-you page loads the tag before dataLayer is ready.",
+            "tr": "v4.12 sürümünden (9 Eki) beri mobil Safari’de purchase gitmiyor: teşekkür sayfası tag’i dataLayer hazır olmadan yüklüyor."
+          },
+          "since": "2026-10-09"
+        }
+      ]
+    },
+    {
+      "id": "ga4_vs_orders",
+      "label": {
+        "en": "GA4 purchases against back-office orders",
+        "tr": "GA4 satın almaları ile arka ofis siparişleri"
+      },
+      "expected": {
+        "metric": "orders",
+        "label": {
+          "en": "Back-office orders",
+          "tr": "Arka ofis siparişi"
+        }
+      },
+      "measured": {
+        "metric": "ga4_purchases",
+        "label": {
+          "en": "GA4 purchases",
+          "tr": "GA4 satın alma"
+        }
+      },
+      "where": null,
+      "tolerance": 0.05,
+      "breakdown": "device",
+      "findings": [
+        {
+          "id": "f_ga4_mobile_safari",
+          "source": "AI Tag Debugger",
+          "text": {
+            "en": "purchase is not sent on mobile Safari since release v4.12 (9 Oct): the thank-you page loads the tag before dataLayer is ready.",
+            "tr": "v4.12 sürümünden (9 Eki) beri mobil Safari’de purchase gitmiyor: teşekkür sayfası tag’i dataLayer hazır olmadan yüklüyor."
+          },
+          "since": "2026-10-09"
+        }
+      ]
+    },
+    {
+      "id": "gads_vs_orders",
+      "label": {
+        "en": "Google Ads conversions against back-office orders",
+        "tr": "Google Ads dönüşümleri ile arka ofis siparişleri"
+      },
+      "expected": {
+        "metric": "orders",
+        "label": {
+          "en": "Back-office orders from Google Ads",
+          "tr": "Google Ads kaynaklı arka ofis siparişi"
+        }
+      },
+      "measured": {
+        "metric": "platform_conversions",
+        "label": {
+          "en": "Google Ads conversions",
+          "tr": "Google Ads dönüşümü"
+        }
+      },
+      "where": {
+        "channel": [
+          "google_ads"
+        ]
+      },
+      "tolerance": 0.1,
+      "breakdown": "device",
+      "findings": []
+    },
+    {
+      "id": "meta_vs_orders",
+      "label": {
+        "en": "Meta conversions against back-office orders",
+        "tr": "Meta dönüşümleri ile arka ofis siparişleri"
+      },
+      "expected": {
+        "metric": "orders",
+        "label": {
+          "en": "Back-office orders from Meta",
+          "tr": "Meta kaynaklı arka ofis siparişi"
+        }
+      },
+      "measured": {
+        "metric": "platform_conversions",
+        "label": {
+          "en": "Meta conversions",
+          "tr": "Meta dönüşümü"
+        }
+      },
+      "where": {
+        "channel": [
+          "meta_ads"
+        ]
+      },
+      "tolerance": 0.2,
+      "breakdown": "device",
+      "findings": [
+        {
+          "id": "f_meta_view_through",
+          "source": "AI Tag Debugger",
+          "text": {
+            "en": "Meta counts view-through purchases (1-day view) that the back office attributes to other channels.",
+            "tr": "Meta, arka ofisin başka kanallara atadığı görüntüleme sonrası satın almaları da sayıyor (1 günlük görüntüleme)."
+          },
+          "since": null
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,102 @@
+{
+  "question": "Mobilde dönüşüm oranı masaüstünden düşük mü?",
+  "lang": "tr",
+  "conversation_id": "conv_dc3361b1cd",
+  "turn_id": "turn_2a2d9175f9",
+  "events": [
+    {
+      "event": "turn",
+      "data": {
+        "turn_id": "turn_2a2d9175f9",
+        "conversation_id": "conv_dc3361b1cd"
+      }
+    },
+    {
+      "event": "step",
+      "data": {
+        "tool": "run_query",
+        "summary": "conversion_rate · device · 2026-10-09..2026-10-22 → %1,74",
+        "ok": true
+      }
+    },
+    {
+      "event": "step",
+      "data": {
+        "tool": "publish_answer",
+        "summary": "ans_3d51c9d93b",
+        "ok": true
+      }
+    },
+    {
+      "event": "answer",
+      "data": {
+        "answer": {
+          "id": "ans_3d51c9d93b",
+          "turn_id": "turn_2a2d9175f9",
+          "question": "Mobilde dönüşüm oranı masaüstünden düşük mü?",
+          "sentence": "9–22 Eki 2026 döneminde Dönüşüm oranı: %1,74.",
+          "title": "Dönüşüm oranı · 9–22 Eki 2026",
+          "followups": [
+            "Fark yalnızca mobilde mi?",
+            "Son 28 günde en yüksek ROAS hangi kanalda?",
+            "Meta dönüşümleri siparişlerle tutuyor mu?"
+          ],
+          "query": {
+            "id": "q_01d22220fe",
+            "metric": "conversion_rate",
+            "metric_version": 2,
+            "group_by": "device",
+            "from": "2026-10-09",
+            "to": "2026-10-22",
+            "filters": {},
+            "unit": "pct",
+            "rows": [
+              {
+                "key": "desktop",
+                "value": 0.023318034498509995
+              },
+              {
+                "key": "mobile",
+                "value": 0.015009330607069831
+              }
+            ],
+            "total": 0.0174273596252453,
+            "sql": "-- metric conversion_rate v2\nSELECT\n  device,\n  SUM(orders) AS numerator,\n  SUM(sessions) AS denominator,\n  SUM(orders) / NULLIF(SUM(sessions), 0) AS value\nFROM daily_channel_device\nWHERE date BETWEEN DATE '2026-10-09' AND DATE '2026-10-22'\nGROUP BY device\nORDER BY value DESC",
+            "dialect": "duckdb",
+            "ran_at": "2026-10-23T19:39:19.144Z"
+          },
+          "check": null,
+          "metric": {
+            "id": "conversion_rate",
+            "label": {
+              "en": "Conversion rate",
+              "tr": "Dönüşüm oranı"
+            },
+            "version": 2,
+            "description": {
+              "en": "Back-office orders divided by GA4 sessions. By channel, orders take the channel stored with the order and sessions the GA4 session source.",
+              "tr": "Arka ofis siparişleri bölü GA4 oturumları. Kanal kırılımında sipariş, siparişle kaydedilen kanala; oturum, GA4 oturum kaynağına göre atanır."
+            },
+            "source": "backoffice+ga4"
+          },
+          "validation": {
+            "ok": true,
+            "unmatched": []
+          },
+          "created_by": "planner",
+          "created_at": "2026-10-23T19:39:19.144Z"
+        }
+      }
+    },
+    {
+      "event": "text",
+      "data": {
+        "text": "Yanıtı yerleşik planlayıcı verdi; model kullanılmadı. Her soruyu sorabilmek için ANTHROPIC_API_KEY tanımlanmalı."
+      }
+    },
+    {
+      "event": "done",
+      "data": {}
+    }
+  ]
+}

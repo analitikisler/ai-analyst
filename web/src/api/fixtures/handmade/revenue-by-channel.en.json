@@ -1,0 +1,195 @@
+{
+  "handmade": true,
+  "question": "Which channel brings the most revenue?",
+  "lang": "en",
+  "after": null,
+  "events": [
+    {
+      "event": "turn",
+      "data": {
+        "turn_id": "turn_mvlz9wpy0ez",
+        "conversation_id": "conv_mvlz9wpx0ey",
+        "question_text": null
+      }
+    },
+    {
+      "event": "step",
+      "data": {
+        "tool": "run_query",
+        "summary": {
+          "en": "Ran a query on revenue, by channel, 25 Sep–22 Oct 2026",
+          "tr": "Ciro için sorgu çalıştırıldı: kanala göre, 25 Eyl–22 Eki 2026"
+        },
+        "ok": true
+      }
+    },
+    {
+      "event": "step",
+      "data": {
+        "tool": "publish_answer",
+        "summary": {
+          "en": "Wrote the answer",
+          "tr": "Cevap yazıldı"
+        },
+        "ok": true
+      }
+    },
+    {
+      "event": "answer",
+      "data": {
+        "answer": {
+          "kind": "split",
+          "sentence": {
+            "en": "Revenue for 25 Sep–22 Oct 2026: 7.63M TL. Organic search leads at 2.43M TL, then Direct 1.67M TL and Google Ads 1.64M TL. Autumn sale starts (10 Oct, a campaign) falls in this period and lines up with the higher days after it.",
+            "tr": "25 Eyl–22 Eki 2026 döneminde ciro 7,63 mn TL. Organik arama 2,43 mn TL ile önde; ardından Doğrudan 1,67 mn TL ve Google Ads 1,64 mn TL. Sonbahar indirimi başlıyor (10 Ekim, kampanya) bu döneme düşüyor ve sonrasındaki yüksek günlerle örtüşüyor."
+          },
+          "title": {
+            "en": "Revenue · 25 Sep–22 Oct 2026",
+            "tr": "Ciro · 25 Eyl–22 Eki 2026"
+          },
+          "followups": [
+            {
+              "en": "Do GA4 purchases match orders in the last 14 days?",
+              "tr": "Son 14 günde GA4 satın almaları siparişlerle tutuyor mu?"
+            },
+            {
+              "en": "Do Meta conversions match orders this month?",
+              "tr": "Bu ay Meta dönüşümleri siparişlerle tutuyor mu?"
+            },
+            {
+              "en": "Do Google Ads conversions match orders in the last 14 days?",
+              "tr": "Son 14 günde Google Ads dönüşümleri siparişlerle tutuyor mu?"
+            }
+          ],
+          "interpretation": {
+            "en": "Read as: revenue, by channel, 25 Sep–22 Oct 2026.",
+            "tr": "Soru şöyle okundu: ciro, kanala göre, 25 Eyl–22 Eki 2026."
+          },
+          "query": {
+            "id": "q_mvlz9wpy0f0",
+            "metric": "revenue",
+            "metric_version": 2,
+            "group_by": "channel",
+            "from": "2026-09-25",
+            "to": "2026-10-22",
+            "filters": {},
+            "unit": "try",
+            "rows": [
+              {
+                "key": "organic",
+                "value": 2426808
+              },
+              {
+                "key": "direct",
+                "value": 1673899
+              },
+              {
+                "key": "google_ads",
+                "value": 1637688
+              },
+              {
+                "key": "meta_ads",
+                "value": 901483
+              },
+              {
+                "key": "email",
+                "value": 788700
+              },
+              {
+                "key": "tiktok_ads",
+                "value": 198128
+              }
+            ],
+            "total": 7626706,
+            "sql": "-- metric revenue v2\nSELECT\n  channel,\n  SUM(revenue) AS value\nFROM daily_channel_device\nWHERE date BETWEEN DATE '2026-09-25' AND DATE '2026-10-22'\nGROUP BY channel\nORDER BY value DESC",
+            "dialect": "duckdb",
+            "ran_at": "2026-10-24T05:48:21.094Z",
+            "provisional_from": "2026-10-20",
+            "partial": null,
+            "comparison": {
+              "kind": "previous_period",
+              "from": "2026-08-28",
+              "to": "2026-09-24",
+              "shift_days": 28,
+              "total": 6868160,
+              "rows": [
+                {
+                  "key": "organic",
+                  "value": 2190991
+                },
+                {
+                  "key": "direct",
+                  "value": 1498630
+                },
+                {
+                  "key": "google_ads",
+                  "value": 1485335
+                },
+                {
+                  "key": "meta_ads",
+                  "value": 808439
+                },
+                {
+                  "key": "email",
+                  "value": 723666
+                },
+                {
+                  "key": "tiktok_ads",
+                  "value": 161099
+                }
+              ],
+              "delta": 758546,
+              "delta_pct": 0.11044384522200996,
+              "sql": "-- metric revenue v2\nSELECT\n  channel,\n  SUM(revenue) AS value\nFROM daily_channel_device\nWHERE date BETWEEN DATE '2026-08-28' AND DATE '2026-09-24'\nGROUP BY channel\nORDER BY value DESC"
+            }
+          },
+          "check": null,
+          "metrics": [
+            {
+              "id": "revenue",
+              "label": {
+                "en": "Revenue",
+                "tr": "Ciro"
+              },
+              "version": 2,
+              "description": {
+                "en": "Order value in TRY including VAT, excluding shipping, from the back office. Refunds are not subtracted.",
+                "tr": "Sipariş panelinden, KDV dahil ve kargo hariç TRY sipariş tutarı. İadeler düşülmez."
+              },
+              "source": "backoffice"
+            }
+          ],
+          "events": [],
+          "validation": {
+            "ok": true,
+            "unmatched": []
+          },
+          "created_by": "planner",
+          "model_label": {
+            "en": "Built-in planner",
+            "tr": "Yerleşik planlayıcı"
+          },
+          "seconds": 0.3,
+          "handmade": false,
+          "id": "ans_mvlz9x7v0f1",
+          "turn_id": "turn_mvlz9wpy0ez",
+          "question": "Which channel brings the most revenue?",
+          "created_at": "2026-10-24T05:48:21.739Z"
+        }
+      }
+    },
+    {
+      "event": "text",
+      "data": {
+        "text": {
+          "en": "Answered by the built-in planner, without a model.",
+          "tr": "Cevabı yerleşik planlayıcı verdi; model kullanılmadı."
+        }
+      }
+    },
+    {
+      "event": "done",
+      "data": {}
+    }
+  ]
+}

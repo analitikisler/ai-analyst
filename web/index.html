@@ -1,84 +1,29 @@
 <!doctype html>
 <html lang="en">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>AI Analyst</title>
-<meta name="description" content="AI Analyst by Analitik İşler: ask the data, see the query, the definition and the check against the source system.">
-<link rel="icon" href="data:,">
-<link rel="preload" href="vendor/fonts/google-sans-text.woff2" as="font" type="font/woff2" crossorigin>
-<link rel="stylesheet" href="vendor/tokens.css">
-<link rel="stylesheet" href="vendor/bundle.css">
-<link rel="stylesheet" href="app.css">
-<script type="module" src="app.js"></script>
-</head>
-<body>
-<svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false"><defs>
-<linearGradient id="logo-bars" gradientUnits="userSpaceOnUse" x1="541.37" y1="0" x2="636.14" y2="0"><stop offset="0" stop-color="#4f8ef7"/><stop offset="1" stop-color="#1a2f5c"/></linearGradient>
-<symbol id="logo" viewBox="0 0 631 96"><path fill="currentColor" d="M18.69 73.87Q13.39 74.14 9.32 72.01Q5.24 69.89 2.88 66.02Q0.52 62.15 0.52 57.11Q0.52 51.85 3.23 48.08Q5.93 44.31 10.49 42.23Q15.05 40.16 20.63 40.16Q23.66 40.16 26.15 40.5Q28.64 40.85 30.6 41.34Q32.55 41.83 33.65 42.51L33.6 40.55Q33.6 36.69 30.64 34.19Q27.68 31.68 22.49 31.68Q19.02 31.68 15.79 33.26Q12.56 34.84 10.35 37.63L1.91 30.84Q4.45 27.48 7.69 25.26Q10.92 23.04 14.84 21.91Q18.76 20.78 23.07 20.78Q34.53 20.78 40.52 26.12Q46.51 31.45 46.51 41.71V72.58H33.6V67.41L33.05 67.53Q31.73 69.2 29.67 70.73Q27.61 72.26 24.87 73.2Q22.12 74.14 18.69 73.87ZM125.55 73.87Q120.25 74.14 116.18 72.01Q112.1 69.89 109.74 66.02Q107.38 62.15 107.38 57.11Q107.38 51.85 110.09 48.08Q112.79 44.31 117.35 42.23Q121.91 40.16 127.49 40.16Q130.52 40.16 133.01 40.5Q135.5 40.85 137.46 41.34Q139.41 41.83 140.51 42.51L140.46 40.55Q140.46 36.69 137.5 34.19Q134.54 31.68 129.35 31.68Q125.88 31.68 122.65 33.26Q119.42 34.84 117.21 37.63L108.77 30.84Q111.31 27.48 114.55 25.26Q117.78 23.04 121.7 21.91Q125.62 20.78 129.93 20.78Q141.39 20.78 147.38 26.12Q153.37 31.45 153.37 41.71V72.58H140.46V67.41L139.92 67.53Q138.59 69.2 136.53 70.73Q134.48 72.26 131.73 73.2Q128.98 74.14 125.55 73.87ZM450.75 73.87Q443.21 74.14 437.29 70.69Q431.36 67.25 427.98 61.24Q424.6 55.23 424.6 47.56Q424.6 40.38 427.93 34.27Q431.26 28.17 437.04 24.47Q442.82 20.78 450.26 20.78Q458.29 20.78 463.78 24.23Q469.27 27.68 472.12 33.45Q474.96 39.21 474.96 46.19Q474.96 47.76 474.86 48.91Q474.76 50.05 474.63 50.77H437.51Q437.95 53.33 439.04 55.35Q440.87 58.74 443.99 60.51Q447.11 62.27 450.95 62.27Q455.46 62.27 458.54 60.31Q461.62 58.36 463.42 55.19L474.05 60.5Q470.45 66.95 464.76 70.55Q459.07 74.14 450.75 73.87ZM265.67 72.58V2.26H278.77V40.4L296.99 22.34H312.92V23.5L294.27 41.82L313.81 71.45V72.58H298.43L284.98 50.94L278.77 57.04V72.58ZM379.8 95.41Q376.24 95.68 373.67 93.78Q371.1 91.88 369.95 88.83L376.5 85.98Q376.93 87.36 377.77 88.07Q378.6 88.79 379.8 88.79Q381.29 88.79 382.07 87.95Q382.85 87.11 382.85 85.95Q382.85 84.79 382.06 83.86Q381.28 82.92 379.8 82.92Q378.98 82.92 378.37 83.33Q377.77 83.73 377.22 84.34L371.04 81.42L373.96 73.81Q370.13 73.5 367.13 72.27Q362.57 70.4 359.72 67.33Q356.87 64.27 355.44 60.37L367.14 55.19Q368.84 58.85 371.62 60.61Q374.39 62.36 378.14 62.36Q381.23 62.36 383.69 61.4Q386.15 60.44 386.15 57.89Q386.15 56.07 384.88 55.01Q383.61 53.96 381.69 53.34Q379.76 52.72 377.72 52.33L371.88 51.06Q368.25 50.27 365.01 48.24Q361.77 46.21 359.75 43.08Q357.73 39.95 357.73 35.87Q357.73 31.3 360.35 27.91Q362.96 24.54 367.42 22.66Q371.89 20.78 377.27 20.78Q382.26 20.78 386.28 21.96Q390.3 23.14 393.25 25.57Q396.2 27.99 398.04 32L386.81 37Q385.22 33.95 382.78 32.81Q380.35 31.68 377.57 31.68Q374.31 31.68 372.43 32.88Q370.54 34.08 370.54 35.67Q370.54 37.38 372.43 38.68Q374.32 39.98 377.02 40.65L384.32 42.41Q391.77 44.18 395.56 48.15Q399.35 52.12 399.35 57.7Q399.35 62.66 396.49 66.38Q393.64 70.1 388.83 72.12Q385.12 73.68 380.77 73.88L379.45 76.78Q379.79 76.52 380.19 76.52H381.07Q384.94 76.52 387.67 79.08Q390.39 81.65 390.39 86.05Q390.39 88.76 389.05 90.97Q387.71 93.18 385.33 94.43Q382.96 95.68 379.8 95.41ZM54.87 72.58V22.34H67.19V28.69L67.72 28.57Q69.94 25.03 74.06 22.91Q78.18 20.78 82.99 20.78Q92.21 20.78 96.83 26.42Q101.45 32.06 101.45 41.42V72.58H88.34V43Q88.34 38.25 85.92 35.74Q83.49 33.24 79.28 33.24Q75.83 33.24 73.29 35.09Q70.76 36.95 69.36 40.05Q67.97 43.16 67.97 47V72.58ZM202.33 33.83V22.34H210.97V8.3H224.07V22.34H236.22V33.83H224.07V54.06Q224.07 57.56 225.49 59.18Q226.9 60.8 230.13 60.8Q231.66 60.8 233 60.38Q234.34 59.95 236.61 58.44V71.62Q234.35 72.48 232.14 72.92Q229.94 73.36 227.59 73.09Q219.82 73.36 215.4 68.85Q210.97 64.33 210.97 56.43V33.83ZM161.73 72.58V2.26H174.83V72.58ZM405.17 72.58V2.26H418.27V72.58ZM481.28 72.58V22.34H493.6V29.07L494.13 28.97Q495.36 26.72 497.48 24.89Q499.59 23.05 502.44 21.96Q505.29 20.88 508.52 20.88Q510.49 20.88 512.06 21.18Q513.63 21.47 514.91 22.04V35.41Q512.66 34.5 510.68 33.97Q508.7 33.44 506.48 33.44Q502.74 33.44 500 35.28Q497.27 37.13 495.83 40.33Q494.38 43.53 494.38 47.57V72.58ZM183.87 72.58V22.34H196.97V72.58ZM243.53 72.58V22.34H256.63V72.58ZM336.95 72.58V22.34H350.05V72.58ZM190.47 17.18Q186.99 17.46 184.5 14.94Q182.02 12.41 182.02 8.88Q182.02 5.35 184.5 2.88Q186.99 0.41 190.47 0.41Q193.95 0.41 196.38 2.88Q198.82 5.35 198.82 8.88Q198.82 12.41 196.38 14.93Q193.95 17.46 190.47 17.18ZM343.55 17.18Q340.07 17.46 337.59 14.94Q335.1 12.41 335.1 8.88Q335.1 5.35 337.59 2.88Q340.07 0.41 343.55 0.41Q347.03 0.41 349.47 2.88Q351.9 5.35 351.9 8.88Q351.9 12.41 349.47 14.93Q347.03 17.46 343.55 17.18ZM250.12 17.18Q246.65 17.46 244.16 14.94Q241.68 12.41 241.68 8.88Q241.68 5.35 244.16 2.88Q246.65 0.41 250.12 0.41Q253.6 0.41 256.04 2.88Q258.48 5.35 258.48 8.88Q258.48 12.41 256.04 14.93Q253.6 17.46 250.12 17.18ZM128.57 63.9Q132.41 63.63 135.05 61.97Q137.68 60.31 139.07 57.65Q140.46 54.99 140.46 52.21Q138.43 51.24 135.72 50.62Q133.02 49.99 130.21 49.99Q124.65 49.99 122.57 52.05Q120.48 54.11 120.48 57.1Q120.48 59.9 122.52 61.76Q124.56 63.63 128.57 63.9ZM21.71 63.9Q25.55 63.63 28.18 61.97Q30.82 60.31 32.21 57.65Q33.6 54.99 33.6 52.21Q31.57 51.24 28.86 50.62Q26.16 49.99 23.35 49.99Q17.79 49.99 15.71 52.05Q13.62 54.11 13.62 57.1Q13.62 59.9 15.66 61.76Q17.69 63.63 21.71 63.9ZM438.05 41.16 462.35 41.26Q462.25 39.84 461.39 38.13Q460.53 36.44 459 35.01Q457.47 33.59 455.31 32.68Q453.15 31.78 450.37 31.78Q446.72 31.78 443.7 33.68Q440.67 35.59 438.94 38.98Q438.41 40.01 438.05 41.16Z"/><path fill="url(#logo-bars)" d="M571.52 72.3V6.88C571.52 5.67 572.5 4.69 573.71 4.69H598.34C599.55 4.69 600.53 5.67 600.53 6.88V72.3ZM541.25 72.3V23.43C541.25 22.22 542.23 21.25 543.43 21.25H569.12V72.3ZM603 72.3V30.99H628.56C629.77 30.99 630.75 31.97 630.75 33.18V72.3Z"/></symbol>
-<symbol id="i-audit" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="square" stroke-miterlimit="10"><circle cx="10.25" cy="10.25" r="6.5"/><path d="M15 15l5.25 5.25"/></g><rect x="8.75" y="8.75" width="3" height="3" fill="currentColor"/></symbol>
-<symbol id="i-measurement" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="square" stroke-miterlimit="10"><path d="M5.25 3.75h9.5l4 4v12.5H5.25z"/><path d="M14.25 3.75v4.5h4.5"/><path d="M8.25 12.25h4.5M8.25 15.75h7.5"/></g><rect x="14.75" y="10.75" width="3" height="3" fill="currentColor"/></symbol>
-<symbol id="i-warehouse" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="square" stroke-miterlimit="10"><path d="M4.25 4.75h15.5v4.5H4.25zM4.25 9.25h15.5v5H4.25zM4.25 14.25h15.5v5H4.25z"/></g><rect x="6.5" y="10.25" width="3" height="3" fill="currentColor"/></symbol>
-<symbol id="i-dashboards" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="square" stroke-miterlimit="10"><path d="M3.75 4.75h16.5v14.5H3.75z"/><path d="M3.75 8.75h16.5"/><path d="M8.25 16.25v-3.5M12 16.25v-5M15.75 16.25v-2"/></g><rect x="5.5" y="5.5" width="2.5" height="2.5" fill="currentColor"/></symbol>
-<symbol id="i-analysis" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="square" stroke-miterlimit="10"><path d="M4.25 3.75v16h16"/><path d="M7.25 16.75l11-9"/></g><rect x="8" y="10" width="3" height="3" fill="currentColor"/><rect x="13" y="13.5" width="3" height="3" fill="currentColor"/><rect x="15.5" y="6.5" width="3" height="3" fill="currentColor"/></symbol>
-<symbol id="i-agents" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="square" stroke-miterlimit="10"><path d="M9.75 3.5h4.5V8h-4.5zM16.5 15.13H21v4.5h-4.5zM3 15.13h4.5v4.5H3z"/><path d="M14.25 6.08A7.75 7.75 0 0 1 19.58 15.13M16.75 19.63A7.75 7.75 0 0 1 7.25 19.63M4.42 15.13A7.75 7.75 0 0 1 9.75 6.08"/></g><rect x="10.5" y="12" width="3" height="3" fill="currentColor"/></symbol>
-<symbol id="i-arrow" viewBox="0 0 16 16"><path d="M2.5 8h10M8.75 4.25 12.5 8l-3.75 3.75" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="square"/></symbol>
-<symbol id="i-copy" viewBox="0 0 16 16"><path d="M5.25 5.25h8v8h-8zM10.75 5.25v-2.5h-8v8h2.5" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="square"/></symbol>
-<symbol id="i-check" viewBox="0 0 16 16"><path d="M3 8.25 6.5 11.75 13 4.75" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="square"/></symbol>
-<symbol id="i-mail" viewBox="0 0 16 16"><g fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="square"><path d="M2.25 3.75h11.5v8.5H2.25z"/><path d="M2.75 4.5 8 8.75l5.25-4.25"/></g></symbol>
-<symbol id="i-close" viewBox="0 0 16 16"><path d="M3.75 3.75l8.5 8.5M12.25 3.75l-8.5 8.5" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="square"/></symbol>
-<symbol id="i-sun" viewBox="0 0 16 16"><g fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="square"><path d="M5.25 5.25h5.5v5.5h-5.5z"/><path d="M8 1v1.5M8 13.5V15M1 8h1.5M13.5 8H15M3.05 3.05l1.06 1.06M11.89 11.89l1.06 1.06M3.05 12.95l1.06-1.06M11.89 4.11l1.06-1.06"/></g></symbol>
-<symbol id="i-moon" viewBox="0 0 16 16"><path d="M13.25 9.75A5.75 5.75 0 0 1 6.25 2.75a5.75 5.75 0 1 0 7 7z" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="miter"/></symbol>
-<symbol id="i-chevron" viewBox="0 0 16 16"><path d="M4 6.25 8 10.25l4-4" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="square"/></symbol>
-<symbol id="i-st-bad" viewBox="0 0 16 16"><path d="M4 4l8 8M12 4l-8 8" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="square"/></symbol>
-<symbol id="i-st-risk" viewBox="0 0 16 16"><path d="M8 2.5 13.5 8 8 13.5 2.5 8z" fill="currentColor"/></symbol>
-<symbol id="i-st-warn" viewBox="0 0 16 16"><path d="M6.9 2.5h2.2v7.25H6.9zM6.9 11.25h2.2v2.25H6.9z" fill="currentColor"/></symbol>
-<symbol id="i-st-ok" viewBox="0 0 16 16"><path d="M3 8.25 6.5 11.75 13 4.75" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="square"/></symbol>
-</defs></svg>
-
-<a class="skip-link" href="#view" data-t="skip">Skip to content</a>
-<div class="app">
-  <aside class="rail" aria-label="AI Analyst">
-    <div class="rail__brand">
-      <span class="logo rail__logo"><svg viewBox="0 0 631 96" role="img" aria-label="Analitik İşler" lang="tr"><use href="#logo"/></svg></span>
-      <span class="rail__product" lang="en">ai analyst</span>
-    </div>
-    <nav class="rail__nav" aria-label="Sections" data-t-label="nav_label">
-      <a class="rail__item" href="#ask" data-view="ask"><svg class="icon" aria-hidden="true"><use href="#i-agents"/></svg><span data-t="nav_ask">Ask</span></a>
-      <a class="rail__item" href="#dashboard" data-view="dashboard"><svg class="icon" aria-hidden="true"><use href="#i-dashboards"/></svg><span data-t="nav_dashboard">Dashboard</span><span class="rail__n" id="n-pins"></span></a>
-      <a class="rail__item" href="#checks" data-view="checks"><svg class="icon" aria-hidden="true"><use href="#i-audit"/></svg><span data-t="nav_checks">Checks</span><span class="rail__n" id="n-checks"></span></a>
-      <a class="rail__item" href="#metrics" data-view="metrics"><svg class="icon" aria-hidden="true"><use href="#i-measurement"/></svg><span data-t="nav_metrics">Metrics</span></a>
-      <a class="rail__item" href="#sources" data-view="sources"><svg class="icon" aria-hidden="true"><use href="#i-warehouse"/></svg><span data-t="nav_sources">Sources</span></a>
-      <a class="rail__item" href="#alerts" data-view="alerts"><svg class="icon" aria-hidden="true"><use href="#i-mail"/></svg><span data-t="nav_alerts">Alerts</span><span class="rail__n" id="n-alerts"></span></a>
-      <a class="rail__item" href="#activity" data-view="activity"><svg class="icon" aria-hidden="true"><use href="#i-analysis"/></svg><span data-t="nav_activity">Activity</span></a>
-    </nav>
-    <div class="rail__foot">
-      <a class="rail__pending" href="#alerts" id="rail-pending" hidden></a>
-      <span class="text" data-variant="meta" id="rail-demo" data-t="demo_note" hidden>Demo workspace. Every figure is generated sample data.</span>
-      <span class="text" data-variant="meta" data-t="by">by Analitik İşler</span>
-    </div>
-  </aside>
-
-  <div class="main">
-    <header class="topbar">
-      <div class="topbar__ws">
-        <span class="topbar__name" id="ws-name"></span>
-        <span class="tag" id="demo-tag" data-t="demo_tag" hidden>demo data</span>
-        <span class="text" data-variant="meta" id="freshness"></span>
-      </div>
-      <div class="topbar__end">
-        <span class="text" data-variant="meta" id="agent-mode"></span>
-        <div class="seg" role="group" aria-label="Language" data-t-label="lang_label">
-          <button type="button" class="seg__b" data-lang="en" lang="en" aria-label="English">EN</button>
-          <button type="button" class="seg__b" data-lang="tr" lang="tr" aria-label="Türkçe">TR</button>
-        </div>
-        <button type="button" class="icon-button" id="theme-btn" aria-label="Switch theme"><svg class="icon" aria-hidden="true"><use id="theme-ico" href="#i-sun"/></svg></button>
-      </div>
-    </header>
-    <main id="view" tabindex="-1" aria-live="off"></main>
-  </div>
-</div>
-<div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
-<div class="sr" id="announce" aria-live="polite"></div>
-</body>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>AI Analyst</title>
+    <meta name="description" content="Ask in Turkish or English. Every answer shows its chart, the SQL it ran, the metric definition and a check against the system that owns the number." />
+    <meta name="theme-color" content="#F4F6FA" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#071529" media="(prefers-color-scheme: dark)" />
+    <!-- Google Sans family, self-hosted (public/fonts, OFL-1.1). Preload only the display face. -->
+    <link rel="preload" href="./fonts/google-sans-flex-display.woff2" as="font" type="font/woff2" crossorigin />
+    <script>
+      // Apply the saved theme and language before first paint. Keys match src/lib/prefs.ts.
+      (function () {
+        try {
+          var theme = JSON.parse(localStorage.getItem("ai-analyst:theme") || '"system"');
+          if (theme === "light" || theme === "dark") document.documentElement.setAttribute("data-theme", theme);
+          var lang = JSON.parse(localStorage.getItem("ai-analyst:lang") || '"system"');
+          var nav = (navigator.languages && navigator.languages[0]) || navigator.language || "en";
+          document.documentElement.lang = lang === "en" || lang === "tr" ? lang : /^tr/i.test(nav) ? "tr" : "en";
+        } catch (e) {}
+      })();
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
 </html>

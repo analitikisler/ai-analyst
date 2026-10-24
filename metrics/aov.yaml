@@ -6,7 +6,15 @@ source: backoffice
 owner: Bahadır Ölez
 description:
   en: "Revenue divided by orders, both from the back office."
-  tr: "Ciro bölü sipariş; ikisi de arka ofisten."
+  tr: "Ciro bölü sipariş; ikisi de sipariş panelinden."
 model: daily_channel_device
 ratio: { numerator: revenue, denominator: orders }
 dimensions: [day, week, month, channel, device]
+# Newest first. The pack keeps the version; these notes say what changed and who changed it.
+history:
+  - version: 1
+    date: 2026-03-01
+    actor: Bahadır Ölez
+    change:
+      en: "First version."
+      tr: "İlk sürüm."

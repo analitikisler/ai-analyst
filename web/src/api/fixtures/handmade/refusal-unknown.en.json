@@ -1,0 +1,51 @@
+{
+  "handmade": true,
+  "question": "Compare email and Google Ads last month",
+  "lang": "en",
+  "after": null,
+  "events": [
+    {
+      "event": "turn",
+      "data": {
+        "turn_id": "turn_mvlz9ys60g3",
+        "conversation_id": "conv_mvlz9ys50g2",
+        "question_text": {
+          "en": "Compare email and Google Ads last month",
+          "tr": "Geçen ay e-posta ile Google Ads’i karşılaştır"
+        }
+      }
+    },
+    {
+      "event": "refusal",
+      "data": {
+        "code": "planner_unknown",
+        "heading": {
+          "en": "The built-in planner cannot answer this one",
+          "tr": "Yerleşik planlayıcı bu soruyu cevaplayamıyor"
+        },
+        "body": {
+          "en": "This is outside the metric set. With a model added, an exploratory answer is possible. The built-in planner covers orders, revenue, sessions, conversion rate, order value, ad spend, ROAS and the four tracking checks, one question at a time.",
+          "tr": "Bu soru metrik setinin dışında. Model eklenirse keşif cevabı verilebilir. Yerleşik planlayıcı sipariş, ciro, oturum, dönüşüm oranı, sepet ortalaması, reklam harcaması, ROAS ve dört ölçüm kontrolü hakkındaki soruları tek tek cevaplar."
+        },
+        "nearest": [
+          {
+            "en": "Revenue by channel last month",
+            "tr": "Geçen ay kanallara göre ciro"
+          },
+          {
+            "en": "Orders by channel last month",
+            "tr": "Geçen ay kanallara göre sipariş"
+          },
+          {
+            "en": "Do Google Ads conversions match orders in the last 14 days?",
+            "tr": "Son 14 günde Google Ads dönüşümleri siparişlerle tutuyor mu?"
+          }
+        ]
+      }
+    },
+    {
+      "event": "done",
+      "data": {}
+    }
+  ]
+}
