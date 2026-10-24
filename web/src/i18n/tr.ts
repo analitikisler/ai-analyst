@@ -8,6 +8,8 @@ export const tr: Copy = {
     name: "AI Analyst",
     pageTitle: "{page} · AI Analyst",
     logo: "Analitik İşler",
+    alpha: "alfa",
+    alpha_hint: "Erken bir sürüm: eksikler ve değişiklikler olabilir.",
   },
 
   shell: {

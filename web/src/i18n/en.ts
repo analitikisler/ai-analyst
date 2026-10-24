@@ -8,6 +8,8 @@ export const en = {
     name: "AI Analyst",
     pageTitle: "{page} · AI Analyst",
     logo: "Analitik İşler",
+    alpha: "alpha",
+    alpha_hint: "An early version: expect rough edges and changes.",
   },
 
   shell: {

@@ -1,6 +1,6 @@
 # AI Analyst · build contract, version 0.2
 
-AI Analyst is Analitik İşler's agent-native analytics tool. A person asks a question in Turkish or English; the
+AI Analyst is Analitik İşler's analytics tool that people and an agent use together. A person asks a question in Turkish or English; the
 agent answers with a chart, the SQL it ran, the versioned metric definition and a tracking check that reconciles
 the figure against the system that owns it. Every UI action, agent tool and chat-app tool is the same action
 from one registry.

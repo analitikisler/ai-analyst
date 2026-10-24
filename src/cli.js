@@ -10,7 +10,7 @@ import { startMcp } from "./mcp.js";
 import { startServer } from "./server.js";
 import { openWorkspace, resetDemo } from "./workspace.js";
 
-const HELP = `ai-analyst · agent-native analytics by Analitik İşler
+const HELP = `ai-analyst · analytics you can ask, with every number checked · Analitik İşler
 
 Usage:
   ai-analyst serve [--port 8787] [--host 127.0.0.1] [--data-dir ./data] [--no-cloud]   web app and HTTP API (seeds the demo on first run)

@@ -1,8 +1,13 @@
 # AI Analyst
 
-Agent-native analytics by Analitik İşler. Ask a question in Turkish or English; the agent answers with a chart,
-the SQL it ran, the versioned metric definition and a tracking check against the system that owns the number:
-back-office orders against GA4 purchases, Meta and Google Ads conversions against orders. No number stands alone.
+> **Alpha.** AI Analyst is an early version, not a finished product. Expect rough edges and breaking changes;
+> the model providers and the BigQuery connection have not yet run against the real services.
+
+Analytics you can ask, with every number checked. By Analitik İşler.
+
+Ask a question in Turkish or English; the agent answers with a chart, the SQL it ran, the versioned metric
+definition and a tracking check against the system that owns the number: back-office orders against GA4
+purchases, Meta and Google Ads conversions against orders. No number stands alone.
 
 The person and the agent share one set of actions. A button and an agent tool call the same function, every
 write lands in one activity log with undo, and anything the agent wants to change (a tile, a watch, an event, a
@@ -115,7 +120,7 @@ default.
 The server listens on 127.0.0.1 only. Another address needs `AI_ANALYST_TOKEN` (24 characters or more) and is
 meant for a trusted network; behind a reverse proxy, settings cannot be changed. Requests from other websites are
 refused (Host, Origin and Sec-Fetch-Site checks, no CORS), and settings can be changed only from the machine
-running the app. Details in `docs/CONTRACT.md`. To report a security problem, email hello@analitikisler.com.
+running the app. Details in `docs/CONTRACT.md`. To report a security problem, see `SECURITY.md`.
 
 ## How an answer is checked
 
@@ -166,3 +171,10 @@ safest credential. Every BigQuery job runs a dry run first and carries a bytes-b
 - On demo data the GTM import and the tracking audit are simulated. On own data the audit is handed to AI Tag
   Debugger through a chat app, and GTM import is not available yet.
 - Not built yet: Meta, TikTok and Search Console connectors, scheduled alert delivery, multi-workspace hosting.
+
+## Licence and trademarks
+
+The code is under the MIT licence (`LICENSE`). The Analitik İşler name and logo, and the AI Analyst and AI Tag
+Debugger names, are trademarks of Analitik İşler and are not covered by the MIT licence: forks and redistributions
+must not use them in a way that suggests they come from or are endorsed by Analitik İşler. The fonts are under the
+SIL Open Font License 1.1 (`web/public/fonts/OFL-*.txt`). Security reports: see `SECURITY.md`.

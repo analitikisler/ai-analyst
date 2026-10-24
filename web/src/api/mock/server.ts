@@ -429,7 +429,7 @@ function settings(): Settings {
       data_dir: "/Users/demo/ai-analyst/data",
       pack_dir: "/Users/demo/ai-analyst",
       address: "http://127.0.0.1:8787",
-      version: "0.2.0",
+      version: "0.2.0-alpha.1",
     },
     data_source: {
       kind: { value: db.source.kind, source: db.source.kind === "demo" ? "default" : "file", locked: false },
