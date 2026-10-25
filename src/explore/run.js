@@ -106,22 +106,27 @@ export async function runExploreSql(ctx, input, pack) {
   const config = ctx.config ?? ctx.app?.config ?? null;
   const policy = config ? policyFor(config, ctx.warehouse) : null;
   const guardOpts = policy ? { policy } : {};
+  // A tile re-runs the SQL it showed, which carries the outer LIMIT wrapper: guard the query inside it.
+  const wrappedRe = /^SELECT \* FROM \(\n([\s\S]*)\n\) AS q\nLIMIT \d+$/;
+  const sqlIn = wrappedRe.test(input.sql) ? input.sql.replace(wrappedRe, "$1") : input.sql;
+  input = { ...input, sql: sqlIn };
   const first = guardSql(input.sql, ctx.warehouse, guardOpts);
   const protectedCols = policy ? await protectedLookup(ctx, first.tables, policy) : null;
   const guarded = protectedCols ? guardSql(input.sql, ctx.warehouse, { ...guardOpts, protectedCols }) : first;
   // The per-question cap: what this turn's queries have read so far counts against it (BigQuery).
   const turn = ctx.turn ?? null;
-  const questionCap = config?.explore?.maxBytesPerQuestion ?? null;
+  // Hand-edited config cannot lift it past ten single queries' worth.
+  const questionCap = config?.explore?.maxBytesPerQuestion ? Math.min(config.explore.maxBytesPerQuestion, 10 * (config.bigquery?.ceiling ?? Infinity)) : null;
   const left = turn && questionCap && ctx.warehouse.dialect === "bigquery" ? questionCap - (turn.explore_bytes ?? 0) : null;
   if (left != null && left <= 0) throw new AppError("bytes_cap", "This question has used its whole cap for exploratory queries. Answer with what the earlier queries returned.", { params: { bytes: 0, cap: questionCap, question: 1 } });
-  const out = await ctx.warehouse.explore(guarded.wrapped, { ...(policy ? { policy } : {}), ...(left != null ? { maxBytes: left } : {}) });
-  if (turn) turn.explore_bytes = (turn.explore_bytes ?? 0) + (out.bytes ?? 0);
+  // DuckDB is local and not billed: the per-question cap applies on BigQuery only.
+  const out = await ctx.warehouse.explore(guarded.wrapped, { ...(policy ? { policy } : {}), ...(left != null ? { maxBytes: left } : {}), ...(turn ? { onBytes: (b) => (turn.explore_bytes = (turn.explore_bytes ?? 0) + b) } : {}) });
   const columns = out.columns;
   // A second look at the result: a column named like a protected one never leaves, whatever the SQL did.
   if (protectedCols) {
     const all = new Set(guarded.tables.flatMap((k) => [...protectedCols(k)]));
     const hit = columns.find((c) => all.has(String(c).toLowerCase()));
-    if (hit) throw new AppError("sql_protected_column", "The query returns, groups or orders by a protected column, or reads one through *, so it does not run. A protected column can be used in a join, a filter or COUNT(DISTINCT …) only.", { params: { column: hit } });
+    if (hit) throw new AppError("sql_protected_column", "The query uses a protected column outside the two places it may appear, so it does not run. A protected column can only be a join key compared with another column (a.col = b.col, or USING) or sit alone inside COUNT(DISTINCT …).", { params: { column: hit } });
   }
   const nd = input.dims.length;
   if (columns.length < nd + 1) throw new AppError("explore_shape", `The query returned ${columns.length} columns; it needs the ${nd} dimension column(s) first and one value column last.`);

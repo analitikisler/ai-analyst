@@ -73,6 +73,38 @@ test("B1 · N2: a turn that ends with text and no card stores the text, which ge
   assert.equal(capText("One. Two. Three.", 10), "One. Two.…");
 });
 
+test("B1: a model that declines shows a refusal card with nearby questions; a turn that ends with nothing is a visible error", async () => {
+  const client = stubAnthropic([
+    () => ({ content: [toolUse("d", "decline_question", { missing: "return", heading: { en: "Returns are not in this data", tr: "İadeler bu veride yok" }, body: { en: "The mart has no returns column.", tr: "Mart tablosunda iade sütunu yok." }, nearest: [{ en: "Revenue by channel in the last 28 days", tr: "Son 28 günde kanallara göre ciro" }] })], stop_reason: "tool_use" }),
+    () => ({ content: [{ type: "text", text: "Returns are not tracked here." }], stop_reason: "end_turn" }),
+  ]);
+  const { turn, events } = await ask(client, "Which products are returned most often?");
+  assert.deepEqual(events.map(([t]) => t), ["turn", "step", "text", "refusal", "done"]);
+  assert.deepEqual([turn.refusal.code, turn.refusal.missing, turn.refusal.heading.en, turn.refusal.nearest.length], ["not_in_data", "return", "Returns are not in this data", 1]);
+  const conv = await callAction("get_conversation", { conversation_id: turn.conversation_id }, ctxFor(ws));
+  assert.equal(conv.turn_list.at(-1).refusal.code, "not_in_data", "the refusal survives a reload");
+  const empty = await ask(stubAnthropic([() => ({ content: [], stop_reason: "end_turn" })]), "Anything?");
+  assert.equal(empty.turn.error.code, "no_answer");
+  assert.match(empty.turn.error.message, /ended without an answer/);
+  assert.ok(empty.events.some(([t, d]) => t === "error" && d.code === "no_answer"));
+});
+
+test("a silent end after a refused exploratory query is the explore_failed card; a silent end with nothing to explain it is no_answer", async () => {
+  const refused = stubAnthropic([
+    () => ({ content: [toolUse("x", "run_sql", { sql: "SELECT * FROM read_csv('/etc/passwd')", measure: "other", dims: [], from: "2026-07-25", to: "2026-10-22", unit: "count" })], stop_reason: "tool_use" }),
+    () => ({ content: [], stop_reason: "end_turn" }),
+  ]);
+  const a = await ask(refused, "Which products are returned most?");
+  assert.equal(a.turn.error, null);
+  assert.equal(a.turn.refusal.code, "explore_failed");
+  assert.deepEqual(a.events.map(([t]) => t), ["turn", "step", "refusal", "done"]);
+  // A failed non-SQL tool does not explain a silent end.
+  const other = stubAnthropic([() => ({ content: [toolUse("q", "run_query", { metric: "nope" })], stop_reason: "tool_use" }), () => ({ content: [], stop_reason: "end_turn" })]);
+  const b = await ask(other, "Anything?");
+  assert.equal(b.turn.refusal, null);
+  assert.equal(b.turn.error.code, "no_answer");
+});
+
 test("B2: publish_answer kind why on a check that does not add up is a why card; on one that adds up it is refused", async () => {
   const client = twoStep([["r", "reconcile", { check: "ga4_vs_orders", from: "2026-10-09", to: "2026-10-22" }], ["q", "run_query", { metric: "orders", group_by: "device", from: "2026-10-09", to: "2026-10-22" }]], (r) => ({
     kind: "why",
@@ -158,6 +190,24 @@ test("B6: the agent lists dashboards and pins by name; the pin comes back as an 
   assert.equal(approval[1].proposal.kind, "pin");
   assert.equal(turn.approvals.length, 1);
   await assert.rejects(callAction("propose_pin", { answer_id: turn.answers[0].id, dashboard_id: "shop_overview" }, ctxFor(ws, "agent")), (e) => e.code === "not_found" && /The dashboards are/.test(e.message));
+});
+
+test("B6: without a dashboard id the pin goes to the dashboard in view; the model is told the dashboards' ids and names", async () => {
+  const d = await callAction("create_dashboard", { name: "Growth" }, ctxFor(ws));
+  const client = stubAnthropic([
+    (p) => {
+      assert.match(p.messages.at(-1).content, /Dashboards, as id \(English \/ Turkish name\): db_example \(Shop overview \/ Mağaza özeti\)/);
+      return { content: [toolUse("q", "run_query", { metric: "orders" })], stop_reason: "tool_use" };
+    },
+    (p) => ({ content: [toolUse("pub", "publish_answer", { sentence: { en: `Orders: ${resultOf(p, "q").json.total_formatted}.`, tr: `Sipariş: ${resultOf(p, "q").json.total_formatted_tr}.` }, query_id: resultOf(p, "q").json.query_id })], stop_reason: "tool_use" }),
+    (p) => ({ content: [toolUse("pin", "propose_pin", { answer_id: resultOf(p, "pub").json.answer_id })], stop_reason: "tool_use" }),
+    () => ({ content: [{ type: "text", text: "It waits for approval." }], stop_reason: "end_turn" }),
+  ]);
+  const events = [];
+  await runTurn({ question: "Pin orders here", lang: "en", conversationId: "new", context: { view: "dashboard", kind: "dashboard", id: d.id }, app: { ...ws, modelClient: client }, emit: (t, x) => events.push([t, x]) });
+  const approval = events.find(([t]) => t === "approval");
+  assert.equal(approval[1].proposal.payload.dashboard_id, d.id);
+  assert.equal(approval[1].proposal.title.en, "Pin this answer to Growth");
 });
 
 test("B7: missing (NULL) data is never zero: SUM keeps NULL, a check side with no data is insufficient_data with a reason, a ratio over no spend is no data", async () => {
@@ -293,14 +343,22 @@ test("prompt caching: the system prompt carries a cache breakpoint, stays byte-i
     console.info = info;
   }
   const [r0, r1] = client.requests;
-  assert.deepEqual(r0.system.at(-1).cache_control, { type: "ephemeral" });
+  // The breakpoint sits on the stable block; the volatile block (today, the data range, the language) comes after.
+  assert.deepEqual(r0.system[0].cache_control, { type: "ephemeral" });
+  assert.equal(r0.system[1].cache_control, undefined);
+  assert.match(r0.system[1].text, /today is 2026-10-23/);
+  assert.match(r0.system[1].text, /The person writes in English/);
   assert.equal(JSON.stringify(r0.system), JSON.stringify(r1.system), "the system prefix is byte-stable across rounds");
   assert.equal(JSON.stringify(r0.tools), JSON.stringify(r1.tools), "the tools are byte-stable across rounds");
-  assert.doesNotMatch(r0.system[0].text, /\d{2}:\d{2}:\d{2}|turn_|conv_/, "no time of day or ids before the breakpoint");
-  assert.deepEqual(turn.usage, { input: 303, output: 60, cache_read: 10000, cache_write: 5000, calls: 3 });
+  assert.doesNotMatch(r0.system[0].text, /\d{4}-\d{2}-\d{2}|\d{2}:\d{2}:\d{2}|turn_|conv_|writes in/, "no date, time, id or language before the breakpoint");
+  // A Turkish question on another day shares the same cached prefix.
+  const { systemPromptParts } = await import("../src/agent/agent.js");
+  const base = { pack: ws.pack, range: { from: "2026-07-25", to: "2026-10-22" }, workspace: "Örnek Moda", demo: true };
+  assert.equal(systemPromptParts({ ...base, lang: "en", today: "2026-10-23" }).stable, systemPromptParts({ ...base, lang: "tr", today: "2026-11-02", range: { from: "2026-07-25", to: "2026-11-01" } }).stable);
+  assert.deepEqual(turn.usage, { provider: "anthropic", model: "claude-opus-5-5", rounds: 3, input: 303, output: 60, cache_read: 10000, cache_write: 5000 });
   const conv = await callAction("get_conversation", { conversation_id: turn.conversation_id }, ctxFor(ws));
   assert.deepEqual(conv.turn_list.at(-1).usage, turn.usage);
-  assert.ok(logs.some((l) => l.includes(turn.id) && /cache read 10000 · cache write 5000/.test(l)));
+  assert.ok(logs.some((l) => l.includes(turn.id) && /anthropic\/claude-opus-5-5 · 3 rounds · input 303 · output 60 · cache read 10000 · cache write 5000/.test(l)));
 });
 
 test("prompt caching: the OpenAI-compatible adapter records usage when the response has it", async () => {
@@ -311,4 +369,30 @@ test("prompt caching: the OpenAI-compatible adapter records usage when the respo
   assert.deepEqual(r.usage, { input: 200, output: 30, cache_read: 1000, cache_write: 0 });
   const none = openAiAdapter({ baseUrl: "http://127.0.0.1:1/v1", key: null, model: "m", fetch: async () => ({ ok: true, status: 200, json: async () => ({ choices: [{ message: { content: "Hi" }, finish_reason: "stop" }] }) }) });
   assert.equal((await none.step(none.start({ system: "S", tools: [], history: [], question: "Q" }))).usage, null);
+});
+
+test("a dead BigQuery credential: state still loads with a source error, reads fail with source_unavailable, one safe log line", async () => {
+  const { openBigQuery } = await import("../src/warehouse/bigquery.js");
+  const { buildState } = await import("../src/state.js");
+  // What gaxios throws when an impersonated service account was deleted: the message, plus request config and headers.
+  const gaxios = () =>
+    Object.assign(new Error("Account deleted: 1234567890"), { code: 404, config: { url: "https://iamcredentials.googleapis.com/v1/x", headers: { Authorization: "Bearer ya29.SECRET-TOKEN-0000" } }, response: { status: 404, data: { error: { message: "Account deleted: 1234567890" } } } });
+  const client = { async createQueryJob() { throw gaxios(); }, async query() { throw gaxios(); } };
+  const warehouse = await openBigQuery({ project: "example-data", dataset: "shop", location: "EU", maxBytes: 1024 }, { client });
+  const app = { ...ws, warehouse };
+  const logs = [];
+  const err = console.error;
+  console.error = (...a) => logs.push(a.map(String).join(" "));
+  let state;
+  try {
+    state = await buildState(app);
+    await assert.rejects(callAction("run_query", { metric: "orders" }, ctxFor(app)), (e) => e.code === "source_unavailable" && e.params.service === "BigQuery" && e.params.reason === "Account deleted: 1234567890" && e.params.status === 404);
+  } finally {
+    console.error = err;
+  }
+  assert.deepEqual(state.source.error, { code: "source_unavailable", message: "BigQuery could not be reached with the saved connection (Account deleted: 1234567890). Check it in Settings › Data source.", params: { service: "BigQuery", reason: "Account deleted: 1234567890", status: 404 } });
+  assert.deepEqual([state.workspace.data_from, state.workspace.rows], [null, null]);
+  assert.ok(Array.isArray(state.dashboards) && state.dashboards.length >= 1, "the shell still has what it needs");
+  assert.ok(logs.length >= 1 && logs.every((l) => /source_unavailable: BigQuery 404: Account deleted/.test(l)), logs.join("\n"));
+  assert.ok(!logs.join("\n").match(/ya29|Bearer|iamcredentials|config/), "no token, header or request config in the log");
 });

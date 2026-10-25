@@ -36,9 +36,11 @@ export function anthropicAdapter({ client, model }) {
   return {
     provider: "anthropic",
     start: ({ system, tools, history, question }) => ({
-      // Tools render first, then the system prompt: one breakpoint on the system block caches both across calls and
-      // rounds (the prefix holds no timestamps or ids). The top-level cache_control below caches the growing messages.
-      system: [{ type: "text", text: system, cache_control: { type: "ephemeral" } }],
+      // Tools render first, then the system prompt: one breakpoint on the stable system block caches both across
+      // calls and rounds (nothing before it changes with the day, the person or the question). The volatile block
+      // (today's date, the data range, the language) comes after the breakpoint. The top-level cache_control below
+      // caches the growing messages within a turn.
+      system: typeof system === "string" ? [{ type: "text", text: system, cache_control: { type: "ephemeral" } }] : [{ type: "text", text: system.stable, cache_control: { type: "ephemeral" } }, { type: "text", text: system.volatile }],
       tools: tools.map((t) => ({ ...t, eager_input_streaming: true })),
       messages: [...history.map((m) => ({ role: m.role, content: m.text })), { role: "user", content: question }],
       jsonRetries: 0,
@@ -98,7 +100,7 @@ export function openAiAdapter({ baseUrl, key, model, fetch: fetchFn = cloudFetch
     provider,
     start: ({ system, tools, history, question }) => ({
       tools: tools.map((t) => ({ type: "function", function: { name: t.name, description: t.description, parameters: t.input_schema } })),
-      messages: [{ role: "system", content: system }, ...history.map((m) => ({ role: m.role, content: m.text })), { role: "user", content: question }],
+      messages: [{ role: "system", content: typeof system === "string" ? system : `${system.stable}\n\n${system.volatile}` }, ...history.map((m) => ({ role: m.role, content: m.text })), { role: "user", content: question }],
     }),
     async step(state, signal) {
       let res;

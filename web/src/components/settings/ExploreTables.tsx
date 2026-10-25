@@ -233,6 +233,9 @@ function TableDetails({ s }: { s: Settings }) {
   const q = useQuery({ queryKey: ["action", "describe_tables", sig], queryFn: () => api.action("describe_tables", {}, lang), enabled: open, staleTime: 60_000 });
   const f = useFormat();
   return (
+    <>
+    {/* Said before the list, open or not: what reaches the model unless a column is protected. */}
+    <p className="text-[13px] leading-[18px] text-text">{c.readable_note}</p>
     <Disclosure label={c.columns} onToggle={setOpen}>
       {q.isLoading && (
         <p className="flex items-center gap-2 text-[13px] text-text-muted">
@@ -244,6 +247,7 @@ function TableDetails({ s }: { s: Settings }) {
         {q.data?.tables.map((x) => <TableDetail key={x.table + JSON.stringify(x.protected_columns)} x={x} />)}
       </div>
     </Disclosure>
+    </>
   );
 }
 

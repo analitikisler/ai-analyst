@@ -69,11 +69,14 @@ The DuckDB demo gets the same model: a separate read-only file holding only the 
 
 Order lines and customers hold personal data. Three rules:
 
-- **Columns that never leave the warehouse.** Settings lists columns the agent may not select or return, for
-  example `email`, `phone`, `first_name`, `last_name`, `street_address`, `ip_address`. The server proposes a list by
-  name and type when a table is added; the person confirms it. A query that selects such a column, or `*` on a table
-  that has one, is refused before it runs. Using it in a join or a COUNT DISTINCT is allowed, since only the result
-  leaves.
+- **Columns that never leave the warehouse.** Settings lists protected columns, for example `email`, `phone`,
+  `first_name`, `last_name`, `street_address`, `ip_address`. The server proposes a list by column name (compound
+  and Turkish forms included) when a table is added; the person confirms it. A protected column may appear only as
+  a join key compared with another column (`a.col = b.col`, `USING (col)`) or alone inside `COUNT(DISTINCT col)`;
+  anywhere else (selected, `*`, grouped, ordered, filtered, compared with a value, `CASE`, `LIKE`, `IN`, `COUNTIF`,
+  any function) the query is refused before it runs (security review 2, H2). Customer and user ids, city, age and
+  gender stay readable by default (the owner's decision); `protection.yaml` in the pack is the one list that turns
+  them on.
 - **Small groups.** A result row describing fewer than 5 customers or orders is not shown to the model when the
   query groups by a customer-level column. (Simple version first: refuse a GROUP BY on a protected column.)
 - **Rows stay aggregated where possible.** The prompt prefers aggregate queries; a row-level result is cut to 200

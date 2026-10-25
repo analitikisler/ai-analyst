@@ -6,6 +6,7 @@ import { isApiError } from "@/api";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
 import { useT } from "@/i18n";
+import { sourceUnavailableSentence } from "@/lib/errors";
 
 export interface EmptyStateProps {
   title: ReactNode;
@@ -73,7 +74,9 @@ export function ErrorState({ title, error, detail, onRetry, retrying, size = "md
   const t = useT();
   const message =
     detail ??
-    (isApiError(error) && error.code === "not_in_fixtures" ? t.err.invalid_input : error instanceof TypeError ? t.err.network.body : error instanceof Error ? error.message : t.err.generic);
+    (isApiError(error) && error.code === "source_unavailable"
+      ? sourceUnavailableSentence(t, error)!
+      : isApiError(error) && error.code === "not_in_fixtures" ? t.err.invalid_input : error instanceof TypeError ? t.err.network.body : error instanceof Error ? error.message : t.err.generic);
   return (
     <div role="alert" className={cn("flex flex-col items-center justify-center gap-3 text-center", size === "sm" ? "px-4 py-6" : "px-6 py-10", bordered && "rounded-lg border border-border bg-surface", className)}>
       <div className="flex size-10 items-center justify-center rounded-lg bg-warning-soft text-warning">

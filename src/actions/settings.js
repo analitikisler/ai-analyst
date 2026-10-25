@@ -25,6 +25,9 @@ import { newId } from "../store/store.js";
 import { isDataset, isProject } from "../warehouse/bigquery.js";
 import { ACT, SOURCE_LABEL } from "../text.js";
 import { defineAction } from "./registry.js";
+import { safeGoogleMessage } from "../warehouse/google-errors.js";
+
+export { safeGoogleMessage };
 
 /** The account gcloud is signed in with, from its local config files (no network); null when not there. */
 function gcloudAccount(dir) {
@@ -57,25 +60,6 @@ export function localCredentials(env = process.env) {
   }
 }
 
-/**
- * Google's own words for a failed call, short and safe to show: the first line, no tokens or secrets, under 200
- * characters. null when there is nothing to say.
- */
-export function safeGoogleMessage(err) {
-  const raw = err?.errors?.[0]?.message || err?.response?.data?.error?.message || err?.message;
-  if (!raw || typeof raw !== "string") return null;
-  let m = raw.split("\n")[0];
-  m = m
-    .replace(/Bearer\s+\S+/gi, "Bearer [hidden]")
-    .replace(/\b(access_token|refresh_token|id_token|client_secret|private_key|api[_-]?key|token)\b(["']?\s*[:=]\s*["']?)[^\s"',&]+/gi, "$1$2[hidden]")
-    .replace(/ya29\.[\w.-]+/g, "[hidden]")
-    .replace(/eyJ[\w-]+\.[\w-]+\.[\w-]*/g, "[hidden]")
-    .replace(/[A-Za-z0-9_\-+/]{40,}={0,2}/g, "[hidden]")
-    .replace(/\s+/g, " ")
-    .trim();
-  if (!m) return null;
-  return m.length > 199 ? `${m.slice(0, 198).trimEnd()}…` : m;
-}
 
 /** A quota project (from the person's application default credentials) that is deleted or missing. */
 export function quotaProjectProblem(message, known = []) {

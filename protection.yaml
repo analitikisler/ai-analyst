@@ -1,0 +1,10 @@
+# Which column-name groups AI Analyst proposes as protected on tables a person allows for exploratory answers.
+# Contact and identity data (email, phone, names, addresses, IP, birth dates, national ids, IBAN, card numbers,
+# precise location) is always proposed. The four groups below are the owner's call; true adds the group to the
+# proposal. A person confirms or edits the list per table in Settings › Data source; the proposal is enforced until
+# then. Protection is by column name.
+optional:
+  person_ids: false   # user_id, customer_id, customer_key, user_pseudo_id, and id on a person-like table
+  city: false         # city, town, district, ilce, il, sehir
+  age: false          # age, age_group, yas
+  gender: false       # gender, sex, cinsiyet

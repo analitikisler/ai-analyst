@@ -110,6 +110,21 @@ export interface AllowEntry { project: string | null; dataset: string; table: st
 //   "$1,240", "$1.84M" (en) and "1.240 $", "1,84 mn $" (tr); any other code after the number ("1,240 CHF").
 //   The server text, the *_formatted tool fields, the system prompt's number examples and the web formatters agree.
 // Errors may carry params (already in ApiErrorBody): e.g. { env } for locked, { bytes, cap } for bytes_cap.
+// Real-service fixes (25 Oct): token usage per model turn; Turn.text (already Text | null) is stored and returned.
+export interface TurnUsage {
+  provider: ProviderId;
+  model: string;
+  /** Model responses in the turn. */
+  rounds: number;
+  input: number;
+  output: number;
+  cache_read: number;
+  cache_write: number;
+}
+export interface Turn { /* … */ usage?: TurnUsage | null }
+// A source that cannot be reached (a deleted or revoked credential, no network): GET /api/state still answers 200
+// with the workspace dates and rows null and this error; every read that needs the warehouse answers 503 with it.
+export interface AppState { /* … */ source: { /* … */ error?: ApiErrorBody | null } }  // code "source_unavailable", params { service, reason, status? }
 ```
 
 `deep_link` is always `null` in 0.2 (AI Tag Debugger has no deep link scheme yet); `mcp_steps` are four lines,
@@ -182,6 +197,7 @@ Who: P person (web app), A agent tool, M chat app over MCP, S settings (loopback
 | `set_preference` | write | P | `make_it_yours`, `not_now`, `exploratory` |
 | `get_workspace` | read | A M | name, demo, data range, rows |
 | `publish_answer` | write | A | `{ sentence: Text, title?: Text, query_id? , check_id?, explore_id?, kind?: "answer"\|"why", segment?: { dimension: "device"\|"channel", key }, lead?: "metric"\|"check", followups?: Text[] }`; the number-grounding validator checks both languages; refused twice, then published with `validation.ok = false`. `kind: "why"` needs a check that does not add up and fills `why`; `segment` makes a `check_split` with the segment's figures and `overall`; `lead: "metric"` (the default when the query has a comparison or is not one of the check's metrics) leads with the metric and keeps the check below. `explore_id` with `check_id` is refused: exploratory answers never carry a verdict |
+| `decline_question` | write | A | `{ missing?, heading: Text, body: Text, nearest: Text[] }` → the turn's refusal card (`not_in_data`), with the follow-up rule applied to `nearest` |
 | `propose_watch`, `propose_pin`, `propose_event`, `propose_metric` | write | A | a pending `Proposal` (or a proposed metric); nothing changes until a person approves |
 | `run_sql` | read | A | exploratory only (a model is set and the switch is on); `{ sql, measure, dims, dim_labels?, from, to, unit, label? }`, dims may be `"other"` (a dimension outside the mart, named by `dim_labels`); see "Exploratory SQL" |
 | `describe_tables` | read | A P S | `{ refresh? }` → `{ dialect, tables: DescribedTable[] }`: the mart and the allowed tables with columns, types, column descriptions, row counts, partitioning, the description (the person's, else the demo's built-in one) and the protected columns. Read by the server from `INFORMATION_SCHEMA` and `__TABLES__` (BigQuery) or the demo file's catalogue, cached 10 minutes per warehouse and list; never table data. Offered to the model only with exploratory answers on |
@@ -201,7 +217,8 @@ Removed from 0.1, replaced by the prototype's actions: `pin_answer` (frozen answ
   fallbacks `"default"`, eager input streaming on tools). OpenAI (`https://api.openai.com/v1`), Gemini (its
   OpenAI-compatible endpoint `https://generativelanguage.googleapis.com/v1beta/openai`) and OpenAI-compatible
   servers (a base URL: Ollama, OpenRouter) go through one fetch-based chat-completions adapter with tool calls.
-- A turn keeps the model's own text (`text`, capped: 400 characters after a card, 1,500 without one) and, for model turns, `usage: { input, output, cache_read, cache_write, calls }` summed over its calls. A check side with no data (all NULL) is `insufficient_data` with `reason: Text`; ratio metrics over a NULL or zero denominator are `null` (no data).
+- A turn keeps the model's own text (`text`, capped: 400 characters after a card, 1,500 without one) and, for model turns, `usage: { provider, model, rounds, input, output, cache_read, cache_write }` (tokens summed over its rounds; the server logs one line per turn). When the data cannot answer, the model calls `decline_question { missing?, heading, body, nearest }`, which makes the turn's `refusal` (code `not_in_data`) instead of free text. A model turn that ends with no card, refusal, approval or text ends with `error { code: "no_answer" }`.
+- Prompt caching (Anthropic): the system prompt is two blocks. The stable one (pack, rules, house style) carries the cache breakpoint, so tools and it are read from cache on every call and round; the volatile one (today's date, the data range, the person's language) and the user message (with the dashboards and `<app_context>`) come after it. The OpenAI-compatible adapter needs nothing; its `usage.prompt_tokens_details.cached_tokens` is recorded. A check side with no data (all NULL) is `insufficient_data` with `reason: Text`; ratio metrics over a NULL or zero denominator are `null` (no data).
 - The model writes every text in both languages (`publish_answer` takes `Text`). Steps stream as tools run; an
   answer or approval is sent right after its tool's step. Follow-ups never repeat a question already asked in
   the conversation.
@@ -228,16 +245,38 @@ unit, label? }`. The model may read the mart and the tables the person allowed (
   (`project.dataset`, `project.dataset.table`, `demo`, `demo.orders`, comma separated) sets both and locks them.
   Names: the BigQuery project in lower case, dataset and table exactly (case-sensitive); demo names in lower case.
 - **Protected columns.** Per table: the person's confirmed list (`explore.protected`), else the server's proposal
-  from the schema by name and type (contact data: email, phone, mobile, names, address lines, street, IP, device
-  ids, national ids, card numbers; `name` only on a customer-like table; location detail and birth dates of any
-  type: postal_code, postcode, zip, latitude, longitude, lat, lng, lon, geom and `*_geom` columns, dob,
-  birth_date, birthday). Pseudonymous keys are not proposed: `user_id`, `customer_id`, `*_user_id`,
-  `customer_key`, `user_pseudo_id` and the `id` of a users or customers table may be selected, grouped and
-  returned; the person can still protect one by hand. City, state and country are never proposed. A protected
-  column still works in `JOIN ... ON`, `WHERE` and `COUNT(DISTINCT ...)`. The proposal is enforced until
-  confirmed; a table whose schema cannot be read is refused. No masking.
+  from the schema, by column name only (the type does not matter). Names are split on `_`, digits and camelCase
+  and matched by token, compound and Turkish forms included (`customer_email`, `contactPhone`, `phone_no`,
+  `msisdn`, `client_ip`, `eposta`, `telefon`, `cep_telefonu`, `ad`, `soyad`, `musteri_adi`, `adres`, `posta_kodu`,
+  `dogum_tarihi`, `tc_kimlik_no`): email, phone, names (`name` on a person-like table or after a person word),
+  addresses and streets, postcodes, IP and user agent, birth dates, national and tax ids, IBAN, card numbers,
+  passwords and tokens, advertising and device ids, precise location. **Readable by default** (the owner's
+  decision, 25 Oct): customer and user ids (`user_id`, `customer_id`, `customer_key`, `user_pseudo_id`, `id` of a
+  person-like table), city, age and gender. One default list decides those four groups:
+  `protection.yaml` in the pack (`optional: { person_ids, city, age, gender }`, all `false` as shipped; read into
+  `config.protection`, used by `proposeProtected` in `src/explore/allow.js`). So per-customer rows without contact
+  data can reach the model provider (at most 200 rows per query) and are stored on this machine (at most 1,000
+  rows per query; a query's result is pruned after 30 days, at start and daily, while a published answer keeps its
+  rows in app.db until that file is deleted); Settings › Data source can protect them. Protection is by column name: a column
+  with an unusual name, or a view that renames one, is not protected until the person adds it, and a view is
+  readable only when added by name (not through its dataset). The proposal is enforced until confirmed; a table
+  whose schema cannot be read is refused. No masking.
+- **Where a protected column may appear** (security review 2, H2, V1, V2): only as a join key compared with a
+  column of another allowed base table (`JOIN … ON a.col = b.col`, each side a bare column qualified by a base
+  table's alias, never a CTE's or derived table's column; or `USING (col)` when no CTE or derived table is read),
+  the same inside a parenthesised join, and alone inside
+  `COUNT(DISTINCT col)`. Everywhere else it is `sql_protected_column`: the select list, `GROUP BY`, `ORDER BY`,
+  `WINDOW`, `WHERE`, `HAVING`, `QUALIFY`, an `ON` condition against a value, `CASE`, `LIKE`, `IN`, `COUNTIF`, a
+  bare `COUNT(col)`, any function, any comparison with a constant. What can leave is the number of distinct values.
+  A self-join, or a join to any column of an allowed table, is allowed; it tells whether values are equal, never what they are. A query that uses a protected column cannot contain a CTE or a subquery. (security review 2, V2: enforced structurally, any CTE or subquery in such a query is
+  `sql_protected_column`.) A tile re-run guards the query inside its outer `LIMIT` wrapper.
 - **The per-question cap.** All exploratory queries of one turn share `explore.maxBytesPerQuestion` (5 GB by
-  default; `set_explore_tables`); on BigQuery a query's cap is the lower of `BIGQUERY_MAX_BYTES` and what is left.
+  default; `set_explore_tables`, at most ten times `BIGQUERY_MAX_BYTES`, `over_ceiling` above); on BigQuery a
+  query's cap is the lower of `BIGQUERY_MAX_BYTES` and what is left, and its dry-run bytes count before it runs,
+  so a run that fails after billing still counts. DuckDB is local and not billed: no per-question cap there.
+- **Warehouse errors on exploratory queries** never pass their text to the model or the UI: BigQuery a fixed
+  sentence; DuckDB a fixed sentence per kind (`explore_sql_error`, `params.kind`: `syntax`, `names`, `values`,
+  `other`), only the kind logged, since DuckDB's text can quote a value from the data.
 - **describe_tables** gives the model the structure (no data); the model may never query `INFORMATION_SCHEMA`.
 
 Three fences, each enough on its own to keep other tables out (security review H1, 24 Oct):
@@ -263,12 +302,14 @@ Three fences, each enough on its own to keep other tables out (security review H
      `__TABLES__`) or a CTE of the top-level `WITH`; a CTE defined inside a subquery does not count, a string used
      as a table, `LATERAL`, `UNNEST` and anything else is `sql_table_not_allowed` with `params.table`; a comma at
      the depth of a `WHERE`, `HAVING`, `QUALIFY` or `ON` condition is refused;
-   - **protected columns** (`sql_protected_column`, `params.column`): read per `SELECT`, a protected column in a
-     select list, `GROUP BY`, `ORDER BY` or `WINDOW` (also inside an expression, an alias, a CTE or a subquery),
-     a `*` or `t.*` when any table read has a protected column, or a table alias alone (a whole row as a struct)
-     is refused; inside `COUNT(…)`/`COUNTIF`, in `ON`, `USING`, `WHERE`, `HAVING`, `QUALIFY`, or in a subquery
-     that sits in one of them, it is allowed. Unqualified names count against every table read; qualified ones
-     against their own table. After the run, a result column named like a protected column is refused too.
+   - **protected columns** (`sql_protected_column`, `params.column`): allowed only as a join key compared with
+     another column (`ON a.col = b.col`, `USING (col)`) and alone inside `COUNT(DISTINCT col)`; refused anywhere
+     else, in any clause and any subquery. A `*` or `t.*` when any table read has a protected column, or a table
+     alias alone (a whole row as a struct), is refused in a select list. Unqualified names count against every
+     table read; qualified ones against their own table. After the run, a result column named like a protected
+     column is refused too;
+   - a top-level `WITH` name equal to an allowed table, or to a table the query reads, is `sql_table_not_allowed`
+     (DuckDB would resolve the name to the table inside the CTE's own body or before it is defined).
 2. **The warehouse checks again.** BigQuery: the dry run is authoritative; the query is refused before it runs
    unless every entry of `statistics.query.referencedTables` and `referencedViews` is on the allowlist (not empty,
    fewer than 50) and `statementType` is `SELECT`; a dry run that fails on location is `sql_location_mismatch`,

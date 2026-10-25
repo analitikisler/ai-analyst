@@ -4,6 +4,7 @@
 // guard and a job timeout. Queries run (and are billed) in the job project; the mart lives in the data project.
 import { assertCloudAllowed } from "../cloud.js";
 import { AppError } from "../errors.js";
+import { sourceUnavailable } from "./google-errors.js";
 import { refAllowed } from "../explore/allow.js";
 import { MART } from "../metrics/load.js";
 
@@ -98,7 +99,7 @@ export async function openBigQuery(cfg, opts = {}) {
     try {
       [dry] = await client.createQueryJob(queryOptions(cfg, sql, { dryRun: true, maxBytes }));
     } catch (err) {
-      if (!policy) throw err;
+      if (!policy) throw sourceUnavailable(err);
       const first = String(err?.message ?? "").split("\n")[0];
       console.error("[ai-analyst] exploratory dry run failed on BigQuery:", first);
       if (/location/i.test(first)) throw new AppError("sql_location_mismatch", "The query reads a dataset in another location than the mart. A BigQuery query runs in one location.", { params: { location: cfg.location ?? "" } });
@@ -116,6 +117,10 @@ export async function openBigQuery(cfg, opts = {}) {
       if (refs.length >= BQ_TABLES_LIMIT) throw notAllowed("too many tables to check");
       const bad = [...refs, ...views].find((r) => !refAllowed(policy, r));
       if (bad) throw notAllowed("referenced tables", name(bad));
+      // Protection is by column name, and a view can rename a column: a view is read only when the person added
+      // it by name, never because its dataset is allowed (security review 2, M3).
+      const looseView = views.find((v) => !(policy.allowed ?? []).includes(`${String(v.projectId).toLowerCase()}.${v.datasetId}.${v.tableId}`));
+      if (looseView) throw notAllowed("a view allowed only through its dataset; add the view by name in Settings › Data source", name(looseView));
       if (type !== "SELECT") throw new AppError("sql_not_select", "Only a read-only query can run: it must start with SELECT or WITH.", { params: { detail: String(type ?? "unknown statement") } });
     } else if (refs || type) {
       const names = (refs ?? []).map((r) => name(r).toLowerCase());
@@ -134,7 +139,12 @@ export async function openBigQuery(cfg, opts = {}) {
 
   async function query(sql) {
     await dryRun(sql, cfg.maxBytes);
-    const [rows] = await client.query(queryOptions(cfg, sql));
+    let rows;
+    try {
+      [rows] = await client.query(queryOptions(cfg, sql));
+    } catch (err) {
+      throw sourceUnavailable(err);
+    }
     lastRun = new Date().toISOString();
     return rows.map(normalizeRow);
   }
@@ -149,11 +159,13 @@ export async function openBigQuery(cfg, opts = {}) {
      * One exploratory statement, already through the SQL guard: the dry run against the allowlist, then the run with
      * the cap and a timeout. maxBytes: what is left of the per-question cap, when lower than the per-query cap.
      */
-    async explore(sql, { timeoutMs = 30000, policy, maxBytes } = {}) {
+    async explore(sql, { timeoutMs = 30000, policy, maxBytes, onBytes } = {}) {
       if (!policy) throw new AppError("sql_table_not_allowed", "The query reads a table that is not on the list of tables the agent may read (Settings › Data source).", { params: { detail: "no allowlist" } });
       const question = maxBytes != null && maxBytes < cfg.maxBytes;
       const cap = question ? Math.max(0, Math.floor(maxBytes)) : cfg.maxBytes;
       const dry = await dryRun(sql, cap, { policy, question });
+      // Counted against the question before the run, so a run that fails after it was billed still counts.
+      onBytes?.(dry.bytes ?? 0);
       try {
         const [rows] = await client.query({ ...queryOptions(cfg, sql, { maxBytes: cap }), jobTimeoutMs: timeoutMs });
         lastRun = new Date().toISOString();

@@ -146,43 +146,86 @@ export function refAllowed(policy, ref) {
 
 // ---------------------------------------------------------------- protected columns
 
-/** Name parts that mark contact or identity data. Matched against the column name split on _ (and the whole name). */
-const CONTACT = [
-  /^e?_?mail$/, /^email(_address)?$/, /^phone(_number)?$/, /^(mobile|cell)(_phone)?$/, /^gsm$/, /^telephone$/, /^tel$/,
-  /^first_?name$/, /^last_?name$/, /^surname$/, /^full_?name$/, /^given_?name$/, /^family_?name$/,
-  /^(street|billing|shipping|home|postal)?_?address(_?line_?\d)?$/, /^street(_name)?$/,
-  /^ip(_?address)?$/, /^user_agent$/, /^(device|advertising|ad|idfa|gaid|idfv)_?id$/,
-  /^(national_id|tckn|tc_?kimlik(_no)?|ssn|passport(_no|_number)?|tax_id|vkn)$/, /^iban$/, /^card(_number)?$/, /^pan$/,
-  /^password(_hash)?$/, /^token$/, /^secret$/,
-];
 /**
- * Location detail and date of birth: quasi-identifiers, whatever the column type (latitude is a number, a geom is
- * GEOGRAPHY). City, state and country stay readable: aggregates by them are the point.
+ * Column names split into lower-case tokens: on _, -, ., spaces, digits and camelCase ("customerEmail",
+ * "contact_phone2" → ["customer", "email"], ["contact", "phone"]).
  */
-const ANY_TYPE = [
-  /^post_?code$/, /^postal_?code$/, /^zip(_?code)?$/, /^(latitude|longitude|lat|lng|lon|long)$/,
-  /^geo(m|_?point|graphy|location)?$/, /_geom$/, /_geo(_?point)?$/, /^(home|user)_?location$/,
-  /^(date_of_)?birth(_?date|day)?$/, /^dob$/, /^birth_?year$/,
-];
-// Pseudonymous keys (user_id, customer_id, customer_key, users.id) are not proposed: they may be selected,
-// grouped and returned. The person can still protect one by hand in Settings.
-const PERSON_TABLE = /customer|user|member|person|people|contact|client|musteri|müşteri/i;
+export function nameTokens(name) {
+  return String(name)
+    .replace(/([a-z])([A-Z])/g, "$1_$2")
+    .replace(/([A-Z]+)([A-Z][a-z])/g, "$1_$2")
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/ı/g, "i")
+    .split(/[^a-z]+/)
+    .filter(Boolean);
+}
+
+const PERSON_TABLE = /customer|user|member|person|people|contact|client|musteri|uye|kisi|recipient|alici/i;
+const PERSON_WORD = new Set(["customer", "user", "member", "person", "contact", "client", "recipient", "billing", "shipping", "buyer", "musteri", "uye", "kisi", "alici", "first", "last", "full", "given", "family", "middle", "sur", "nick", "display"]);
+const has = (tokens, ...words) => words.some((w) => tokens.includes(w));
+const pair = (tokens, a, b) => tokens.some((t, i) => t === a && tokens[i + 1] === b);
+// Turkish adds case and possessive endings (telefonu, adresi, soyadı): match these roots as prefixes.
+const root = (tokens, ...roots) => tokens.some((t) => roots.some((r) => t.startsWith(r)));
+
+/** Contact, identity and precise-location data: always proposed. Returns the reason, or null. */
+function contactGroup(tokens, compact, personTable) {
+  if (root(tokens, "eposta", "telefon", "soyad", "soyisim", "adres", "dogum", "kimlik")) return root(tokens, "eposta") ? "email" : root(tokens, "telefon") ? "phone" : root(tokens, "adres") ? "address" : root(tokens, "dogum") ? "birth" : root(tokens, "kimlik") ? "national_id" : "name";
+  if (has(tokens, "email", "mail", "eposta", "emailaddress") || pair(tokens, "e", "mail") || pair(tokens, "e", "posta")) return "email";
+  if (has(tokens, "phone", "telephone", "tel", "telefon", "gsm", "msisdn", "cellphone", "mobilephone", "fax") || (has(tokens, "mobile", "cell") && has(tokens, "number", "no", "num", "phone")) || (personTable && tokens.length === 1 && ["mobile", "cell"].includes(tokens[0]))) return "phone";
+  if (has(tokens, "firstname", "lastname", "fullname", "surname", "soyad", "soyadi", "soyisim", "isim", "adsoyad", "givenname", "familyname")) return "name";
+  if (has(tokens, "name", "adi") && (personTable || tokens.some((t) => PERSON_WORD.has(t)))) return "name";
+  if (tokens.length === 1 && ["ad", "adi"].includes(tokens[0])) return "name";
+  if (tokens.at(-1) === "ad" && (personTable || tokens.some((t) => PERSON_WORD.has(t)))) return "name";
+  if (has(tokens, "address", "adres", "street", "sokak", "cadde", "mahalle", "addressline")) return "address";
+  if (has(tokens, "postcode", "postal", "zip", "zipcode", "postakodu") || pair(tokens, "posta", "kodu")) return "postcode";
+  if (has(tokens, "ip", "ipv4", "ipv6", "ipaddress") || pair(tokens, "user", "agent")) return "ip";
+  if (has(tokens, "birth", "birthday", "birthdate", "dob", "dogum")) return "birth";
+  if (has(tokens, "tckn", "kimlik", "ssn", "passport", "pasaport", "vkn", "nationalid") || pair(tokens, "national", "id") || pair(tokens, "tax", "id") || (tokens[0] === "tc" && (tokens.length === 1 || has(tokens, "no", "kimlik", "number")))) return "national_id";
+  if (has(tokens, "iban")) return "iban";
+  if (has(tokens, "cvv", "cvc", "pan") || compact === "card" || pair(tokens, "credit", "card") || pair(tokens, "debit", "card") || (has(tokens, "card", "kart") && has(tokens, "number", "no", "num", "last", "pan"))) return "card";
+  if (has(tokens, "password", "passwd", "secret", "token", "sifre")) return "secret";
+  if (has(tokens, "idfa", "gaid", "idfv", "advertising") || pair(tokens, "device", "id")) return "device_id";
+  if (has(tokens, "latitude", "longitude", "lat", "lng", "lon", "geo", "geom", "geopoint", "geography", "geolocation") || (tokens.at(-1) === "location" && has(tokens, "home", "user", "customer"))) return "location";
+  return null;
+}
+
+/** The owner's optional groups (protection.yaml). */
+function optionalGroup(tokens, personTable) {
+  if (has(tokens, "city", "town", "district", "ilce", "sehir") || (tokens.length === 1 && tokens[0] === "il")) return "city";
+  if (has(tokens, "age", "yas")) return "age";
+  if (has(tokens, "gender", "sex", "cinsiyet")) return "gender";
+  const idLike = tokens.at(-1) === "id" || tokens.at(-1) === "key";
+  if (idLike && (tokens.some((t) => PERSON_WORD.has(t) && !["first", "last", "full", "given", "family", "middle", "sur", "nick", "display", "billing", "shipping"].includes(t)) || pair(tokens, "user", "pseudo"))) return "person_ids";
+  if (personTable && tokens.length === 1 && tokens[0] === "id") return "person_ids";
+  return null;
+}
+
+/** The default list: which optional groups are proposed too. Read from <pack>/protection.yaml when it exists. */
+export const DEFAULT_OPTIONAL = { person_ids: false, city: false, age: false, gender: false };
 
 /**
- * Proposed protected columns for one table, by name and type. The person confirms (or changes) the list in
- * Settings; until then the proposal is what the guard enforces.
+ * Proposed protected columns for one table, by name: compound names count (customer_email, contactPhone, phone_no,
+ * client_ip), in English and Turkish (eposta, telefon, ad, soyad, adres, dogum). The type does not matter: a phone
+ * stored as a number is still a phone. The person confirms (or changes) the list in Settings; until then the
+ * proposal is what the guard enforces.
  * @param {string} table the table's last name part
  * @param {{ name: string, type?: string }[]} columns
+ * @param {{ person_ids?: boolean, city?: boolean, age?: boolean, gender?: boolean }} [optional] the default list
  */
-export function proposeProtected(table, columns) {
+export function proposeProtected(table, columns, optional = DEFAULT_OPTIONAL) {
+  const personTable = PERSON_TABLE.test(String(table));
   const out = [];
   for (const c of columns ?? []) {
-    const name = String(c.name).toLowerCase();
-    const type = String(c.type ?? "").toUpperCase();
-    const text = !type || /STRING|VARCHAR|TEXT|CHAR|BYTES|JSON/.test(type);
-    if (ANY_TYPE.some((re) => re.test(name))) out.push(name);
-    else if (text && CONTACT.some((re) => re.test(name))) out.push(name);
-    else if (text && name === "name" && PERSON_TABLE.test(table)) out.push(name);
+    const name = String(c.name);
+    const tokens = nameTokens(name);
+    const compact = tokens.join("");
+    if (contactGroup(tokens, compact, personTable)) out.push(name.toLowerCase());
+    else {
+      const g = optionalGroup(tokens, personTable);
+      if (g && optional?.[g]) out.push(name.toLowerCase());
+    }
   }
   return [...new Set(out)];
 }
@@ -198,5 +241,5 @@ export function protectedFor(config, key, columns) {
   const stored = config.explore?.protected?.[key];
   if (stored) return { columns: stored.columns, confirmed: stored.confirmed };
   if (!columns) return null;
-  return { columns: proposeProtected(key.split(".").at(-1), columns), confirmed: false };
+  return { columns: proposeProtected(key.split(".").at(-1), columns, config.protection ?? DEFAULT_OPTIONAL), confirmed: false };
 }

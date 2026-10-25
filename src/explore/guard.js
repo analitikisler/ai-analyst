@@ -14,7 +14,8 @@
 //   allowlist (BigQuery: written in full, project.dataset.table), or a CTE defined in the top-level WITH;
 //   no string literal used as a table (DuckDB reads files that way), no LATERAL or UNNEST;
 //   protected columns (contact data, person ids) never reach the output: not selected, not through *, an alias, a
-//   CTE, a subquery or an expression, not grouped or ordered by; a join, a filter or COUNT(DISTINCT …) may use them.
+//   CTE, a subquery or an expression, not grouped, ordered or filtered by; only a join key (a.col = b.col, USING) or
+//   COUNT(DISTINCT col) may use them.
 // The statement runs wrapped in an outer LIMIT 1000.
 import { AppError } from "../errors.js";
 
@@ -71,7 +72,7 @@ export const GUARD_MESSAGES = {
   sql_forbidden_keyword: "The query uses a word that writes, loads, changes settings or reads another statement form, so it does not run.",
   sql_forbidden_function: "The query calls a function that exploratory queries may not use (only aggregate, window, math, date, string and conditional functions), so it does not run.",
   sql_table_not_allowed: "The query reads a table that is not on the list of tables the agent may read (Settings › Data source). On BigQuery every table is written in full, project.dataset.table.",
-  sql_protected_column: "The query returns, groups or orders by a protected column, or reads one through *, so it does not run. A protected column can be used in a join, a filter or COUNT(DISTINCT …) only.",
+  sql_protected_column: "The query uses a protected column outside the two places it may appear, so it does not run. A protected column can only be a join key compared with another column (a.col = b.col, or USING) or sit alone inside COUNT(DISTINCT …).",
   sql_location_mismatch: "The query reads a dataset in another location than the mart. A BigQuery query runs in one location.",
   sql_unsupported_syntax: "The query uses a form the guard does not read the same way as the warehouse (block comments, backslashes, prefixed or dollar-quoted strings, @ variables), so it does not run.",
 };
@@ -175,11 +176,7 @@ function martPolicy(warehouse) {
 /** Words after a table name that are not its alias. */
 const NOT_ALIAS = new Set([...CLAUSE_END, "join", "inner", "left", "right", "full", "outer", "cross", "natural", "positional", "asof", "anti", "semi", "for", "as", "union", "except", "intersect", "lateral", "unnest", "window"]);
 /** Clause words that set where a token stands inside one SELECT. */
-const CLAUSES = new Set(["select", "from", "join", "where", "group", "having", "order", "qualify", "window", "on", "using", "limit", "offset", "fetch", "union", "except", "intersect"]);
-/** Clauses whose content becomes output (or splits it): a protected column may not appear there. */
-const LEAKING = new Set(["select", "group", "order", "window"]);
-/** Clauses that only filter: a subquery inside one only feeds the condition. */
-const FILTERING = new Set(["where", "having", "qualify", "on"]);
+const CLAUSES = new Set(["select", "from", "join", "where", "group", "having", "order", "qualify", "window", "on", "limit", "offset", "fetch", "union", "except", "intersect"]);
 /** Words before "*" that make it a star (every column), not a multiplication. */
 const STAR_BEFORE = new Set(["select", "distinct", "all", "struct", "value"]);
 
@@ -207,6 +204,8 @@ export function guardSql(sql, warehouse, opts = {}) {
   // CTE names count only when defined in the top-level WITH (depth 0), so a CTE inside a subquery cannot make a
   // real table's name look allowed elsewhere.
   const ctes = new Set();
+  const lastParts = new Set([...(policy.allowed ?? []), ...(policy.entries ?? []).map((e) => e?.table).filter(Boolean), warehouse.table.replace(/`/g, "")].map((k) => String(k).split(".").at(-1).toLowerCase()));
+  const shadowsTable = (name) => lastParts.has(name) || policy.match([name]) !== null || policy.match(["main", name]) !== null;
   {
     let depth = 0;
     let inWith = first.value.toLowerCase() === "with";
@@ -219,7 +218,13 @@ export function guardSql(sql, warehouse, opts = {}) {
       if (lower === "select") inWith = false;
       if (lower === "with" || lower === "recursive" || (t.type === "punct" && t.value === ",")) {
         const nameTok = tokens[k + 1];
-        if (nameTok && ["word", "quoted"].includes(nameTok.type) && tokens[k + 2]?.value?.toLowerCase() === "as" && tokens[k + 3]?.value === "(") ctes.add(nameTok.value.toLowerCase());
+        if (nameTok && ["word", "quoted"].includes(nameTok.type) && tokens[k + 2]?.value?.toLowerCase() === "as" && tokens[k + 3]?.value === "(") {
+          const cte = nameTok.value.toLowerCase();
+          // A CTE named like an allowed table would shadow it in one reading and not in another (DuckDB resolves the
+          // name inside the CTE's own body, or before it is defined, to the table): refused in both dialects.
+          if (shadowsTable(cte)) refuse("sql_table_not_allowed", `a WITH name equal to the table ${nameTok.value}`);
+          ctes.add(cte);
+        }
       }
     }
   }
@@ -313,69 +318,164 @@ export function guardSql(sql, warehouse, opts = {}) {
   }
   if (!reads) refuseTable("no table");
 
-  if (opts.protectedCols) checkProtected(tokens, [...new Set(tables)], aliases, opts.protectedCols);
+  if (opts.protectedCols) checkProtected(tokens, [...new Set(tables)], aliases, opts.protectedCols, ctes);
 
+  // A WITH name equal to a table the query reads (a dataset entry's tables are only known by being read).
+  for (const key of tables) {
+    const last = String(key).split(".").at(-1).toLowerCase();
+    if (ctes.has(last)) refuse("sql_table_not_allowed", `a WITH name equal to the table ${last}`);
+  }
   const body = sql.trim().replace(/;\s*$/, "");
   const wrapped = `SELECT * FROM (\n${body}\n) AS q\nLIMIT ${ROW_LIMIT}`;
   return { sql: body, wrapped, tables: [...new Set(tables)] };
 }
 
 /**
- * Protected columns never reach the output. Read per SELECT (each subquery has its own clauses): in the select list,
- * GROUP BY, ORDER BY and WINDOW, a protected column, a * or a whole row (a table alias alone, which both warehouses
- * return as a struct) is refused; inside COUNT(…) it is allowed (only a count leaves), and so is anything in a
- * join, a filter, or a subquery that sits in a filter (it only decides which rows count). Unqualified names are
- * protected when any table read has a protected column of that name; qualified ones by their own table.
+ * Protected columns may be used in two places only, and nowhere else (security review 2, H2):
+ *   - as a join key compared with another column: JOIN … ON a.col = b.col (each side a bare column), or USING (col);
+ *   - inside COUNT(DISTINCT col), with nothing around the column.
+ * Anywhere else, a protected column is refused: in the select list, GROUP BY, ORDER BY, WINDOW, WHERE, HAVING,
+ * QUALIFY, an ON condition against a literal, CASE, LIKE, IN, any function, COUNTIF, any comparison with a
+ * constant. So what can leave is the number of distinct values, never a value or a property of one. A *, or a whole
+ * row (a table alias alone, which both warehouses return as a struct), over a table with a protected column is
+ * refused in the select list. Unqualified names are protected when any table read has a protected column of that
+ * name; qualified ones by their own table.
  */
-function checkProtected(tokens, tables, aliases, protectedCols) {
+function checkProtected(tokens, tables, aliases, protectedCols, ctes = new Set()) {
   const byTable = new Map(tables.map((k) => [k, protectedCols(k) ?? new Set()]));
   const any = new Set([...byTable.values()].flatMap((s) => [...s]));
   if (!any.size) return;
   const rowAliases = new Set([...aliases].filter(([, key]) => byTable.get(key)?.size).map(([a]) => a));
-  const frames = [{ sub: true, clause: null, filter: false, count: false }];
+  const frames = [{ sub: true, clause: null, using: false, fromItem: false }];
+  // Names that stand for rows the query computes (a CTE, a derived table, and their aliases): a protected join key
+  // may not be compared with their columns, which could hold chosen values (security review 2, V2).
+  const derived = new Set(ctes);
+  // A query that uses a protected column may not contain a CTE or a subquery anywhere: then a protected column can
+  // only ever meet base-table columns, whatever the nesting (security review 2, V2).
+  const nested = ctes.size > 0 || tokens.some((x, i) => x.type === "punct" && x.value === "(" && tokens[i + 1]?.type === "word" && SUBQUERY_START.has(tokens[i + 1].value.toLowerCase()));
+  const allowUse = (what) => {
+    if (nested) refuse("sql_protected_column", `${what} in a query with a WITH or a subquery`, { column: what });
+  };
+  const aliasAt = (i) => {
+    let a = i;
+    if (val(tokens[a]) === "as") a++;
+    const at = tokens[a];
+    return at && (at.type === "quoted" || (at.type === "word" && !NOT_ALIAS.has(val(at)))) ? val(at) : null;
+  };
   const deny = (what) => refuse("sql_protected_column", what, { column: what });
+  const isName = (t) => t && (t.type === "word" || t.type === "quoted");
+  const val = (t) => (t ? String(t.value).toLowerCase() : null);
+  /** The first token of a column reference that ends at j (a, a.b, a.b.c). */
+  const refStart = (j) => {
+    let i = j;
+    while (tokens[i - 1]?.value === "." && tokens[i - 1].type === "punct" && isName(tokens[i - 2])) i -= 2;
+    return i;
+  };
+  /** The last token of a column reference that starts at i, or -1 when i does not start a plain column reference. */
+  const refEnd = (i) => {
+    if (!isName(tokens[i])) return -1;
+    let j = i;
+    while (tokens[j + 1]?.value === "." && tokens[j + 1].type === "punct" && isName(tokens[j + 2])) j += 2;
+    if (tokens[j + 1]?.value === "(") return -1; // a function call
+    return j;
+  };
+  const BOUNDARY_AFTER = new Set(["and", "or", "where", "join", "inner", "left", "right", "full", "cross", "natural", "group", "order", "having", "qualify", "window", "limit", "union", "except", "intersect"]);
+  const endsOperand = (j) => {
+    const n = tokens[j + 1];
+    return !n || (n.type === "punct" && [")", ","].includes(n.value)) || (n.type === "word" && BOUNDARY_AFTER.has(val(n)));
+  };
+  const startsOperand = (i) => {
+    const p = tokens[i - 1];
+    return p && ((p.type === "punct" && p.value === "(") || (p.type === "word" && ["on", "and", "or"].includes(val(p))));
+  };
+  /** A column of an allowed base table, qualified by its alias: the reference spanning [i, j]. */
+  const baseColumn = (i, j) => {
+    const t = tokens[j];
+    const q = t.type === "quoted" && t.value.includes(".") ? t.value.split(".").at(-2).toLowerCase() : i < j ? val(tokens[j - 2]) : null;
+    return q !== null && aliases.has(q) && !derived.has(q);
+  };
+  /** a.col = b.col in an ON clause, the protected reference spanning [start, end]; b a base table's column. */
+  const joinKey = (start, end) => {
+    if (tokens[end + 1]?.value === "=" && startsOperand(start)) {
+      const rEnd = refEnd(end + 2);
+      return rEnd > 0 && endsOperand(rEnd) && baseColumn(end + 2, rEnd);
+    }
+    if (tokens[start - 1]?.value === "=" && endsOperand(end)) {
+      const lEnd = start - 2;
+      if (!isName(tokens[lEnd]) || tokens[lEnd + 1]?.value === "(") return false;
+      const lStart = refStart(lEnd);
+      return startsOperand(lStart) && baseColumn(lStart, lEnd);
+    }
+    return false;
+  };
+  /** COUNT(DISTINCT col) with nothing else inside. */
+  const countDistinct = (start, end) => val(tokens[start - 1]) === "distinct" && tokens[start - 2]?.value === "(" && val(tokens[start - 3]) === "count" && tokens[end + 1]?.value === ")";
+
   for (let k = 0; k < tokens.length; k++) {
     const t = tokens[k];
     const lower = t.type === "word" ? t.value.toLowerCase() : null;
     const top = frames.at(-1);
     if (t.type === "punct" && t.value === "(") {
       const next = tokens[k + 1];
-      const prev = tokens[k - 1];
       const sub = next?.type === "word" && SUBQUERY_START.has(next.value.toLowerCase());
-      const filter = top.filter || FILTERING.has(top.clause);
-      if (sub) frames.push({ sub: true, clause: null, filter, count: false });
-      else frames.push({ sub: false, clause: top.clause, filter, count: top.count || (prev?.type === "word" && ["count", "countif", "count_if"].includes(prev.value.toLowerCase())) });
+      // A parenthesis in a FROM list is a FROM item (a parenthesised join): its JOIN, ON and USING are read as in a
+      // SELECT, so its conditions are checked too (security review 2, V1).
+      frames.push(sub ? { sub: true, clause: null, using: false, fromItem: false } : { sub: false, clause: top.clause, using: val(tokens[k - 1]) === "using", fromItem: top.clause === "from" });
       continue;
     }
     if (t.type === "punct" && t.value === ")") {
-      if (frames.length > 1) frames.pop();
+      if (frames.length > 1) {
+        const closed = frames.pop();
+        // A derived table in a FROM list: its alias names computed rows.
+        if (closed.sub && frames.at(-1).clause === "from") {
+          const a = aliasAt(k + 1);
+          if (a) derived.add(a);
+        }
+      }
       continue;
     }
-    if (lower && CLAUSES.has(lower) && top.sub) {
-      top.clause = lower === "join" || lower === "using" ? "from" : ["union", "except", "intersect"].includes(lower) ? null : lower;
+    if (lower && CLAUSES.has(lower) && (top.sub || top.fromItem)) {
+      top.clause = lower === "join" ? "from" : ["union", "except", "intersect"].includes(lower) ? null : lower;
       continue;
     }
-    if (top.filter || top.count || !LEAKING.has(top.clause)) continue;
     const prev = tokens[k - 1];
     if (t.type === "punct" && t.value === "*" && top.clause === "select") {
       if ((prev?.type === "word" && STAR_BEFORE.has(prev.value.toLowerCase())) || (prev?.type === "punct" && [",", "."].includes(prev.value))) deny("*");
       continue;
     }
-    if (t.type !== "word" && t.type !== "quoted") continue;
+    if (!isName(t)) continue;
+    // JOIN … USING (col): a join key, when every row source of the query is a base table (no CTE, no derived table).
+    if (top.using) {
+      if (any.has(val(t))) {
+        if (derived.size) deny(t.value);
+        allowUse(t.value);
+      }
+      continue;
+    }
+    if (top.clause === "from") {
+      // Table names and aliases. A CTE read here, and its alias, name computed rows.
+      if (isName(t) && ctes.has(val(t)) && tokens[k - 1]?.value !== ".") {
+        const a = aliasAt(k + 1);
+        if (a) derived.add(a);
+      }
+      continue;
+    }
     if (tokens[k + 1]?.value === "(") continue; // a function name, checked by the allowlist
+    if (tokens[k + 1]?.value === "." && isName(tokens[k + 2])) continue; // a qualifier: checked at the column
     if (prev?.type === "word" && prev.value.toLowerCase() === "as") continue; // an output name or a type, not data
     const parts = t.type === "quoted" ? t.value.split(".") : [t.value];
     const name = parts.at(-1).toLowerCase();
-    const qualifier = parts.length > 1 ? parts.at(-2).toLowerCase() : prev?.value === "." && tokens[k - 2] ? String(tokens[k - 2].value).toLowerCase() : null;
-    if (qualifier !== null) {
-      const key = aliases.get(qualifier);
-      if (key ? byTable.get(key)?.has(name) : any.has(name)) deny(parts.join("."));
-      // A table written in full in the select list is its whole row.
-      if (parts.length > 1 && rowAliases.has(name) && tokens[k + 1]?.value !== ".") deny(parts.join("."));
+    const start = refStart(k);
+    const qualifier = parts.length > 1 ? parts.at(-2).toLowerCase() : start < k ? val(tokens[k - 2]) : null;
+    if (top.clause === "select" && start === k && rowAliases.has(name)) deny(t.value); // a whole row
+    if (top.clause === "select" && parts.length > 1 && rowAliases.has(name)) deny(parts.join("."));
+    const key = qualifier !== null ? aliases.get(qualifier) : null;
+    const isProtected = key ? byTable.get(key)?.has(name) : any.has(name);
+    if (!isProtected) continue;
+    if ((top.clause === "on" && joinKey(start, k)) || countDistinct(start, k)) {
+      allowUse(t.value);
       continue;
     }
-    if (any.has(name)) deny(t.value);
-    // A table alias alone returns the whole row.
-    if (rowAliases.has(name) && tokens[k + 1]?.value !== ".") deny(t.value);
+    deny(parts.length > 1 || start === k ? (start < k ? tokens.slice(start, k + 1).map((x) => x.value).join("") : t.value) : t.value);
   }
 }

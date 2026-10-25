@@ -6,7 +6,7 @@ import { useState } from "react";
 import { Link, useNavigate } from "react-router";
 import { ArrowRightIcon, ListChecksIcon, RotateCcwIcon } from "lucide-react";
 import { useAppState, useCall } from "@/api/queries";
-import type { Answer, Proposal, Refusal, Step, Text, Turn } from "@/api/types";
+import type { Answer, Proposal, Refusal, Step, Text, Turn, TurnUsage } from "@/api/types";
 import type { LiveTurn } from "@/ask/AskStore";
 import { Suggestion, Suggestions } from "@/components/ai-elements/suggestion";
 import { Disclosure } from "@/components/kit";
@@ -18,7 +18,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Spinner } from "@/components/ui/spinner";
 import { Trace, TraceCollapsible, TraceCollapsibleContent, TraceCollapsibleTrigger, TraceDescription, TraceIcon, TraceLine, TraceTitle } from "@/components/ui/trace";
 import { fmt, plural, useBilingual, useLang, useT } from "@/i18n";
-import { bytesCapSentence } from "@/lib/errors";
+import { bytesCapSentence, sourceUnavailableSentence } from "@/lib/errors";
 import { useFormat } from "@/lib/format";
 import { notify } from "@/lib/notify";
 import { AnswerCard, MessageActions } from "./AnswerCard";
@@ -46,7 +46,7 @@ export function UserMessage({ text, context }: { text: string; context?: Text | 
 }
 
 /** The agent's steps as one folded row above the reply (shadcn Trace; the AI Elements chain-of-thought pattern). */
-export function StepsTrace({ steps, seconds, running, sources }: { steps: Step[]; seconds: number; running?: boolean; sources: number }) {
+export function StepsTrace({ steps, seconds, running, sources, usage }: { steps: Step[]; seconds: number; running?: boolean; sources: number; usage?: TurnUsage | null }) {
   const t = useT();
   const lang = useLang();
   const f = useFormat();
@@ -89,6 +89,12 @@ export function StepsTrace({ steps, seconds, running, sources }: { steps: Step[]
               </li>
             ))}
           </ol>
+          {/* Model turns: the tokens the turn used, here only, never in the reply itself. */}
+          {usage && (
+            <p className="mt-2 font-mono text-2xs text-text-muted tnum">
+              {fmt(usage.cache_read > 0 ? t.ask.trace.usage_cache : t.ask.trace.usage, { steps: stepsText, input: f.int(usage.input), output: f.int(usage.output), cache: f.int(usage.cache_read) })}
+            </p>
+          )}
         </TraceCollapsibleContent>
       </TraceCollapsible>
     </Trace>
@@ -264,7 +270,7 @@ export function TurnView({ turn, live, fresh, last, actions, contextName }: { tu
       <MessageScrollerItem messageId={`${key}-a`}>
         <Message align="start" aria-busy={running || undefined}>
           <MessageContent className="gap-4">
-            <StepsTrace steps={turn.steps} seconds={seconds} running={running} sources={sourcesOf(answers)} />
+            <StepsTrace steps={turn.steps} seconds={seconds} running={running} sources={sourcesOf(answers)} usage={live ? null : (turn as Turn).usage} />
             {running && !answers.length && !turn.refusal && !proposals.length && !turn.text && <AnswerSkeleton />}
             {answers.map((a, i) => (
               <div key={a.id} id={`answer-${a.id}`} className="scroll-mt-20">
@@ -302,7 +308,7 @@ export function TurnView({ turn, live, fresh, last, actions, contextName }: { tu
             )}
             {status === "error" && error && error.code !== "stopped" && (
               <div role="alert" className="text-sm text-text">
-                <p>{bytesCapSentence(t, f.bytes, error) ?? (error.code === "rate_limited" ? t.err.rate_limited : error.code === "network" ? t.err.network.body : error.code === "no_cloud" ? fmt(t.err.no_cloud, { service: String(("params" in error && error.params?.service) || "–") }) : t.err.agent_stop)}</p>
+                <p>{bytesCapSentence(t, f.bytes, error) ?? sourceUnavailableSentence(t, error) ?? (error.code === "rate_limited" ? t.err.rate_limited : error.code === "network" ? t.err.network.body : error.code === "no_answer" ? t.err.no_answer : error.code === "no_cloud" ? fmt(t.err.no_cloud, { service: String(("params" in error && error.params?.service) || "–") }) : t.err.agent_stop)}</p>
                 <Disclosure label={t.common.details}>
                   <code className="font-mono text-2xs text-text-muted">{fmt(t.err.details, { code: error.code })}</code>
                 </Disclosure>

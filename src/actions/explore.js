@@ -17,7 +17,7 @@ const shownKey = (e) => (e.project ? entryKey(e) : e.table ?? DEMO_DATASET);
 defineAction({
   name: "describe_tables",
   description:
-    "The tables you may read with run_sql: the mart and the ones the person allowed, each with its columns and types, a one-line description of what a row is, the row count, the partitioning column and the protected columns (never select, group or order by them; a join, a filter or COUNT(DISTINCT …) may use them). Call it before writing SQL across tables. No table data.",
+    "The tables you may read with run_sql: the mart and the ones the person allowed, each with its columns and types, a one-line description of what a row is, the row count, the partitioning column and the protected columns (only as a join key compared with another column, or alone inside COUNT(DISTINCT …); never selected, grouped, ordered, filtered or passed to a function). Call it before writing SQL across tables. No table data.",
   kind: "read",
   agent: true,
   settings: true,
@@ -118,6 +118,9 @@ defineAction({
       for (const e of removed) ctx.log(ACT.explore_removed(shownKey(e), !e.table));
     }
     if (input.max_bytes_per_question) {
+      // A question may read at most ten single queries' worth: the per-query ceiling (BIGQUERY_MAX_BYTES) times 10.
+      const ceiling = 10 * ctx.config.bigquery.ceiling;
+      if (input.max_bytes_per_question > ceiling) throw new AppError("over_ceiling", "The cap per question can be at most ten times the cap per query (BIGQUERY_MAX_BYTES).", { params: { cap: ceiling } });
       next = updateConfigFile(next, (file) => (file.explore = { ...(file.explore ?? {}), maxBytesPerQuestion: input.max_bytes_per_question }));
       ctx.log(ACT.question_cap(input.max_bytes_per_question));
     }
@@ -140,7 +143,7 @@ function allowedKey(ctx, table) {
 
 defineAction({
   name: "set_protected_columns",
-  description: "Confirms (or changes) the protected columns of one allowed table: they never leave the warehouse; a query may use them in a join, a filter or COUNT(DISTINCT …) only.",
+  description: "Confirms (or changes) the protected columns of one allowed table: a query may use them only as a join key compared with another column or alone inside COUNT(DISTINCT …), so only counts of distinct values leave the warehouse. Protection is by column name.",
   kind: "write",
   settings: true,
   input: z.object({ table: tableInput, columns: z.array(colName).max(300) }).strict(),

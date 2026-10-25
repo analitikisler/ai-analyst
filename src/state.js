@@ -7,6 +7,7 @@ import { listDashboards } from "./dashboards.js";
 import { listOverlay } from "./metrics/overlay.js";
 import { preferences } from "./settings.js";
 import { SOURCE_LABEL } from "./text.js";
+import { workspaceName } from "./config.js";
 
 /** A finding confirmed by a failing audit of its check says so, even on a run stored before the audit. */
 function withAudit(store, c) {
@@ -18,7 +19,16 @@ function withAudit(store, c) {
 /** @param {object} app the workspace @param {{ loopback?: boolean }} [o] */
 export async function buildState(app, { loopback = true } = {}) {
   const { store, config } = app;
-  const ws = await workspaceInfo({ store, warehouse: app.warehouse, pack: app.pack, config });
+  // A source that cannot be reached must not take the shell down: Settings is where it gets fixed.
+  let ws;
+  let sourceError = null;
+  try {
+    ws = await workspaceInfo({ store, warehouse: app.warehouse, pack: app.pack, config });
+  } catch (err) {
+    if (err?.code !== "source_unavailable") throw err;
+    sourceError = { code: err.code, message: err.message, params: err.params ?? {} };
+    ws = { name: workspaceName(config, app.warehouse), demo: app.warehouse.demo, data_from: null, data_to: null, refreshed_at: null, rows: null };
+  }
   const run = store.latestCheckRun();
   const watches = store.list("watches", { order: "ASC" });
   const proposals = store.list("proposals", { order: "ASC" });
@@ -33,6 +43,7 @@ export async function buildState(app, { loopback = true } = {}) {
       label: bigquery ? SOURCE_LABEL.bigquery(bq.project) : SOURCE_LABEL.demo,
       project: bigquery ? bq.project : null,
       table: bigquery ? `${bq.project}.${bq.dataset}` : null,
+      error: sourceError,
     },
     // Every money figure in the app is written in this (ISO 4217).
     currency: config.currency,

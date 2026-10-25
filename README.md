@@ -126,12 +126,24 @@ that means aggregated figures by day, channel and device, never order-level or p
 order or customer tables, the model can see rows from them (at most 200 per query); prefer aggregates, and keep
 contact data in protected columns.
 
-Protected columns never leave the warehouse: a query that selects one, reads it through `*`, an alias, a CTE, a
-subquery or an expression, or groups or orders by it, is refused before it runs; a join, a filter or
-`COUNT(DISTINCT …)` may still use it. When you add a table, the server proposes protected columns by name and type
-(email, phone, names, addresses, IP addresses, customer and user ids) and you confirm the list. Detection by name
-can miss oddly named columns, so check each table. There is no masking yet. A filter on a protected column still
-lets repeated counting questions narrow down a value, so allow customer tables only to a model and people you trust.
+Protected column values never leave the warehouse. A query may use a protected column in two places only: as a
+join key compared with a column of an allowed table (`a.email = b.email`, both qualified, or `USING (email)`),
+also inside a parenthesised join, or alone inside `COUNT(DISTINCT …)`. Anywhere else it is refused before the query runs: selected, read through `*`, an alias, a
+CTE or a subquery, grouped or ordered by, used in `WHERE`, `HAVING`, `QUALIFY` or a join condition against a value,
+inside `CASE`, `LIKE`, `IN`, `COUNTIF` or any function. So what can leave about a protected column is the number
+of its distinct values in a group. A self-join, or a join to any column of an allowed table, is allowed; it tells whether values are equal, never what they are. A query that uses a protected column cannot contain a CTE or a subquery. When you add a table, the server proposes protected columns by name, compound
+names included (`customer_email`, `contact_phone`, `client_ip`, Turkish `eposta`, `telefon`, `ad`, `soyad`,
+`adres`, `dogum_tarihi`): email, phone, names, addresses, postcodes, IP addresses, birth dates, national ids,
+IBAN and card numbers, and precise location. You confirm the list in Settings › Data source. Protection is by
+column name, so a column with an unusual name, or a view that renames one, is not protected until you add it; a
+view is readable only when you add it by name. There is no masking yet.
+
+By default customer and user ids, city, age and gender stay readable. Per-customer rows without contact data
+(such as an order history by customer id) can therefore reach the model provider, at most 200 rows per query, and
+are stored on this machine, at most 1,000 rows per query. A query's result is deleted after 30 days (checked at
+start and once a day), but an answer published from it keeps its rows in the app database (`app.db` in the data
+folder) until that file is deleted. Protect those columns in Settings › Data source if they should not leave. Column descriptions in the warehouse reach the model as data;
+whoever can edit them can write text the model reads.
 
 `AI_ANALYST_NO_CLOUD=1` (or `serve --no-cloud`) blocks every outbound call; tests and `bun run dev` set it by
 default.

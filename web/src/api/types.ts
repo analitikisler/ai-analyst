@@ -336,11 +336,14 @@ export interface AskContext {
 }
 
 export interface TurnUsage {
+  provider: ProviderId;
+  model: string;
+  /** Model responses in the turn. */
+  rounds: number;
   input: number;
   output: number;
   cache_read: number;
   cache_write: number;
-  calls: number;
 }
 
 export type TurnStatus = "running" | "done" | "error" | "stopped";
@@ -669,10 +672,11 @@ export interface AgentMode {
 export interface Workspace {
   name: string;
   demo: boolean;
-  data_from: string;
-  data_to: string;
+  /** null while the source cannot be read (source.error). */
+  data_from: string | null;
+  data_to: string | null;
   refreshed_at: string;
-  rows: number;
+  rows: number | null;
 }
 
 export interface CheckRun {
@@ -688,7 +692,15 @@ export interface CheckRun {
 /** GET /api/state */
 export interface AppState {
   workspace: Workspace;
-  source: { kind: "demo" | "bigquery"; label: Text; project: string | null; table: string | null };
+  source: {
+    kind: "demo" | "bigquery";
+    label: Text;
+    project: string | null;
+    table: string | null;
+    /** Set when the warehouse cannot be read with the saved connection (code source_unavailable, params
+     *  { service, reason, status? }): the app still loads, reads fail with the same code. */
+    error?: ApiErrorBody | null;
+  };
   /** The workspace currency (ISO 4217, default TRY): every money figure is written in it. */
   currency: string;
   agent: AgentMode;

@@ -23,7 +23,8 @@ import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Spinner } from "@/components/ui/spinner";
 import { fmt, LANGS, useBilingual, useLang, useT } from "@/i18n";
-import { describeError } from "@/lib/errors";
+import { StatusGlyph } from "@/components/art/StatusGlyph";
+import { describeError, sourceUnavailableSentence } from "@/lib/errors";
 import { useFormat } from "@/lib/format";
 import { notify } from "@/lib/notify";
 import { usePref } from "@/lib/prefs";
@@ -193,7 +194,7 @@ function DataSection({ s }: { s: Settings }) {
         {demo ? (
           <>
             <p className="text-sm text-text">{t.set.data.demo_name}</p>
-            <p className="mt-0.5 font-mono text-2xs text-text-muted tnum">{fmt(t.set.data.demo_meta, { from: f.date(state?.workspace.data_from ?? "2026-07-25"), to: f.date(state?.workspace.data_to ?? "2026-10-22", true), rows: f.int(state?.workspace.rows ?? 1080), time: f.whenMid(state?.workspace.refreshed_at) })}</p>
+            <p className="mt-0.5 font-mono text-2xs text-text-muted tnum">{fmt(t.set.data.demo_meta, { from: f.date(state?.workspace.data_from), to: f.date(state?.workspace.data_to, true), rows: f.int(state?.workspace.rows), time: f.whenMid(state?.workspace.refreshed_at) })}</p>
             <Disclosure label={t.set.data.demo_contents} className="mt-1">
               <ul className="flex flex-col gap-1.5 text-[13px]">
                 {sources?.map((x) => (
@@ -212,6 +213,12 @@ function DataSection({ s }: { s: Settings }) {
             <p className="text-sm text-text">{fmt(t.set.data.bq.in_use_name, { table: bq ? `${bq.data_project}.${bq.dataset}` : (state?.source.table ?? state?.source.project ?? "–"), location: bq?.location ?? "–" })}</p>
             <p className="mt-0.5 font-mono text-2xs text-text-muted tnum">{fmt(t.set.data.bq.in_use_meta, { time: f.whenMid(s.data_source.checked_at) })}</p>
           </>
+        )}
+        {sourceUnavailableSentence(t, state?.source.error) && (
+          <p role="status" className="mt-2 flex items-start gap-1.5 text-[13px] leading-[18px] text-danger">
+            <StatusGlyph tone="bad" size={12} className="mt-[3px] shrink-0" />
+            {sourceUnavailableSentence(t, state?.source.error)}
+          </p>
         )}
       </Row>
       <Row label={t.set.data.demo_title} hint={t.set.data.demo_note}>

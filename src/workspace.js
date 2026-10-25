@@ -24,6 +24,7 @@ export async function openWorkspace(config, opts = {}) {
   const pack = loadPack(config.packDir);
   const { warehouse, seeded } = await openWarehouse(config, { seedIfMissing: seed, bigQueryClient: opts.bigQueryClient });
   const store = new Store(appDbFile(config));
+  store.pruneExplore(30);
   const app = {
     config,
     pack,

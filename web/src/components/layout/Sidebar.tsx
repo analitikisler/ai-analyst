@@ -110,9 +110,12 @@ export function Sidebar({ onNavigate, footer }: { onNavigate?: () => void; foote
         <div className="flex flex-col gap-1 border-t border-border pt-3">
           <NavRow item={SETTINGS_NAV} onNavigate={onNavigate} />
           <div className="flex items-center justify-between gap-2 px-2">
-            <StatusLine onNavigate={onNavigate} className="flex-1" />
-            <span title={t.app.alpha_hint} className="shrink-0 rounded-sm border border-border px-1 font-mono text-2xs leading-4 text-text-muted">{t.app.alpha}</span>
+            <StatusLine onNavigate={onNavigate} className="min-w-0 flex-1" />
             {footer}
+          </div>
+          {/* Its own line, so the status line keeps the full sidebar width in both languages. */}
+          <div className="px-2">
+            <span title={t.app.alpha_hint} className="inline-flex rounded-sm border border-border px-1 font-mono text-2xs leading-4 text-text-muted">{t.app.alpha}</span>
           </div>
         </div>
       </div>

@@ -317,5 +317,6 @@ export const ERRORS = {
   too_many_steps: T("The agent stopped before it finished. Ask again, or rephrase the question.", "Agent bitirmeden durdu. Soru tekrar sorulabilir ya da farklı ifade edilebilir."),
   model_error: T("The model did not answer. Ask again in a minute.", "Model cevap vermedi. Bir dakika sonra tekrar sorulabilir."),
   internal: T("Something went wrong on the server. The log has the details.", "Sunucuda bir sorun oluştu. Ayrıntılar günlükte."),
+  no_answer: T("The model ended without an answer. Ask again, or rephrase the question.", "Model cevap vermeden bitti. Soru tekrar sorulabilir ya da farklı ifade edilebilir."),
   no_cloud: T("No model was called: AI_ANALYST_NO_CLOUD is set, so this server makes no calls to outside services.", "Model çağrılmadı: AI_ANALYST_NO_CLOUD tanımlı olduğu için bu sunucu dış servislere hiç bağlanmıyor."),
 };

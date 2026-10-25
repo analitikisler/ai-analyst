@@ -79,4 +79,38 @@ export async function renderSmoke(check: (name: string, ok: boolean, detail?: un
       }
     }
   }
+  // A dead warehouse credential: GET /api/state answers with source.error and no data dates; Ask, the dashboard and
+  // Settings › Data source still render, with the source_unavailable sentence and a link to Settings › Data source.
+  for (const lang of ["en", "tr"] as const) {
+    const qc = createQueryClient();
+    const base = getState();
+    qc.setQueryData(keys.state(), {
+      ...base,
+      workspace: { ...base.workspace, demo: false, data_from: null, data_to: null, rows: null },
+      source: { ...base.source, kind: "bigquery", error: { code: "source_unavailable", message: "", params: { service: "BigQuery", reason: "invalid_grant", status: 401 } } },
+    });
+    qc.setQueryData(keys.action("get_settings", {}), callAction("get_settings", {}, lang));
+    const sentence = lang === "en" ? "BigQuery could not be reached with the saved connection (invalid_grant). Check it in Settings › Data source." : "BigQuery kayıtlı bağlantıyla erişilemedi (invalid_grant). Ayarlar › Veri kaynağı bölümünden kontrol edilebilir.";
+    for (const path of ["/ask", "/dashboards/db_example", "/settings/data"]) {
+      try {
+        const router = createMemoryRouter(resolved, { initialEntries: [path] });
+        const html = renderToString(
+          <QueryClientProvider client={qc}>
+            <LanguageProvider lang={lang}>
+              <TooltipProvider>
+                <AskProvider>
+                  <RouterProvider router={router} />
+                </AskProvider>
+              </TooltipProvider>
+            </LanguageProvider>
+          </QueryClientProvider>,
+        );
+        const text = html.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").replace(/&#x27;|’/g, "’");
+        const linked = path === "/settings/data" || html.includes('href="/settings/data"') || html.includes("#/settings/data");
+        check(`render ${lang} ${path} with source.error: the source sentence${path === "/settings/data" ? "" : " and the Settings link"}, no gaps`, text.includes(sentence) && linked && !/\{[a-z_]+\}/.test(html), text.slice(0, 240));
+      } catch (err) {
+        check(`render ${lang} ${path} with source.error`, false, String(err));
+      }
+    }
+  }
 }

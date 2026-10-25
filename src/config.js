@@ -34,6 +34,19 @@ const readJson = (file, what) => {
   }
 };
 
+/** protection.yaml's optional groups; all off when the file is missing. */
+function readProtection(packDir) {
+  const file = path.join(packDir, "protection.yaml");
+  const out = { person_ids: false, city: false, age: false, gender: false };
+  if (!existsSync(file)) return out;
+  const text = readFileSync(file, "utf8");
+  for (const k of Object.keys(out)) {
+    const m = new RegExp(`^\\s*${k}:\\s*(true|false)\\b`, "m").exec(text);
+    if (m) out[k] = m[1] === "true";
+  }
+  return out;
+}
+
 export const secretsFile = (dataDir) => path.join(dataDir, "secrets.json");
 
 /**
@@ -119,6 +132,8 @@ export function loadConfig({ env = process.env, cwd = process.cwd(), file } = {}
     token: has("AI_ANALYST_TOKEN") ? env.AI_ANALYST_TOKEN : null,
     dataDir,
     packDir: path.resolve(cwd, pick("AI_ANALYST_PACK_DIR", fromFile.packDir, ROOT)),
+    // The default list of optional protected-column groups (protection.yaml in the pack): the owner's call.
+    protection: readProtection(path.resolve(cwd, pick("AI_ANALYST_PACK_DIR", fromFile.packDir, ROOT))),
     warehouse,
     warehouseSetting: { ...wh, value: warehouse === "bigquery" ? "bigquery" : "demo" },
     bigquery: {

@@ -120,6 +120,11 @@ export class Store {
     const c = this.get("queries", id);
     return c?.check ? c : null;
   }
+  /** Exploratory results can hold per-customer rows: they are kept for `days` only (answers keep their copy). */
+  pruneExplore(days = 30) {
+    const before = new Date(Date.now() - days * 86400000).toISOString();
+    return this.db.prepare("DELETE FROM queries WHERE kind = 'explore' AND created_at < ?").run(before).changes;
+  }
   saveCheckRun(run) {
     return this.put("check_runs", run);
   }

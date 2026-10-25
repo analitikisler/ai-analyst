@@ -38,6 +38,7 @@ const BQ = { table: "`ornek-data.ai_analyst.daily_channel_device`", dialect: "bi
 const bqCfg = { project: "ornek-data", dataset: "ai_analyst", location: "EU", maxBytes: 1024 ** 3 };
 const duckTwo = (wh = { demo: true }) => policyFor({ bigquery: {}, explore: { allow: [], demoAllow: [{ project: null, dataset: "demo", table: "orders" }, { project: null, dataset: "demo", table: "products" }] } }, wh);
 const bqTwo = policyFor({ bigquery: bqCfg, explore: { allow: [{ project: "ornek-data", dataset: "ai_analyst", table: "orders" }, { project: "ornek-data", dataset: "ai_analyst", table: "products" }], demoAllow: [] } }, { demo: false });
+const bqViewByName = policyFor({ bigquery: bqCfg, explore: { allow: [{ project: "ornek-data", dataset: "shop", table: null }, { project: "ornek-data", dataset: "shop", table: "v_returns" }], demoAllow: [] } }, { demo: false });
 const bqDataset = policyFor({ bigquery: bqCfg, explore: { allow: [{ project: "ornek-data", dataset: "shop", table: null }], demoAllow: [] } }, { demo: false });
 
 // Cross-table attacks: the allowed tables next to a decoy (secret_table, and returns / order_items, which the demo
@@ -138,8 +139,10 @@ test("BigQuery dry run: every referenced table and view must be on the list; vie
     [{ refs: [ref("salaries", "hr")], views: [ref("v_returns", "shop")] }, bqDataset, "sql_table_not_allowed", "ornek-data.hr.salaries"],
     // A view not on the list over an allowed table.
     [{ refs: [ref("orders")], views: [ref("orders_view")] }, bqTwo, "sql_table_not_allowed", "ornek-data.ai_analyst.orders_view"],
-    // A view on the list over tables on the list.
-    [{ refs: [ref("orders", "shop")], views: [ref("v_returns", "shop")] }, bqDataset, null],
+    // A view reached only through its dataset entry: refused, since a view can rename a protected column (review 2, M3).
+    [{ refs: [ref("orders", "shop")], views: [ref("v_returns", "shop")] }, bqDataset, "sql_table_not_allowed", "ornek-data.shop.v_returns"],
+    // The same view added by name, over tables on the list.
+    [{ refs: [ref("orders", "shop")], views: [ref("v_returns", "shop")] }, bqViewByName, null],
     [{ refs: [ref("table_added_later", "shop")] }, bqDataset, null],
     [{ refs: [ref("orders", "Shop")] }, bqDataset, "sql_table_not_allowed"],
     [{ refs: Array.from({ length: 50 }, (_, i) => ref(`t${i}`, "shop")) }, bqDataset, "sql_table_not_allowed"],
@@ -257,14 +260,13 @@ test("protected columns: refused in the output through *, aliases, CTEs, subquer
   ]) assert.equal(refusal(sql, shopWh, { policy: shopPolicy, protectedCols }), "sql_protected_column", sql);
 });
 
-test("protected columns: allowed in a join, a filter, COUNT and COUNT(DISTINCT); another table's column of the same name is fine", () => {
+test("protected columns: allowed only as a join key against another column and inside COUNT(DISTINCT col); another table's column of the same name is fine", () => {
   for (const sql of [
     `SELECT COUNT(DISTINCT customer_id) AS customers FROM ${O}`,
     `SELECT channel, COUNT(DISTINCT o.customer_id) AS customers FROM ${O} o GROUP BY channel`,
-    `SELECT channel, COUNT(*) AS n FROM ${O} o JOIN ${C} c ON c.customer_id = o.customer_id WHERE c.email LIKE '%@example.com' GROUP BY channel`,
+    `SELECT channel, COUNT(*) AS n FROM ${O} o JOIN ${C} c ON c.customer_id = o.customer_id GROUP BY channel`,
+    `SELECT channel, COUNT(*) AS n FROM ${O} o JOIN ${C} c ON o.customer_id = c.customer_id AND o.channel = 'email' GROUP BY channel`,
     `SELECT channel, COUNT(*) AS n FROM ${O} o JOIN ${C} c USING (customer_id) GROUP BY channel`,
-    `SELECT channel, COUNT(*) AS n FROM ${O} WHERE customer_id IN (SELECT customer_id FROM ${C} WHERE email IS NOT NULL) GROUP BY channel`,
-    `SELECT channel, COUNTIF(customer_id IS NULL) AS n FROM ${O} GROUP BY channel`,
     `SELECT channel, SUM(order_total) AS revenue FROM ${O} GROUP BY channel HAVING COUNT(DISTINCT customer_id) > 5`,
     `SELECT p.name, COUNT(*) AS n FROM ${P} p JOIN ${C} c ON true GROUP BY p.name`,
     `SELECT category, COUNT(*) AS n FROM ${P} GROUP BY category`,
@@ -273,13 +275,69 @@ test("protected columns: allowed in a join, a filter, COUNT and COUNT(DISTINCT);
   ]) assert.equal(refusal(sql, shopWh, { policy: shopPolicy, protectedCols }), null, sql);
 });
 
+test("protected columns: refused in filters, conditions, CASE, LIKE, IN, functions, COUNTIF, bare COUNT and any comparison with a constant", () => {
+  for (const sql of [
+    // protected_in_where: a filter on a protected column narrows (or rebuilds) a value, so it is refused.
+    `SELECT channel, COUNT(*) AS n FROM ${O} o JOIN ${C} c ON c.customer_id = o.customer_id WHERE c.email LIKE '%@example.com' GROUP BY channel`,
+    `SELECT channel, COUNT(*) AS n FROM ${O} WHERE customer_id IN (SELECT customer_id FROM ${C} WHERE email IS NOT NULL) GROUP BY channel`,
+    `SELECT channel, COUNT(*) AS n FROM ${O} WHERE customer_id = 'c-1' GROUP BY channel`,
+    `SELECT channel, COUNT(*) AS n FROM ${O} WHERE customer_id IN ('c-1', 'c-2') GROUP BY channel`,
+    `SELECT channel, COUNT(*) AS n FROM ${O} WHERE customer_id IS NULL GROUP BY channel`,
+    `SELECT channel, COUNTIF(customer_id IS NULL) AS n FROM ${O} GROUP BY channel`,
+    `SELECT COUNT(customer_id) AS n FROM ${O}`,
+    `SELECT COUNT(DISTINCT LOWER(email)) AS n FROM ${C}`,
+    `SELECT COUNT(DISTINCT email || 'x') AS n FROM ${C}`,
+    `SELECT COUNT(CASE WHEN email LIKE 'a%' THEN 1 END) AS n FROM ${C}`,
+    `SELECT SUM(LENGTH(email)) AS n FROM ${C}`,
+    `SELECT channel, COUNT(*) AS n FROM ${O} o JOIN ${C} c ON c.email = 'a@b.example' GROUP BY channel`,
+    `SELECT channel, COUNT(*) AS n FROM ${O} o JOIN ${C} c ON LOWER(c.email) = LOWER(o.channel) GROUP BY channel`,
+    `SELECT channel, COUNT(*) AS n FROM ${O} o JOIN ${C} c ON c.customer_id = o.customer_id AND c.phone LIKE '+90%' GROUP BY channel`,
+    `SELECT channel, COUNT(*) AS n FROM ${O} o JOIN ${C} c ON c.customer_id > o.customer_id GROUP BY channel`,
+    `SELECT channel, SUM(order_total) AS r FROM ${O} GROUP BY channel HAVING MAX(customer_id) > 'm'`,
+    `SELECT channel, COUNT(*) AS n FROM ${O} GROUP BY channel QUALIFY COUNT(customer_id) > 1`,
+  ]) assert.equal(refusal(sql, shopWh, { policy: shopPolicy, protectedCols }), "sql_protected_column", sql);
+});
+
 test("protected columns: proposed by name and type; contact data, location detail and birth dates, never a product name or a pseudonymous id", () => {
   assert.deepEqual(proposeProtected("customers", [{ name: "customer_id", type: "STRING" }, { name: "email", type: "STRING" }, { name: "phone_number", type: "STRING" }, { name: "first_name", type: "STRING" }, { name: "name", type: "STRING" }, { name: "city", type: "STRING" }, { name: "created_at", type: "TIMESTAMP" }, { name: "ip_address", type: "STRING" }, { name: "postcode", type: "STRING" }]), ["email", "phone_number", "first_name", "name", "ip_address", "postcode"]);
   assert.deepEqual(proposeProtected("products", [{ name: "name", type: "STRING" }, { name: "category", type: "STRING" }]), []);
-  assert.deepEqual(proposeProtected("orders", [{ name: "customer_id", type: "VARCHAR" }, { name: "order_total", type: "DECIMAL(18,2)" }, { name: "email", type: "INT64" }]), [], "email as a number is not contact data; customer_id is a pseudonymous key");
+  assert.deepEqual(proposeProtected("orders", [{ name: "customer_id", type: "VARCHAR" }, { name: "order_total", type: "DECIMAL(18,2)" }, { name: "msisdn", type: "INT64" }]), ["msisdn"], "the type does not matter: a phone stored as a number is a phone; customer_id follows the default list (off)");
   assert.deepEqual(proposeProtected("events", [{ name: "user_pseudo_id", type: "STRING" }, { name: "device_id", type: "STRING" }, { name: "event_name", type: "STRING" }]), ["device_id"]);
   assert.deepEqual(proposeProtected("people", [{ name: "dob", type: "DATE" }, { name: "birth_date", type: "DATE" }, { name: "birthday", type: "DATE" }, { name: "zip", type: "STRING" }, { name: "zip_code", type: "INT64" }, { name: "lat", type: "FLOAT64" }, { name: "lng", type: "FLOAT64" }, { name: "lon", type: "FLOAT64" }, { name: "geom", type: "GEOGRAPHY" }, { name: "mobile", type: "STRING" }, { name: "address_line_1", type: "STRING" }, { name: "street", type: "STRING" }, { name: "state", type: "STRING" }, { name: "country", type: "STRING" }]),
     ["dob", "birth_date", "birthday", "zip", "zip_code", "lat", "lng", "lon", "geom", "mobile", "address_line_1", "street"]);
+});
+
+test("protected columns: compound and Turkish names are proposed (security review 2, H1); product, campaign and ad columns are not", () => {
+  const names = (list) => list.map((name) => ({ name, type: "STRING" }));
+  const reviewer = ["customer_email", "billing_email", "contact_phone", "phone_no", "msisdn", "customer_name", "client_ip", "email"];
+  assert.deepEqual(proposeProtected("customers", names([...reviewer, "user_id", "customer_id"])), reviewer, "ids follow the default list");
+  const more = ["customerEmail", "contactPhone", "e_mail", "mail", "tel", "gsm", "mobile_number", "first_name", "lastName", "surname", "full_name", "shipping_address", "street", "postcode", "zip_code", "ip_address", "birth_date", "dob", "national_id", "tckn", "tc_kimlik_no", "iban", "card_number", "credit_card"];
+  assert.deepEqual(proposeProtected("orders", names(more)), more.map((n) => n.toLowerCase()));
+  const turkish = ["ad", "soyad", "ad_soyad", "musteri_adi", "telefon", "cep_telefonu", "adres", "teslimat_adresi", "eposta", "e_posta", "dogum_tarihi", "posta_kodu"];
+  assert.deepEqual(proposeProtected("musteriler", names(turkish)), turkish);
+  const readable = ["product_name", "campaign_name", "ad_spend", "ad_id", "ad_name", "channel", "device", "order_total", "gift_card_amount", "city", "age", "gender", "user_id", "customer_id", "mobile_sessions"];
+  assert.deepEqual(proposeProtected("orders", names(readable)), [], "not contact data on a table that is not about people");
+});
+
+test("protected columns: the default list (protection.yaml) decides ids, city, age and gender; all off as shipped", async () => {
+  const { loadConfig } = await import("../src/config.js");
+  assert.deepEqual(loadConfig({ env: {}, cwd: "/nonexistent" }).protection, { person_ids: false, city: false, age: false, gender: false });
+  const on = { person_ids: true, city: true, age: true, gender: true };
+  assert.deepEqual(proposeProtected("users", cols({ id: "INT64", city: "STRING", age: "INT64", gender: "STRING", traffic_source: "STRING" }), on), ["id", "city", "age", "gender"]);
+  assert.deepEqual(proposeProtected("orders", cols({ order_id: "INT64", user_id: "INT64", customer_key: "STRING", user_pseudo_id: "STRING" }), on), ["user_id", "customer_key", "user_pseudo_id"]);
+  assert.deepEqual(proposeProtected("orders", cols({ order_id: "INT64", user_id: "INT64" })), []);
+});
+
+test("a WITH name equal to an allowed table is refused in both dialects (security review 2, M2)", () => {
+  for (const sql of [
+    `WITH customers AS (SELECT 1 AS x) SELECT COUNT(*) AS n FROM ${C}`,
+    `WITH a AS (SELECT COUNT(*) AS n FROM ${C}), customers AS (SELECT n FROM a) SELECT n FROM customers`,
+    `WITH \`customers\` AS (SELECT 1 AS x) SELECT COUNT(*) AS n FROM ${C} JOIN customers ON true`,
+  ]) assert.equal(refusal(sql, shopWh, { policy: shopPolicy, protectedCols }), "sql_table_not_allowed", sql);
+  const duckPolicy = { allowed: ["daily_channel_device", "orders"], entries: [], match: (p) => (p.length === 1 && ["orders", "daily_channel_device"].includes(p[0].toLowerCase()) ? p[0].toLowerCase() : null) };
+  for (const sql of ["WITH orders AS (SELECT 1 AS x) SELECT * FROM orders", "WITH x AS (SELECT * FROM orders), orders AS (SELECT * FROM x) SELECT * FROM orders", "WITH orders AS (SELECT * FROM orders) SELECT COUNT(*) AS n FROM orders"]) {
+    assert.equal(refusal(sql, { table: "daily_channel_device", dialect: "duckdb" }, { policy: duckPolicy }), "sql_table_not_allowed", sql);
+  }
 });
 
 // theLook eCommerce's real column lists (bigquery-public-data.thelook_ecommerce).
@@ -546,4 +604,93 @@ test("test_bigquery: the step 'can read the allowed tables', and a warning when 
   } finally {
     bq.close();
   }
+});
+
+test("DuckDB errors on exploratory queries never pass their text on: a fixed sentence per kind (security review 2, M1)", async () => {
+  const { duckExploreError } = await import("../src/warehouse/duckdb.js");
+  const logs = [];
+  const errLog = console.error;
+  console.error = (...a) => logs.push(a.join(" "));
+  try {
+    const e = duckExploreError(new Error('Conversion Error: Could not convert string "jane@shop.example" to INT32\nLINE 1: …'));
+    assert.deepEqual([e.code, e.params.kind], ["explore_sql_error", "values"]);
+    assert.doesNotMatch(e.message, /jane/);
+    assert.equal(duckExploreError(new Error("Binder Error: Referenced column \"emial\" not found")).params.kind, "names");
+    assert.equal(duckExploreError(new Error("Parser Error: syntax error at or near \"FORM\"")).params.kind, "syntax");
+    assert.equal(duckExploreError(new Error("Something else entirely: secret 42")).params.kind, "other");
+    // Through the real explore path on the demo.
+    await assert.rejects(explore("SELECT CAST(channel AS INTEGER) AS n FROM orders"), (x) => x.code === "explore_sql_error" && !/organic|email|direct/.test(x.message));
+  } finally {
+    console.error = errLog;
+  }
+  assert.ok(!logs.join("\n").match(/jane|secret 42|organic/), "nor in the log");
+});
+
+test("the per-question bytes cap counts the dry run before the run, a failed run included, and has a ceiling (security review 2, M4)", async () => {
+  const seen = [];
+  const client = { ...bqClient({ refs: [ref("orders")] }), async query() { throw new Error("job failed after billing"); } };
+  const wh = await openBigQuery(bqCfg, { client });
+  const errLog = console.error;
+  console.error = () => {};
+  try {
+    await assert.rejects(wh.explore("SELECT 1", { policy: bqTwo, onBytes: (b) => seen.push(b) }), (e) => e.code === "explore_sql_error");
+  } finally {
+    console.error = errLog;
+  }
+  assert.deepEqual(seen, [100], "counted although the run failed");
+  await assert.rejects(act("set_explore_tables", { max_bytes_per_question: 10 * ws.config.bigquery.ceiling + 1 }), (e) => e.code === "over_ceiling");
+});
+
+test("exploratory results are kept for 30 days in app.db (security review 2, L2)", () => {
+  ws.store.put("queries", { id: "x_old", created_at: "2020-01-01T00:00:00.000Z", explore: { rows: [] } }, { kind: "explore" });
+  ws.store.put("queries", { id: "x_new", created_at: new Date().toISOString(), explore: { rows: [] } }, { kind: "explore" });
+  assert.equal(ws.store.pruneExplore(30), 1);
+  assert.equal(ws.store.get("queries", "x_old"), null);
+  assert.ok(ws.store.get("queries", "x_new"));
+});
+
+test("protected columns inside a parenthesised join are checked like any other (security review 2, V1), on both dialects", () => {
+  const duckPolicy = { allowed: ["daily_channel_device", "orders", "customers"], entries: [], match: (p) => (p.length === 1 && ["orders", "customers", "daily_channel_device"].includes(p[0].toLowerCase()) ? p[0].toLowerCase() : null) };
+  const duckProt = (k) => (k === "customers" ? new Set(["email", "customer_id"]) : k === "orders" ? new Set(["customer_id"]) : new Set());
+  const duck = { table: "daily_channel_device", dialect: "duckdb" };
+  const forms = (c, o) => [
+    `SELECT COUNT(*) AS n FROM (${o} o JOIN ${c} c ON c.customer_id = o.customer_id AND c.email LIKE 'a%')`,
+    `SELECT COUNT(*) AS n FROM (${o} o JOIN ${c} c ON LOWER(c.email) = o.channel)`,
+    `SELECT COUNT(*) AS n FROM (${o} o JOIN ${c} c ON c.email = 'a@b.example')`,
+    `SELECT COUNT(*) AS n FROM ((${o} o JOIN ${c} c ON c.customer_id = o.customer_id) JOIN ${c} d ON d.email LIKE '%x')`,
+  ];
+  for (const sql of forms(C, O)) assert.equal(refusal(sql, shopWh, { policy: shopPolicy, protectedCols }), "sql_protected_column", sql);
+  for (const sql of forms("customers", "orders")) assert.equal(refusal(sql, duck, { policy: duckPolicy, protectedCols: duckProt }), "sql_protected_column", sql);
+  // The plain key in a parenthesised join still works.
+  assert.equal(refusal(`SELECT COUNT(*) AS n FROM (${O} o JOIN ${C} c ON c.customer_id = o.customer_id)`, shopWh, { policy: shopPolicy, protectedCols }), null);
+  assert.equal(refusal("SELECT COUNT(*) AS n FROM (orders o JOIN customers c ON c.customer_id = o.customer_id)", duck, { policy: duckPolicy, protectedCols: duckProt }), null);
+});
+
+test("a protected join key may only meet a column of an allowed base table, never a CTE's or a derived table's (security review 2, V2)", () => {
+  for (const sql of [
+    `WITH guess AS (SELECT 'a@b.example' AS e) SELECT COUNT(*) AS n FROM ${C} c JOIN guess g ON c.email = g.e`,
+    `WITH guess AS (SELECT 'a@b.example' AS e) SELECT COUNT(*) AS n FROM ${C} c JOIN guess ON c.email = guess.e`,
+    `SELECT COUNT(*) AS n FROM ${C} c JOIN (SELECT 'a@b.example' AS e) g ON g.e = c.email`,
+    `SELECT COUNT(*) AS n FROM ${C} c JOIN (SELECT 'a@b.example' AS email) g USING (email)`,
+    `SELECT COUNT(*) AS n FROM ${C} c JOIN ${O} o ON c.customer_id = customer_id`, // the other side unqualified
+  ]) assert.equal(refusal(sql, shopWh, { policy: shopPolicy, protectedCols }), "sql_protected_column", sql);
+  assert.equal(refusal(`SELECT COUNT(*) AS n FROM ${C} c JOIN ${O} o ON o.customer_id = c.customer_id`, shopWh, { policy: shopPolicy, protectedCols }), null);
+  assert.equal(refusal(`SELECT COUNT(*) AS n FROM ${C} c JOIN ${O} o USING (customer_id)`, shopWh, { policy: shopPolicy, protectedCols }), null);
+});
+
+test("a query that uses a protected column cannot contain a CTE or a subquery, on both dialects (security review 2, V2-a, V2-b)", () => {
+  const duckPolicy = { allowed: ["daily_channel_device", "orders", "customers"], entries: [], match: (p) => (p.length === 1 && ["orders", "customers", "daily_channel_device"].includes(p[0].toLowerCase()) ? p[0].toLowerCase() : null) };
+  const duckProt = (k) => (k === "customers" ? new Set(["email", "customer_id"]) : k === "orders" ? new Set(["customer_id"]) : new Set());
+  const duck = { table: "daily_channel_device", dialect: "duckdb" };
+  const forms = (c, o) => [
+    `SELECT COUNT(*) AS n FROM ${c} JOIN (SELECT 'a@b.example' AS email) USING (email)`, // V2-a: an unaliased subquery
+    `SELECT COUNT(*) AS n FROM ${o} o CROSS JOIN ((SELECT 'a@b.example' AS email)) o JOIN ${c} c ON c.email = o.email`, // V2-b: a double-parenthesised subquery reusing a base table's alias
+    `WITH k AS (SELECT 1 AS one) SELECT COUNT(DISTINCT c.email) AS n FROM ${c} c`, // a CTE beside COUNT(DISTINCT)
+    `SELECT COUNT(*) AS n FROM ${o} o JOIN ${c} c ON c.customer_id = o.customer_id WHERE o.channel IN (SELECT channel FROM ${o})`, // a subquery elsewhere
+  ];
+  for (const sql of forms(C, O)) assert.equal(refusal(sql, shopWh, { policy: shopPolicy, protectedCols }), "sql_protected_column", sql);
+  for (const sql of forms("customers", "orders")) assert.equal(refusal(sql, duck, { policy: duckPolicy, protectedCols: duckProt }), "sql_protected_column", sql);
+  // Without a protected column, CTEs and subqueries are fine; with one, the flat forms still pass.
+  assert.equal(refusal(`WITH k AS (SELECT channel FROM ${O}) SELECT COUNT(*) AS n FROM k`, shopWh, { policy: shopPolicy, protectedCols }), null);
+  assert.equal(refusal("SELECT COUNT(DISTINCT c.email) AS n FROM customers c JOIN orders o ON o.customer_id = c.customer_id", duck, { policy: duckPolicy, protectedCols: duckProt }), null);
 });

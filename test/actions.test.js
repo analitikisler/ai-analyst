@@ -34,12 +34,12 @@ test("every action of the web contract is registered and a person may call it", 
   }
   // Beyond the web contract: the agent's own tools, the workspace header, and the audit callback for chat apps.
   const extra = [...registry.keys()].filter((k) => !WEB_ACTIONS.includes(k)).sort();
-  assert.deepEqual(extra, ["attach_audit_finding", "get_workspace", "propose_event", "propose_metric", "propose_pin", "propose_watch", "publish_answer", "run_sql"]);
+  assert.deepEqual(extra, ["attach_audit_finding", "decline_question", "get_workspace", "propose_event", "propose_metric", "propose_pin", "propose_watch", "publish_answer", "run_sql"]);
 });
 
 test("the agent's tools: reads, the check run, publishing, proposals and SQL; never a person's write", () => {
   const tools = actionsFor("agent").map((a) => a.name).sort();
-  assert.deepEqual(tools, ["describe_tables", "explain_metric", "get_workspace", "list_checks", "list_dashboards", "list_events", "list_metrics", "list_sources", "propose_event", "propose_metric", "propose_pin", "propose_watch", "publish_answer", "reconcile", "run_all_checks", "run_query", "run_sql"]);
+  assert.deepEqual(tools, ["decline_question", "describe_tables", "explain_metric", "get_workspace", "list_checks", "list_dashboards", "list_events", "list_metrics", "list_sources", "propose_event", "propose_metric", "propose_pin", "propose_watch", "publish_answer", "reconcile", "run_all_checks", "run_query", "run_sql"]);
   const defs = toolDefinitions(ws.pack, { eager: true });
   const rq = defs.find((t) => t.name === "run_query");
   assert.equal(rq.input_schema.type, "object");

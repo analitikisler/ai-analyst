@@ -9,6 +9,7 @@ import { useAppState } from "@/api/queries";
 import { ErrorState } from "@/components/kit";
 import { isApiError } from "@/api";
 import { describeError } from "@/lib/errors";
+import { SourceBanner } from "./SourceBanner";
 import { useFormat } from "@/lib/format";
 import { notify } from "@/lib/notify";
 import { Button } from "@/components/ui/button";
@@ -168,7 +169,14 @@ export function AppShell() {
               <div ref={slots.setPhoneRow} className="empty:hidden lg:hidden" />
             </header>
             <main id="main" tabIndex={-1} className="flex min-w-0 flex-1 flex-col px-4 py-4 outline-none md:px-6 md:py-6 xl:py-8">
-              {failure ? <ErrorState title={failure.title} detail={failure.body} onRetry={() => void refetch()} retrying={isFetching} /> : <Outlet />}
+              {failure ? (
+                <ErrorState title={failure.title} detail={failure.body} onRetry={() => void refetch()} retrying={isFetching} />
+              ) : (
+                <>
+                  {(onAsk || location.pathname.startsWith("/dashboards")) && <SourceBanner className="mb-4" />}
+                  <Outlet />
+                </>
+              )}
             </main>
           </div>
         </div>

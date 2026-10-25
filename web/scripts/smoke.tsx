@@ -7,6 +7,8 @@ import { createQueryClient, keys } from "../src/api/queries";
 import { httpDriver, mockDriver } from "./smoke-driver";
 import { groupEvents } from "../src/components/charts/events";
 import { AnswerCard } from "../src/components/ask/AnswerCard";
+import { TurnView } from "../src/components/ask/Thread";
+import { MessageScroller, MessageScrollerContent, MessageScrollerProvider, MessageScrollerViewport } from "../src/components/ui/message-scroller";
 import { MAIN_NAV } from "../src/components/layout/nav";
 import { TooltipProvider } from "../src/components/ui/tooltip";
 import { LanguageProvider } from "../src/i18n";
@@ -372,6 +374,49 @@ if (process.env.WRITE_HANDMADE) {
     await writeFile(new URL(`${name}.json`, dir), JSON.stringify({ handmade: true, question: q, lang, after: before ?? null, events }, null, 2) + "\n");
   }
   console.log(`wrote ${cases.length} handmade fixtures`);
+}
+
+// A model turn that ends in text only (no card), as it comes back after a reload: the reply is the text, with its
+// bold and list rendered, no HTML from the model; the tokens show only in the steps trace; no_answer has its copy.
+{
+  const qc2 = createQueryClient();
+  qc2.setQueryData(keys.state(), await driver.state());
+  const stored = {
+    id: "turn_text_only", conversation_id: "conv_text_only", question: "What should I look at first?", question_text: null, lang: "en" as const, context: null,
+    steps: [{ tool: "list_metrics", summary: { en: "Read the metric list", tr: "Metrik listesi okundu" }, ok: true }],
+    answers: [], approvals: [], refusal: null,
+    text: { en: "Start with **GA4 purchases**.\n- the gap is on mobile\n- <b>it began</b> on 9 Oct", tr: "Önce **GA4 satın almaları**." },
+    usage: { provider: "anthropic" as const, model: "claude-opus-5-5", rounds: 2, input: 41200, output: 2100, cache_read: 38000, cache_write: 0 },
+    error: null, created_by: "agent" as const, status: "done" as const, seconds: 2.4, created_at: "2026-10-25T09:00:00.000Z",
+  };
+  const view = (turn: typeof stored | (typeof stored & { status: "error"; error: { code: string } })) =>
+    renderToString(
+      <QueryClientProvider client={qc2}>
+        <LanguageProvider lang="en">
+          <TooltipProvider>
+            <MemoryRouter>
+              <MessageScrollerProvider>
+                <MessageScroller>
+                  <MessageScrollerViewport>
+                    <MessageScrollerContent>
+                      <TurnView turn={turn as never} last actions={{ onAsk: () => {} }} />
+                    </MessageScrollerContent>
+                  </MessageScrollerViewport>
+                </MessageScroller>
+              </MessageScrollerProvider>
+            </MemoryRouter>
+          </TooltipProvider>
+        </LanguageProvider>
+      </QueryClientProvider>,
+    );
+  const html = view(stored);
+  check(
+    "a text-only model turn renders its text after reload: bold, a list, no model HTML, no tokens in the reply",
+    html.includes("<strong") && html.includes("GA4 purchases</strong>") && (html.match(/<li/g) ?? []).length >= 2 && !html.includes("<b>it began") && !html.includes("41,200 tokens"),
+    html.slice(0, 300),
+  );
+  const failed = view({ ...stored, text: null, status: "error", error: { code: "no_answer" } });
+  check("a no_answer turn says no answer came back", failed.includes("No answer came back. Nothing was changed."), failed.slice(0, 300));
 }
 
 (await driver.reset());

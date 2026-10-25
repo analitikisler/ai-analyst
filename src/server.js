@@ -47,7 +47,7 @@ const TYPES = {
 };
 
 const BASE_HEADERS = { "X-Content-Type-Options": "nosniff", "Referrer-Policy": "no-referrer", "X-Frame-Options": "DENY", "Cross-Origin-Opener-Policy": "same-origin", "Cross-Origin-Resource-Policy": "same-origin" };
-const STATUS = { not_found: 404, unknown_action: 404, forbidden: 403, loopback_only: 403, unauthorized: 401, too_large: 413, bad_request: 400, invalid_input: 400, unsupported_media: 415, locked: 409, not_pending: 409, already_undone: 409, undo_gone: 409, only_one: 409, test_required: 409, no_cloud: 503, over_ceiling: 409, no_data: 409, unavailable: 409, not_undoable: 409, bytes_cap: 422, sql_location_mismatch: 409, sql_table_not_allowed: 409 };
+const STATUS = { not_found: 404, unknown_action: 404, forbidden: 403, loopback_only: 403, unauthorized: 401, too_large: 413, bad_request: 400, invalid_input: 400, unsupported_media: 415, locked: 409, not_pending: 409, already_undone: 409, undo_gone: 409, only_one: 409, test_required: 409, no_cloud: 503, over_ceiling: 409, no_data: 409, unavailable: 409, source_unavailable: 503, not_undoable: 409, bytes_cap: 422, sql_location_mismatch: 409, sql_table_not_allowed: 409 };
 
 const json = (res, status, body, extra = {}) => {
   res.writeHead(status, { ...BASE_HEADERS, "Content-Type": "application/json; charset=utf-8", "Cache-Control": "no-store", ...extra });
@@ -180,7 +180,7 @@ export function createHandler(app, opts = {}) {
     res.end(req.method === "HEAD" ? undefined : body);
   }
 
-  async function ask(req, res, body, lang) {
+  async function ask(req, res, body, lang, loopback) {
     const question = typeof body.question === "string" ? body.question.trim() : "";
     if (!question || question.length > 2000) return fail(res, 400, "bad_request", "question must be text of 1 to 2,000 characters.");
     const conversationId = body.conversation_id == null ? undefined : String(body.conversation_id);
@@ -208,6 +208,8 @@ export function createHandler(app, opts = {}) {
         conversationId,
         context,
         app,
+        // The agent's tool calls carry where the question came from, as the person's own calls do.
+        loopback,
         signal: controller.signal,
         emit,
         onTurn: (t) => {
@@ -303,7 +305,7 @@ export function createHandler(app, opts = {}) {
 
       if (pathname === "/api/ask" && req.method === "POST") {
         const body = await readJson(req);
-        return await ask(req, res, body, langOf(req, url, body));
+        return await ask(req, res, body, langOf(req, url, body), loopback);
       }
 
       const stop = pathname.match(/^\/api\/turns\/([A-Za-z0-9_]{1,64})\/stop$/);
@@ -322,7 +324,8 @@ export function createHandler(app, opts = {}) {
         return;
       }
       if (err instanceof AppError) return fail(res, STATUS[err.code] ?? 400, err.code, err.message, err.params);
-      console.error("[ai-analyst]", err);
+      // The stack only: a client error object can carry request config and headers.
+      console.error("[ai-analyst]", err?.stack ?? String(err));
       return fail(res, 500, "internal", "Something went wrong on the server. The log has the details.");
     }
   };

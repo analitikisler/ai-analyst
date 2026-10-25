@@ -31,6 +31,19 @@ export function normalizeRow(row) {
   return out;
 }
 
+const DUCK_ERRORS = [
+  [/^Parser Error/i, "syntax", "The query has a syntax error. Check the SQL and try again."],
+  [/^(Binder|Catalog) Error/i, "names", "The query names a column or table that is not there, or compares values of different types. Check the names with describe_tables."],
+  [/^(Conversion|Invalid Input|Out of Range|Overflow)/i, "values", "A value in the data could not be read the way the query asks (a type conversion or a value out of range). Cast or filter differently."],
+];
+/** DuckDB's error as a code and a fixed sentence; only its kind is logged (its text can hold a value). */
+export function duckExploreError(err) {
+  const first = String(err?.message ?? "").split("\n")[0];
+  const hit = DUCK_ERRORS.find(([re]) => re.test(first));
+  console.error(`[ai-analyst] exploratory query failed on DuckDB: ${hit ? hit[1] : "other"}`);
+  return new AppError("explore_sql_error", hit ? hit[2] : "The warehouse refused the query. Check the SQL and try again.", { params: { kind: hit ? hit[1] : "other" } });
+}
+
 /** An exploratory result row: numbers as numbers, dates as dates, the rest as text. */
 function normalizeAny(row) {
   const out = {};
@@ -124,9 +137,9 @@ export async function openDuckDB(file) {
         return { rows, columns: reader.columnNames(), bytes: statSync(file).size, tables: [] };
       } catch (err) {
         if (/interrupt/i.test(err.message)) throw new AppError("explore_timeout", `The query ran longer than ${Math.round(timeoutMs / 1000)} seconds and was stopped.`);
-        // DuckDB's message is useful to the model (a misspelt column) but may name paths: keep the first line,
-        // without anything that looks like a path.
-        throw new AppError("explore_sql_error", `The warehouse refused the query: ${err.message.split("\n")[0].replace(/(\/|[A-Za-z]:\\)[^\s'"]+/g, "<path>")}`);
+        // DuckDB's own text can quote a value from the data (a conversion error names the value it could not read),
+        // so neither the model, the UI nor the log ever sees it: a fixed sentence per kind of error.
+        throw duckExploreError(err);
       } finally {
         clearTimeout(timer);
         c.closeSync?.();

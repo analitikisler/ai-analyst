@@ -57,7 +57,8 @@ export const DUCK_ATTACKS = [
   [`SELECT COLUMNS(*) FROM ${M}`, "sql_forbidden_function"],
   [`SELECT * FROM ${M} USING SAMPLE 1, secret_table`, "sql_forbidden_keyword"],
   [`SELECT * FROM ${M} SAMPLE 1`, "sql_forbidden_keyword"],
-  [`WITH ${M} AS (SELECT 1 AS x) SELECT * FROM ${M}`, null], // a CTE shadowing the mart: the data is the query's own
+  [`WITH ${M} AS (SELECT 1 AS x) SELECT * FROM ${M}`, "sql_table_not_allowed"], // a CTE named like an allowed table (review 2, M2)
+  [`WITH x AS (SELECT * FROM ${M}), ${M} AS (SELECT * FROM x) SELECT * FROM ${M}`, "sql_table_not_allowed"], // forward and self reference
   [`SELECT * FROM ${M} -- ; DROP\n`, null],
   [`SELECT * FROM ${M} QUALIFY row_number() OVER () = 1`, null],
   [`SELECT * FROM (secret_table JOIN ${M} ON true)`, "sql_table_not_allowed"],

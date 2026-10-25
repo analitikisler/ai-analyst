@@ -12,6 +12,7 @@ import { Tally, TallyCompact } from "@/components/tally/Tally";
 import { ExploreBadge, ExploreChart } from "@/components/ask/Explore";
 import { Skeleton } from "@/components/ui/skeleton";
 import { fmt, useBilingual, useT } from "@/i18n";
+import { sourceUnavailableSentence } from "@/lib/errors";
 import { useFormat } from "@/lib/format";
 
 export interface TileProps {
@@ -103,7 +104,7 @@ export function TileView(p: TileProps) {
         {edit && p.menu}
       </header>
       <div className={cn("mt-2 min-h-0 flex-1", edit && "pointer-events-none")}>
-        {!r ? <Skeleton className="h-full min-h-16 w-full" /> : r.error ? <ErrorState size="sm" detail={fmt(t.dash.tile.error, { reason: "" })} onRetry={p.onRetry} /> : <TileBody {...p} />}
+        {!r ? <Skeleton className="h-full min-h-16 w-full" /> : r.error ? <ErrorState size="sm" detail={sourceUnavailableSentence(t, r.error) ?? fmt(t.dash.tile.error, { reason: "" })} onRetry={p.onRetry} /> : <TileBody {...p} />}
       </div>
       <footer className="mt-3 flex items-start gap-1 text-2xs text-text-muted">
         <Clock3Icon size={12} strokeWidth={1.75} aria-hidden className="mt-0.5 shrink-0" />

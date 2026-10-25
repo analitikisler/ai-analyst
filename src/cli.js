@@ -78,9 +78,13 @@ async function main(argv) {
     };
     if (!ws.seeded.workspace) await watched();
     const timer = setInterval(watched, HOUR);
+    // Exploratory results older than 30 days go, once a day while the server runs (and at start, in openWorkspace).
+    const prune = setInterval(() => ws.store.pruneExplore(30), 24 * HOUR);
+    prune.unref();
     timer.unref();
     const stop = () => {
       clearInterval(timer);
+      clearInterval(prune);
       server.close();
       ws.close();
       process.exit(0);
