@@ -11,7 +11,7 @@ one side. Version 0.2 (24 Oct 2026) replaces 0.1: the web app is the approved pr
 
 ## Conventions
 
-- Runtime: Bun ≥ 1.3 is the primary tool (`bun install`, `bun run build`, `bun run test`, `bun test ./test/`);
+- Runtime: Bun ≥ 1.4 is the primary tool (`bun install`, `bun run build`, `bun run test`, `bun test ./test/`);
   Node ≥ 22.13 runs `ai-analyst serve` and the tests (`node --test test/*.test.js`). Plain ES modules, no
   TypeScript build on the server, JSDoc where types help.
 - Dependencies, no new one in 0.2: `@anthropic-ai/sdk`, `@modelcontextprotocol/sdk`, `zod` 4.6.6 (raised from

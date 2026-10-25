@@ -1,6 +1,6 @@
 # ai analyst web app
 
-React 19, Vite, Tailwind 4 and shadcn on Base UI. Bun ≥1.3. Run everything from `web/`.
+React 19, Vite, Tailwind 4 and shadcn on Base UI. Bun ≥1.4. Run everything from `web/`.
 
 ```sh
 bun install
