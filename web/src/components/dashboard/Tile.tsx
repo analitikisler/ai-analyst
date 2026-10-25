@@ -176,6 +176,13 @@ function TileBody({ tile, result: r, compare, marked }: TileProps) {
   }
   const q = r.query!;
   const cmp = compare !== "off" ? q.comparison : null;
+  // A number with no data for the period says so: no value, no 0, no chart.
+  if (tile.chart === "number" && q.total == null)
+    return (
+      <div className="flex h-full flex-col justify-center">
+        <p className="text-[13px] text-text-muted">{t.format.no_data_period}</p>
+      </div>
+    );
   if (tile.chart === "number") {
     const value = <span className="font-display text-2xl leading-8 font-heading tracking-[-0.012em] text-text-strong tnum">{q.total == null ? t.format.no_data : f.value(q.total, q.unit)}</span>;
     const trend = (r.series ?? q).rows.map((x) => x.value);

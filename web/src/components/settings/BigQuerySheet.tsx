@@ -7,6 +7,7 @@ import { cn } from "cn";
 import { useAppState, useCall, useSettings } from "@/api/queries";
 import type { BigQueryConfig, BqStep, BqTest } from "@/api/types";
 import { StepStatus } from "@/components/kit";
+import { EnableApiButton } from "./Connectors";
 import { TallyMicro } from "@/components/tally/Tally";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -246,6 +247,7 @@ export function BigQuerySheet() {
                       {step.status === "failed" && (
                         <div className="mt-2 ml-7 rounded-md bg-danger-soft p-3 text-[13px] leading-[18px] text-text">
                           <p>{errText(step)}</p>
+                          <EnableApiButton error={step.error} />
                           <p className="mt-1 text-text-muted">{state?.source.kind === "bigquery" ? t.set.bq.nothing_changed_bq : t.set.bq.nothing_changed}</p>
                           <Button variant="link" size="sm" className="mt-1" onClick={() => fieldFor(step).current?.focus()}>
                             {t.set.bq.fix}

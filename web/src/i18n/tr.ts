@@ -537,6 +537,7 @@ export const tr: Copy = {
       step_names: { credentials: "Kimlik bilgileri", jobs: "Sorgu çalıştırma", dataset: "Veri kümesi", table: "Tablo uyuşuyor", read: "Tablo okuma", allowed: "İzin verilen tabloları okuma", cost: "Tipik bir sorunun okuma miktarı" },
       method: { adc: "gcloud application default credentials", key_file: "anahtar dosyası" },
       err: {
+        api_disabled: "{service}, oturum açan Google Cloud projesinde ({project}) etkin değil. Etkinleştirildikten bir dakika sonra yeniden test edilebilir.",
         no_credentials: "Bu bilgisayarda Google oturumu yok. gcloud auth application-default login çalıştırılmalı ya da bir anahtar dosyası seçilmeli.",
         no_jobs: "{id} {p} projesinde sorgu çalıştıramıyor. Orada BigQuery Job User rolü verilmeli ya da bu role sahip olduğu bir proje seçilmeli.",
         dataset_not_found: "{p}.{d} veri kümesi {loc} konumunda bulunamadı. Ad ve konum kontrol edilmeli; {id} hesabının görebildiği de doğrulanmalı.",
@@ -747,6 +748,7 @@ export const tr: Copy = {
 
   format: {
     dash: "–",
+    no_data_period: "Bu dönem için veri yok",
     no_data: "Veri yok",
     noPrevious: "Önceki dönem için veri yok",
     up: "{value} arttı",
@@ -770,7 +772,7 @@ export const tr: Copy = {
   },
 
   dimensions: {
-    channel: { organic: "Organik arama", direct: "Doğrudan", google_ads: "Google Ads", meta_ads: "Meta Ads", tiktok_ads: "TikTok Ads", email: "E-posta", other: "Diğer", unknown: "Atanmamış" },
+    channel: { organic: "Organik arama", direct: "Doğrudan", google_ads: "Google Ads", meta_ads: "Meta Ads", tiktok_ads: "TikTok Ads", email: "E-posta", referral: "Yönlendirme", organic_social: "Organik sosyal", other: "Diğer", unknown: "Atanmamış" },
     device: { mobile: "Mobil", desktop: "Masaüstü", unknown: "Cihaz bilinmiyor" },
     weekday: { mon: "Pazartesi", tue: "Salı", wed: "Çarşamba", thu: "Perşembe", fri: "Cuma", sat: "Cumartesi", sun: "Pazar" },
   },
@@ -899,6 +901,9 @@ export const tr: Copy = {
       empty: "Bu eşleştirmeyle kalan sipariş yok.",
     },
     err: {
+      api_disabled: "{service}, oturum açan Google Cloud projesinde ({project}) etkin değil. Etkinleştirildikten bir dakika sonra yeniden test edilebilir.",
+      property_api_denied: "Google bu mülkün API ile okunmasına izin vermiyor. Google’ın demo mülkleri böyledir; gerçek erişim olan bir mülk kullanılmalı.",
+      enable_api: "Etkinleştir",
       upload_too_large: "Dosya 25 MB’ın üstünde. Daha kısa bir dönem dışa aktarılmalı ya da dosya bölünmeli.",
       upload_kind: "Bir CSV ya da XLSX dosyası seçilmeli.",
       file_unreadable: "Dosya okunamadı: altında sipariş satırları olan bir başlık satırı bulunamadı. CSV ya da XLSX olarak yeniden dışa aktarılmalı.",

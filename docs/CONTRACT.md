@@ -374,8 +374,11 @@ A sync replaces exactly the days (and source) it fetched. Columns a connector do
 "no data". When both an orders connector and the file cover a day, each source keeps its own rows and the mart sums
 orders per date, channel and device across them (the person should use one orders source; the Sources screen says so).
 
-**Dimensions.** Channel gains `other` (a GA4 group with no mart channel) and `unknown` (the source cannot
-attribute); device gains `unknown`. Breakdowns list only the segments present in the data, so the demo's
+**Dimensions.** Channel gains `referral` (en "Referral", tr "Yönlendirme"), `organic_social` (en "Organic social", tr
+"Organik sosyal"), `other` (a group or source with no mart channel) and `unknown` (the source cannot attribute);
+device gains `unknown`. In the orders file, Shopify and WooCommerce, a `referral` medium, a referring site with no
+medium, or WooCommerce's `referral` source type is referral; a social medium, or a social network as the source
+without a paid medium, is organic social; a paid medium from Facebook or Instagram stays meta_ads. Breakdowns list only the segments present in the data, so the demo's
 breakdowns stay mobile and desktop. When a check side has no device split (all `unknown`), the check runs on totals
 with `breakdown: []` and `breakdown_available: false`.
 
@@ -383,7 +386,10 @@ with `breakdown: []` and `breakdown_available: false`.
 Dimensions `date`, `sessionDefaultChannelGroup`, `deviceCategory`; metrics `sessions`, `transactions` (purchase
 events with a transaction id, the closest match to the mart's distinct-`transaction_id` GA4 purchases),
 `purchaseRevenue`. Channel groups: Organic Search → organic, Direct → direct, Paid Search → google_ads, Paid Social →
-meta_ads, Email → email, Unassigned and (not set) → unknown, every other group → other. Devices: mobile and tablet →
+meta_ads only when the session source is Facebook or Instagram (TikTok → tiktok_ads; Paid Search → google_ads only
+from Google; any other paid platform → other; the report adds `sessionSource` for this), Email → email, Referral →
+referral, Organic Social → organic_social, Unassigned and (not set) → unknown, every other group (Organic Video,
+Affiliates, Display…) → other. Devices: mobile and tablet →
 mobile, desktop → desktop, anything else → unknown. Auth as BigQuery: application default credentials, a key file,
 or impersonating a service account. Test steps: credentials, property, report (one day), range (first and last day
 with data), flags (thresholding, sampling, `(other)` row: a warning, not a failure), quota (tokens left per day).
@@ -452,7 +458,7 @@ Console, Google Tag Manager, each a `mailto:hello@analitikisler.com` with the su
 
 ```ts
 export type SourceKind = "demo" | "bigquery" | "local";
-export type Channel = "organic" | "direct" | "google_ads" | "meta_ads" | "tiktok_ads" | "email" | "other" | "unknown";
+export type Channel = "organic" | "direct" | "google_ads" | "meta_ads" | "tiktok_ads" | "email" | "referral" | "organic_social" | "other" | "unknown";
 export type Device = "mobile" | "desktop" | "unknown";
 export type ConnectorId = "ga4" | "orders_file" | "shopify" | "woocommerce";
 export type ConnectorStatus = "not_connected" | "connected" | "syncing" | "error";
@@ -502,7 +508,7 @@ send for a .csv when Excel is installed; read as CSV, a real .xls file is refuse
 and `application/octet-stream` (kind from the name and the first bytes).
 Action names are lower case with digits and underscores (`/^[a-z][a-z0-9_]*$/`: `test_ga4`, `connect_ga4`).
 New error codes: `upload_too_large` (413), `upload_kind`, `file_unreadable`, `upload_not_found`, `mapping_invalid`,
-`currency_mismatch`, `connector_not_connected`, `sync_running`, `scope_write`, `scope_extra`, `scope_unchecked`, `property_not_found`,
+`currency_mismatch`, `connector_not_connected`, `sync_running`, `scope_write`, `scope_extra`, `scope_unchecked`, `api_disabled` (params `service`, `project`, `link`: a console.cloud.google.com page that enables the Data API), `property_api_denied`, `property_not_found`,
 `host_not_allowed`, `shop_unreachable`; reused: `key_rejected`, `rate_limited`, `no_cloud`, `source_unavailable`.
 
 ## Settings, secrets and configuration

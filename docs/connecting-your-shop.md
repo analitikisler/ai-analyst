@@ -57,15 +57,33 @@ to sign in.
 
 ### Your own Google login
 
-Simplest on your own computer. With the [gcloud CLI](https://cloud.google.com/sdk/docs/install):
+On your own computer, with the [gcloud CLI](https://cloud.google.com/sdk/docs/install). Google blocks the plain
+`gcloud auth application-default login --scopes=…analytics.readonly…` ("This app is blocked"), because gcloud's own
+client may not ask for the Analytics scope. Sign in through an OAuth client of your own instead:
 
-```sh
-gcloud auth application-default login \
-  --scopes=https://www.googleapis.com/auth/analytics.readonly,https://www.googleapis.com/auth/cloud-platform
-```
+1. In a Google Cloud project of your own, open APIs & Services › **Library** and enable the **Google Analytics Data
+   API**. Without it, the test stops with `api_disabled` and a link to the page that enables it.
+2. APIs & Services › **OAuth consent screen** (Google Auth Platform): audience **External**, publishing status
+   **Testing**, and add your own Google account under **Test users**.
+3. APIs & Services › **Credentials** › Create credentials › **OAuth client ID**, application type **Desktop app**.
+   Download the JSON file and keep it outside the project folder.
+4. Sign in with that client:
 
-Your Google user must have access to the property. In Settings choose **Google login**. Without the
-`analytics.readonly` scope, the test fails at the property step with an insufficient-scopes error.
+   ```sh
+   gcloud auth application-default login \
+     --client-id-file=/path/to/client_secret.json \
+     --scopes=https://www.googleapis.com/auth/analytics.readonly,https://www.googleapis.com/auth/cloud-platform
+   ```
+
+5. Your Google user must have access to the GA4 property. In Settings › Sources › Google Analytics 4 choose
+   **Google login**, enter the property ID and test.
+
+In Testing status Google's refresh tokens for this client expire after about seven days **(unverified for every
+account type)**; sign in again when the test says the credentials were not accepted. For a shared machine or a
+server that keeps syncing, use a service account added to the property as **Viewer** (below) instead.
+
+Google's demo properties (the Google Merchandise Store and the Flood-It! demo) refuse the Data API; the test stops
+with `property_api_denied`. Use a property of your own.
 
 ### A service account key file
 
@@ -95,8 +113,11 @@ No key file. Your own login acts as the service account:
 
 Six steps: credentials, the property, a one-day report, the first and last day with data, report flags, the quota
 left. Thresholding, sampling and an `(other)` row are warnings, not failures: small segments may read low. GA4's
-default channel groups map to the mart's channels (Organic Search → organic, Direct → direct, Paid Search →
-google_ads, Paid Social → meta_ads, Email → email, Unassigned → unknown, everything else → other). The property's
+default channel groups map to the mart's channels: Organic Search → organic, Direct → direct, Email → email,
+Referral → referral, Organic Social → organic social, Paid Search from Google → google_ads, Paid Social from
+Facebook or Instagram → meta_ads and from TikTok → tiktok_ads (the session source tells them apart; a paid group
+from any other platform is other), Unassigned → unknown, every other group (Organic Video, Affiliates, Display,
+Cross-network…) → other. The property's
 currency must match the workspace currency (Settings › Currency).
 
 ## The orders file
@@ -204,6 +225,8 @@ A source whose settings come from the environment cannot be disconnected in Sett
 | `scope_extra` | the Shopify token has more scopes than `read_orders`: make a token with `read_orders` only |
 | `scope_unchecked` | the shop did not answer the permission check clearly: check the key is Read only and that no plugin blocks the REST API |
 | `property_not_found` | wrong property ID, or the account is not a Viewer on it |
+| `api_disabled` | the Google Analytics Data API is off in the Google Cloud project of the credentials: enable it at the link shown |
+| `property_api_denied` | Google does not serve this property through the Data API (its demo properties): use a property of your own |
 | `currency_mismatch` | the source reports another currency: change Settings › Currency first |
 | `host_not_allowed` | the address is not HTTPS on the shop's domain, or redirects |
 | `rate_limited` | the service is limiting requests: nothing was stored, the next sync tries again |

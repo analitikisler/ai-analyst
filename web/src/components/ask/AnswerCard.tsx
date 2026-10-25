@@ -264,9 +264,9 @@ function FigureHead({ answer: a, fresh }: { answer: Answer; fresh?: boolean }) {
       </p>
       <div className="mt-1 flex flex-wrap items-baseline gap-x-3 gap-y-2">
         <Marked draw={fresh}>
-          <span className={cn("font-display text-[28px] leading-9 font-heading tracking-[-0.012em] text-text-strong tnum", fresh && "animate-[aia-fade-in_220ms_var(--ease-out)_both]")}>{q.total == null ? t.format.no_data : f.value(q.total, q.unit)}</span>
+          <span className={cn("font-display text-[28px] leading-9 font-heading tracking-[-0.012em] text-text-strong tnum", fresh && "animate-[aia-fade-in_220ms_var(--ease-out)_both]")}>{q.total == null ? (a.kind === "number" ? t.format.no_data_period : t.format.no_data) : f.value(q.total, q.unit)}</span>
         </Marked>
-        {cmp && (
+        {cmp && q.total != null && (
           <span className="flex flex-wrap items-center gap-2 text-[13px] text-text-muted tnum">
             <DeltaBadge current={q.total} previous={cmp.total} unit={q.unit} size="md" />
             {fmt(t.ask.against, { value: f.value(cmp.total, q.unit), range: f.range(cmp.from, cmp.to) })}

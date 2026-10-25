@@ -28,7 +28,8 @@ export function leadOf(pack, query, check, lead) {
 function answerKind(query, check, explore, lead = "check") {
   if (explore) return "explore";
   if (check && lead === "check") return check.filters?.device || check.filters?.channel ? "check_split" : "check";
-  if (query.group_by === "none") return "number";
+  // No data for the whole period: a number card that says no data, never an empty split or series.
+  if (query.group_by === "none" || (query.total == null && (query.rows ?? []).every((r) => r.value == null))) return "number";
   return query.group_by === "channel" || query.group_by === "device" ? "split" : "series";
 }
 

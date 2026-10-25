@@ -296,6 +296,8 @@ const dimName = (key: string, lang: Lang): string => {
     meta_ads: T("Meta Ads", "Meta Ads"),
     tiktok_ads: T("TikTok Ads", "TikTok Ads"),
     email: T("Email", "E-posta"),
+    referral: T("Referral", "Yönlendirme"),
+    organic_social: T("Organic social", "Organik sosyal"),
     other: T("Other", "Diğer"),
     unknown: T("Not attributed", "Atanmamış"),
     mobile: T("Mobile", "Mobil"),

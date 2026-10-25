@@ -57,6 +57,26 @@ export function availableColumns(app) {
   for (const id of CONNECTOR_IDS) if (isConnected(app.config, app.store, id)) for (const c of LANDING[TABLE_OF[id]]) cols.add(c);
   return cols;
 }
+/**
+ * Which columns the active source can split by device and by channel: on your shop's data, the columns of the
+ * landing rows that carry a device (or a channel) other than "unknown". Null on the demo and BigQuery.
+ */
+export function availableSplits(app) {
+  if (app.config.warehouse !== "local") return null;
+  const out = { device: new Set(), channel: new Set() };
+  for (const r of app.store.list("landing", { limit: 10_000_000 })) {
+    const cols = LANDING[r.table] ?? [];
+    if (r.device !== "unknown") for (const c of cols) out.device.add(c);
+    if (r.channel !== "unknown") for (const c of cols) out.channel.add(c);
+  }
+  return out;
+}
+/** Whether a metric can be answered split by a dimension (day, week, month and none always can). */
+export function splitAnswerable(app, metricId, by, splits = availableSplits(app)) {
+  if (!splits || !["device", "channel"].includes(by)) return true;
+  const m = app.pack.metrics[metricId];
+  return Boolean(m) && columnsOf(m).every((c) => splits[by].has(c));
+}
 const columnsOf = (m) => (m ? (m.sum ? [m.sum] : [m.ratio.numerator, m.ratio.denominator]) : []);
 /** Whether the active source can answer a metric (every column it reads is filled). */
 export function metricAnswerable(app, metricId, cols = availableColumns(app)) {
@@ -208,13 +228,18 @@ export async function activateLocal(app, { log } = {}) {
  * Syncs one connector or every connected one (not the file), then rebuilds the local warehouse once.
  * @returns {Promise<object[]>} the connector states
  */
-export async function syncSources(app, { connector, historyDays, log } = {}) {
+export async function syncSources(app, { connector, historyDays, log, wait = false } = {}) {
+  // wait: a connect that meets a running sync (the daily one, say) waits for it, then syncs, instead of answering
+  // "connected" with nothing fetched.
+  while (wait && app.syncing?.size && app.syncIdle) await app.syncIdle.catch(() => {});
   const ids = connector ? [connector] : CONNECTOR_IDS.filter((id) => id !== "orders_file" && isConnected(app.config, app.store, id));
   if (connector === "orders_file") throw new AppError("invalid_input", "The orders file is imported again, not synced. Choose the file again in Settings › Sources.");
   for (const id of ids) if (!isConnected(app.config, app.store, id)) throw new AppError("connector_not_connected", `${NAME[id].en} is not connected.`, { params: { connector: id } });
   app.syncing ??= new Set();
   if (app.syncing.size) throw new AppError("sync_running", "A sync is running. Wait for it to finish.");
   for (const id of ids) app.syncing.add(id);
+  let release;
+  app.syncIdle = new Promise((r) => (release = r));
   let stored = 0;
   try {
     for (const id of ids) {
@@ -237,6 +262,7 @@ export async function syncSources(app, { connector, historyDays, log } = {}) {
     if (stored) await activateLocal(app, { log });
   } finally {
     for (const id of ids) app.syncing.delete(id);
+    release();
   }
   return connectorStates(app);
 }

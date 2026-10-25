@@ -6,6 +6,22 @@ import { enShort, f, trFrom, trLong } from "./format.js";
 
 export { f, enShort, trFrom, trLong };
 export const T = (en, tr) => ({ en, tr });
+
+/**
+ * Turkish suffixes after a name, a number or an abbreviation take the typographic apostrophe (brand §3): "TL'ydi",
+ * "12 Eki'de", "GA4'te" become "TL’ydi", "12 Eki’de", "GA4’te". A straight quote between a letter, digit, % or ) and
+ * a lowercase letter is a suffix apostrophe in Turkish text.
+ */
+export const trApostrophes = (s) => (typeof s === "string" ? s.replace(/([\p{L}\p{N}%)])['`´‘](?=[a-zçğıöşüâîû])/gu, "$1’") : s);
+
+/** The same, for every bilingual text { en, tr } inside a value: only the tr side changes. */
+export function trApostrophesDeep(v) {
+  if (Array.isArray(v)) return v.map(trApostrophesDeep);
+  if (!v || typeof v !== "object") return v;
+  const out = {};
+  for (const [k, x] of Object.entries(v)) out[k] = k === "tr" && typeof x === "string" && typeof v.en === "string" ? trApostrophes(x) : trApostrophesDeep(x);
+  return out;
+}
 export const both = (fn) => ({ en: fn("en"), tr: fn("tr") });
 
 export const STEP = {
@@ -299,6 +315,8 @@ export const NAMES = {
     meta_ads: T("Meta Ads", "Meta Ads"),
     tiktok_ads: T("TikTok Ads", "TikTok Ads"),
     email: T("Email", "E-posta"),
+    referral: T("Referral", "Yönlendirme"),
+    organic_social: T("Organic social", "Organik sosyal"),
     other: T("Other channels", "Diğer kanallar"),
     unknown: T("Unknown", "Bilinmiyor"),
   },

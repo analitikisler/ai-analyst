@@ -56,7 +56,7 @@ async function connectAndSync(ctx, id, historyDays) {
   setState(ctx.store, id, { history_days: clampHistory(historyDays), error: null });
   ctx.log({ en: `Connected ${NAME[id].en}`, tr: `${NAME[id].tr} bağlandı` });
   try {
-    await syncSources(ctx.app, { connector: id, historyDays, log: (d) => ctx.log(d, null, { action: "save_data_source" }) });
+    await syncSources(ctx.app, { connector: id, historyDays, wait: true, log: (d) => ctx.log(d, null, { action: "save_data_source" }) });
   } catch (err) {
     rethrowCloud(err);
     if (!(err instanceof AppError)) throw err;

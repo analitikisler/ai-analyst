@@ -8,15 +8,21 @@ const CHANNEL_NAMES = [
   [/^(organic|organic search|seo|organik|organik arama)$/, "organic"],
   [/^(direct|doğrudan|dogrudan|\(direct\)|\(none\)|none)$/, "direct"],
   [/^(google ads|google|adwords|paid search|cpc|ppc|google cpc)$/, "google_ads"],
-  [/^(meta|meta ads|facebook|facebook ads|instagram|instagram ads|paid social)$/, "meta_ads"],
+  [/^(meta|meta ads|facebook|facebook ads|instagram|instagram ads)$/, "meta_ads"],
   [/^(tiktok|tiktok ads)$/, "tiktok_ads"],
   [/^(email|e-mail|e-posta|eposta|newsletter|bülten|bulten)$/, "email"],
+  [/^(referral|referrals|referans|yönlendirme|yonlendirme|yönlendiren site|referring site)$/, "referral"],
+  [/^(organic social|social|social media|sosyal|sosyal medya|organik sosyal)$/, "organic_social"],
 ];
+
+/** Social networks, as a source names them (a UTM source, GA4's session source, Shopify's referring site). */
+const SOCIAL = /^(?:(?:m|l|lm|www)\.)?(facebook|instagram|fb|ig|meta|t\.co|twitter|x|linkedin|lnkd\.in|pinterest|youtube|tiktok|reddit|threads|whatsapp|snapchat)(?:\.(?:com|net|in))?$/;
+const SOCIAL_MEDIUM = /^(social|social-network|social_network|social-media|social_media|sm|organic_social|organic social|sosyal)$/;
 
 /**
  * @param {{ channel?: string, source?: string, medium?: string, sourceType?: string }} o
  *   sourceType: WooCommerce's _wc_order_attribution_source_type (utm, organic, referral, typein, admin, mobile_app).
- * @returns {"organic"|"direct"|"google_ads"|"meta_ads"|"tiktok_ads"|"email"|"other"|"unknown"}
+ * @returns {"organic"|"direct"|"google_ads"|"meta_ads"|"tiktok_ads"|"email"|"referral"|"organic_social"|"other"|"unknown"}
  */
 export function channelFrom({ channel, source, medium, sourceType } = {}) {
   const c = lower(channel);
@@ -31,17 +37,22 @@ export function channelFrom({ channel, source, medium, sourceType } = {}) {
   const paid = /^(cpc|ppc|paid|paidsearch|paid_search|paid-search|paid_social|paidsocial|paid-social|cpm|display|ads?)$/.test(m) || /paid/.test(m);
   if (s || m) {
     if (/^(google|adwords|googleads|google_ads)$/.test(s) && paid) return "google_ads";
-    if (/(facebook|instagram|meta|fb|ig)/.test(s) && (paid || /social/.test(m))) return "meta_ads";
-    if (/tiktok/.test(s)) return "tiktok_ads";
+    // A paid visit from Meta or TikTok is their ads; an unpaid one is organic social.
+    if (/(facebook|instagram|^meta$|^fb$|^ig$)/.test(s) && paid) return "meta_ads";
+    if (/tiktok/.test(s) && paid) return "tiktok_ads";
     if (/^(email|e-mail|newsletter|mail|klaviyo|mailchimp)$/.test(m) || /^(email|newsletter|klaviyo|mailchimp)$/.test(s)) return "email";
     if (m === "organic" || (/^(google|bing|yandex|yahoo|duckduckgo)$/.test(s) && !paid)) return "organic";
     if (s === "(direct)" || (s === "direct" && (!m || m === "(none)" || m === "none"))) return "direct";
+    if (!paid && (SOCIAL_MEDIUM.test(m) || SOCIAL.test(s))) return "organic_social";
+    // A referral medium, or a referring site with no medium (Shopify's last visit: "blog.example.com").
+    if (m === "referral" || (!m && /^[a-z0-9-]+(\.[a-z0-9-]+)+$/.test(s))) return "referral";
     return "other";
   }
   const t = lower(sourceType);
   if (t === "typein") return "direct";
   if (t === "organic") return "organic";
-  if (t === "referral" || t === "utm") return "other";
+  if (t === "referral") return "referral";
+  if (t === "utm") return "other";
   if (c) return "other";
   return "unknown";
 }

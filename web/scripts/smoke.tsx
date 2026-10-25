@@ -459,6 +459,36 @@ if (process.env.WRITE_HANDMADE) {
   console.log(`wrote ${cases.length} handmade fixtures`);
 }
 
+// Real-connector codes: api_disabled with its console link (only console.cloud.google.com), property_api_denied.
+{
+  const { connErrText, enableLink } = await import("../src/components/settings/Connectors");
+  const enCopy = (await import("../src/i18n/en")).en;
+  const trCopy = (await import("../src/i18n/tr")).tr;
+  const dis = { code: "api_disabled", params: { service: "Google Analytics Data API", project: "my-project", link: "https://console.cloud.google.com/apis/library/analyticsdata.googleapis.com?project=my-project" } };
+  check("api_disabled: the sentence names the service and the project, en and tr", connErrText(enCopy, dis) === "Google Analytics Data API is not enabled in the Google Cloud project that signs in (my-project). Enable it, wait a minute, then test again." && connErrText(trCopy, dis).startsWith("Google Analytics Data API, oturum açan Google Cloud projesinde (my-project) etkin değil."), connErrText(enCopy, dis));
+  check("api_disabled: the Enable it link only for a console.cloud.google.com address", enableLink(dis) === dis.params.link && enableLink({ ...dis, params: { ...dis.params, link: "https://evil.example/console.cloud.google.com/" } }) === null);
+  check("property_api_denied has its own sentence, en and tr", connErrText(enCopy, { code: "property_api_denied" }).startsWith("Google does not allow this property") && connErrText(trCopy, { code: "property_api_denied" }).includes("Google’ın demo mülkleri"));
+  // A number answer with no data for the period: the words, no value, no 0.
+  const num = answerOf(await ask("How many orders did we get yesterday?", "en", "new"))?.answer;
+  if (num) {
+    const qcN = createQueryClient();
+    qcN.setQueryData(keys.state(), await driver.state());
+    const empty = { ...num, query: { ...num.query, total: null, comparison: null } };
+    const html = renderToString(
+      <QueryClientProvider client={qcN}>
+        <LanguageProvider lang="en">
+          <TooltipProvider>
+            <MemoryRouter>
+              <AnswerCard answer={empty} />
+            </MemoryRouter>
+          </TooltipProvider>
+        </LanguageProvider>
+      </QueryClientProvider>,
+    );
+    check("a number answer whose total is null says No data for this period", num.kind === "number" && html.includes("No data for this period") && !/>0<\/span>/.test(html), num.kind);
+  } else skip("number answer with no data");
+}
+
 // A source with no device split (all unknown): the check runs on totals and says so instead of a device table.
 {
   const st = await driver.state();

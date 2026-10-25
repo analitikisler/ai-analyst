@@ -2,6 +2,7 @@
 // MCP server exposes the chat-app ones. Who may call what is enforced here, once.
 import { z } from "zod";
 import { AppError } from "../errors.js";
+import { trApostrophesDeep } from "../text.js";
 
 /** @type {Map<string, ReturnType<typeof defineAction>>} */
 export const registry = new Map();
@@ -67,7 +68,8 @@ export async function callAction(name, input, ctx) {
   if (action.settings && ctx.loopback === false) throw new AppError("loopback_only", "Settings can only be changed from this machine.");
   const parsed = schemaFor(action, ctx.app.pack).safeParse(input ?? {});
   if (!parsed.success) throw new AppError("invalid_input", `Invalid input for ${name}:\n${z.prettifyError(parsed.error)}`);
-  return action.run(contextFor(name, ctx), parsed.data);
+  // Turkish text that is stored (answers, refusals, events, proposals) takes the typographic apostrophe in suffixes.
+  return action.run(contextFor(name, ctx), trApostrophesDeep(parsed.data));
 }
 
 /** The ctx an action runs with: the live app parts (they change when the data source changes) and log(). */

@@ -26,7 +26,7 @@ export type Unit = "count" | "try" | "pct" | "ratio";
 export type GroupBy = "none" | "day" | "week" | "month" | "channel" | "device";
 export type SourceKind = "demo" | "bigquery" | "local";
 /** other: a GA4 group with no mart channel; unknown: the source cannot attribute. */
-export type Channel = "organic" | "direct" | "google_ads" | "meta_ads" | "tiktok_ads" | "email" | "other" | "unknown";
+export type Channel = "organic" | "direct" | "google_ads" | "meta_ads" | "tiktok_ads" | "email" | "referral" | "organic_social" | "other" | "unknown";
 export type Device = "mobile" | "desktop" | "unknown";
 export type Dialect = "duckdb" | "bigquery";
 export type Actor = "person" | "agent" | "system" | "chat_app";

@@ -373,13 +373,17 @@ async function checkAnswer(ctx, pc, check, period, opts = {}) {
   };
 }
 
+/** A query with no value anywhere: no total and no row with a value. */
+export const noDataQuery = (q) => q.total == null && (q.rows ?? []).every((r) => r.value == null);
+
 async function metricAnswer(ctx, pc, metric, group, p) {
   const { pack } = pc;
   const g = group ?? "none";
   const singleDay = p.from === p.to;
   const compare = ["none", "day", "channel", "device"].includes(g) ? "previous_period" : undefined;
   const q = await runQuery(ctx, { metric, group_by: g, from: p.from, to: p.to, compare, month_to_date: p.key === "this_month" });
-  const kind = g === "none" ? "number" : g === "channel" || g === "device" ? "split" : "series";
+  // No data for the whole period (ROAS without ad spend): a number card that says so, never an empty chart.
+  const kind = noDataQuery(q) || g === "none" ? "number" : g === "channel" || g === "device" ? "split" : "series";
   const base = kind === "number" ? numberSentence(pack, q, singleDay) : kind === "split" ? splitSentence(pack, q) : seriesSentence(pack, q);
   const sentence = withEvent(base, q, pc.events ?? []);
   const reading = both((l) => `${mid(pack.metrics[metric].label[l], l)}, ${GROUPING[g][l]}, ${range2(q.from, q.to)[l]}`);

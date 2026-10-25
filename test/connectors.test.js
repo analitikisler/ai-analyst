@@ -318,33 +318,34 @@ test("zip bombs: the unpack cap is 50 times the file (200 MB at most); a declare
 // ---------------------------------------------------------------- GA4
 
 test("GA4: groups and devices mapped, every page read, warnings, currency, and Google's errors as app codes", async () => {
-  assert.deepEqual(["Organic Search", "Direct", "Paid Search", "Paid Social", "Email", "Unassigned", "(not set)", "Referral", "Organic Video", ""].map(channelOfGroup), ["organic", "direct", "google_ads", "meta_ads", "email", "unknown", "unknown", "other", "other", "unknown"]);
+  const groups = [["Organic Search", "google"], ["Direct", "(direct)"], ["Paid Search", "google"], ["Paid Search", "bing"], ["Paid Social", "facebook"], ["Paid Social", "l.instagram.com"], ["Paid Social", "tiktok"], ["Paid Social", "linkedin"], ["Paid Social", ""], ["Email", "newsletter"], ["Referral", "blog.example.com"], ["Organic Social", "t.co"], ["Organic Video", "youtube"], ["Affiliates", "partner"], ["Display", "google"], ["Unassigned", ""], ["(not set)", ""], ["", ""]];
+  assert.deepEqual(groups.map(([g, src]) => channelOfGroup(g, src)), ["organic", "direct", "google_ads", "other", "meta_ads", "meta_ads", "tiktok_ads", "other", "other", "email", "referral", "organic_social", "other", "other", "other", "unknown", "unknown", "unknown"]);
   assert.deepEqual(["mobile", "tablet", "desktop", "smart tv", ""].map(deviceOfCategory), ["mobile", "mobile", "desktop", "unknown", "unknown"]);
   assert.equal(propertyId("properties/123456789"), "123456789");
   assert.equal(propertyId("G-ABC123"), null);
 
   const calls = [];
   const all = [
-    ["20261020", "Organic Search", "mobile", "100", "3", "300.5"],
-    ["20261020", "Referral", "tablet", "10", "1", "50"],
-    ["20261020", "Affiliates", "desktop", "5", "0", "0"],
-    ["20261021", "Paid Social", "desktop", "40", "2", "200"],
-    ["bad", "Direct", "desktop", "1", "1", "1"],
+    ["20261020", "Organic Search", "mobile", "google", "100", "3", "300.5"],
+    ["20261020", "Referral", "tablet", "blog.example.com", "10", "1", "50"],
+    ["20261020", "Affiliates", "desktop", "partner", "5", "0", "0"],
+    ["20261021", "Paid Social", "desktop", "facebook", "40", "2", "200"],
+    ["bad", "Direct", "desktop", "(direct)", "1", "1", "1"],
   ];
   const transport = {
     async runReport(property, body) {
       calls.push({ property, offset: body.offset, dims: body.dimensions.map((x) => x.name), metrics: body.metrics.map((x) => x.name) });
       const page = all.slice(body.offset, body.offset + 2);
-      return { rowCount: all.length, rows: page.map((r) => ({ dimensionValues: r.slice(0, 3).map((value) => ({ value })), metricValues: r.slice(3).map((value) => ({ value })) })), metadata: { currencyCode: "TRY", subjectToThresholding: true, dataLossFromOtherRow: true }, propertyQuota: { tokensPerDay: { remaining: 24000 } } };
+      return { rowCount: all.length, rows: page.map((r) => ({ dimensionValues: r.slice(0, 4).map((value) => ({ value })), metricValues: r.slice(4).map((value) => ({ value })) })), metadata: { currencyCode: "TRY", subjectToThresholding: true, dataLossFromOtherRow: true }, propertyQuota: { tokensPerDay: { remaining: 24000 } } };
     },
   };
   const r = await fetchGa4Days(transport, "123456789", "2026-10-20", "2026-10-21");
   assert.deepEqual(calls.map((c) => c.offset), [0, 2, 4]);
-  assert.deepEqual(calls[0].dims, ["date", "sessionDefaultChannelGroup", "deviceCategory"]);
+  assert.deepEqual(calls[0].dims, ["date", "sessionDefaultChannelGroup", "deviceCategory", "sessionSource"]);
   assert.deepEqual(calls[0].metrics, ["sessions", "transactions", "purchaseRevenue"]);
   assert.deepEqual(r.rows, [
     { date: "2026-10-20", channel: "organic", device: "mobile", sessions: 100, ga4_purchases: 3, ga4_revenue: 300.5 },
-    { date: "2026-10-20", channel: "other", device: "mobile", sessions: 10, ga4_purchases: 1, ga4_revenue: 50 },
+    { date: "2026-10-20", channel: "referral", device: "mobile", sessions: 10, ga4_purchases: 1, ga4_revenue: 50 },
     { date: "2026-10-20", channel: "other", device: "desktop", sessions: 5, ga4_purchases: 0, ga4_revenue: 0 },
     { date: "2026-10-21", channel: "meta_ads", device: "desktop", sessions: 40, ga4_purchases: 2, ga4_revenue: 200 },
   ]);
@@ -353,7 +354,8 @@ test("GA4: groups and devices mapped, every page read, warnings, currency, and G
   assert.equal(r.warnings.length, 2);
 
   const fail = (status) => ({ runReport: async () => { throw Object.assign(new Error(`HTTP ${status} with token ya29.secret`), { code: status }); } });
-  for (const [status, code] of [[401, "key_rejected"], [403, "property_not_found"], [404, "property_not_found"], [429, "rate_limited"], [500, "source_unavailable"]]) {
+  for (const [status, code] of [[401, "key_rejected"], [403, "property_not_found"], [404, "property_not_found"], [429, "source_unavailable"], [500, "source_unavailable"]]) {
+    // A bare 429 is not a quota error: Google names the quota when it is one (see real-connectors.test.js).
     await assert.rejects(fetchGa4Days(fail(status), "1234", "2026-10-20", "2026-10-20"), codeIs(code), String(status));
   }
   assert.equal(ga4Error(Object.assign(new Error("x"), { response: { status: 403 } })).code, "property_not_found");
@@ -709,7 +711,7 @@ test("L7: from another machine the connector states carry no shop domain, proper
 });
 
 test("GA-style source / medium in a channel column maps like UTM source and medium; whole names still work", () => {
-  const cases = { "google / cpc": "google_ads", "instagram / paid": "meta_ads", "(direct) / (none)": "direct", "google / organic": "organic", "newsletter / email": "email", "Organik": "organic", "Google Ads": "google_ads", "Instagram": "meta_ads", "partner / referral": "other" };
+  const cases = { "google / cpc": "google_ads", "instagram / paid": "meta_ads", "(direct) / (none)": "direct", "google / organic": "organic", "newsletter / email": "email", "Organik": "organic", "Google Ads": "google_ads", "Instagram": "meta_ads", "partner / referral": "referral", "facebook / social": "organic_social", "Paid Social": "other" };
   for (const [channel, id] of Object.entries(cases)) assert.equal(channelFrom({ channel }), id, channel);
   const cols = ["Sipariş No", "Sipariş Tarihi", "Toplam", "Kaynak"];
   const rows = Object.keys(cases).slice(0, 5).map((k, i) => [String(i + 1), "2026-10-20 10:00", "10", k]);

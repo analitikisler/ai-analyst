@@ -276,10 +276,12 @@ function channelOf(raw: string | undefined, src: string | undefined, med: string
   if (!v) return "unknown";
   if (/organic|seo|organik/.test(v)) return "organic";
   if (/google|cpc|adwords/.test(v)) return "google_ads";
+  if (/(meta|facebook|instagram|fb|tiktok).*(organic|social)|^(facebook|instagram|tiktok|linkedin|pinterest)$/.test(v) && !/paid|cpc|ads?\b/.test(v)) return "organic_social";
   if (/meta|facebook|instagram|fb/.test(v)) return "meta_ads";
   if (/tiktok/.test(v)) return "tiktok_ads";
   if (/mail|bulten|newsletter/.test(v)) return "email";
   if (/direct|dogrudan/.test(v)) return "direct";
+  if (/referral|yonlendirme/.test(v)) return "referral";
   return "other";
 }
 function deviceOf(raw: string | undefined, ua: string | undefined): Device {

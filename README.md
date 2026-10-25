@@ -232,6 +232,8 @@ cards, charts and the model's prompt all follow it.
 - The GA4, Shopify and WooCommerce connectors, the OpenAI, Gemini and OpenAI-compatible models and the BigQuery
   connection test are tested against stubbed services only; they have not run against the real ones yet. The
   ikas, Ticimax and WooCommerce export steps in the guide are marked where they are unverified.
+- The BigQuery SQL in `models/` builds the six original channels; the Referral and Organic social channels come
+  only from the GA4, orders-file, Shopify and WooCommerce connectors for now.
 - The orders file and the shop connectors give no ad spend, so ROAS, CPA and the ad-platform checks say no data
   on a shop connected that way.
 - On demo data the tracking audit is simulated. On own data it is handed to ai tag debugger through a chat app.

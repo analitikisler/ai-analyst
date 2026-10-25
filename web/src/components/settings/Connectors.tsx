@@ -5,7 +5,7 @@
 import { useEffect, useState } from "react";
 import { useSearchParams } from "react-router";
 import { cn } from "cn";
-import { MailIcon, RefreshCwIcon } from "lucide-react";
+import { ExternalLinkIcon, MailIcon, RefreshCwIcon } from "lucide-react";
 import { api } from "@/api";
 import { useAppState, useCall } from "@/api/queries";
 import type { ConnectorId, ConnectorState, ConnStep, WaitlistItem } from "@/api/types";
@@ -29,13 +29,32 @@ export function connErrText(t: Copy, e: { code: string; params?: Record<string, 
   if (!e) return "";
   const p = Object.fromEntries(Object.entries(e.params ?? {}).map(([k, v]) => [k, String(v)]));
   const own = (t.sources.err as Record<string, string>)[e.code];
-  if (own) return fmt(own, { host: "–", property: "–", scope: "–", currency: "–", path: "–", ...p });
+  if (own) return fmt(own, { host: "–", property: "–", scope: "–", currency: "–", path: "–", service: "–", project: "–", ...p });
   if (e.code === "no_cloud") return fmt(t.err.no_cloud, { service: p.service ?? "–" });
   // Google sign-in codes are the BigQuery test's own (the same credentials and key files).
   const google = (t.set.bq.err as Record<string, string>)[e.code];
   if (google && /^(no_credentials|keyfile_|impersonat)/.test(e.code)) return fmt(google, { path: "–", id: "–", ...p });
   if (e.code === "source_unavailable") return sourceUnavailableSentence(t, e) ?? "";
   return fmt(t.sources.err.generic, { step: step ?? e.code, message: p.message ?? p.google ?? e.code });
+}
+
+/** The Google Cloud console page that enables an API, only when the server's link really points there. */
+export function enableLink(e: { code: string; params?: Record<string, string | number> } | null | undefined): string | null {
+  const link = e?.code === "api_disabled" ? String(e.params?.link ?? "") : "";
+  return link.startsWith("https://console.cloud.google.com/") ? link : null;
+}
+
+export function EnableApiButton({ error }: { error: { code: string; params?: Record<string, string | number> } | null | undefined }) {
+  const t = useT();
+  const link = enableLink(error);
+  if (!link) return null;
+  return (
+    <Button variant="outline" size="sm" className="mt-2" render={<a href={link} target="_blank" rel="noreferrer" />} nativeButton={false}>
+      {t.sources.err.enable_api}
+      <ExternalLinkIcon strokeWidth={1.75} data-icon="inline-end" />
+      <span className="sr-only">{t.common.opens_tab}</span>
+    </Button>
+  );
 }
 
 /** Steps appear one at a time, as in the BigQuery test, so a long test reads as progress. */
@@ -89,6 +108,7 @@ export function ConnSteps({ ids, names, shown, doneText, onFix, stale }: { ids: 
               {real?.status === "failed" && (
                 <div className="mt-2 ml-7 rounded-md bg-danger-soft p-3 text-[13px] leading-[18px] text-text">
                   <p>{connErrText(t, real.error, names[id])}</p>
+                  <EnableApiButton error={real.error} />
                   <p className="mt-1 text-text-muted">{t.sources.nothing_changed}</p>
                   {onFix && (
                     <Button variant="link" size="sm" className="mt-1" onClick={() => onFix(real)}>
@@ -179,6 +199,7 @@ function ConnectorCard({ c, title, lead, onOpen }: { c: ConnectorState; title: s
       {c.error && (
         <div role="alert" className="rounded-md bg-danger-soft px-2 py-1.5 text-[13px] leading-[18px] text-text">
           <p>{connErrText(t, c.error)}</p>
+          <EnableApiButton error={c.error} />
           <Button variant="link" size="sm" className="-ml-2" onClick={() => onOpen(SHEET_OF[c.id])}>
             {t.sources.fix}
           </Button>

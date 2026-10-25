@@ -9,7 +9,7 @@ import { addDays } from "../format.js";
 import { compileQuery, resolveQuery } from "../metrics/compile.js";
 import { listOverlay, writeOverlay } from "../metrics/overlay.js";
 import { ACT, CROSS_Q, EXPLORE_Q, FOLLOW, NEAR, SUGGEST, T } from "../text.js";
-import { availableColumns, checkAnswerable, metricAnswerable } from "../connectors/index.js";
+import { availableColumns, availableSplits, checkAnswerable, metricAnswerable, splitAnswerable } from "../connectors/index.js";
 import { defineAction } from "./registry.js";
 
 export const metricInfo = (m) => ({
@@ -114,20 +114,28 @@ defineAction({
     const mode = agentMode(ctx.app);
     // On the demo, one question across the shop's tables (it needs them on the list in Settings › Sources).
     const cross = ctx.warehouse.demo ? [CROSS_Q.returns_category] : [];
-    // On your shop's data, only what the connected sources can answer: no ad checks or ROAS without ad data.
+    // On your shop's data, only what the connected sources can answer: no ad checks or ROAS without ad data, and no
+    // device or channel split when the sources do not record one.
     const cols = availableColumns(ctx.app);
-    const ok = (s) => (s.check ? checkAnswerable(ctx.app, s.check, cols) : metricAnswerable(ctx.app, s.metric, cols));
+    const splits = availableSplits(ctx.app);
+    const ok = (s) => (s.check ? checkAnswerable(ctx.app, s.check, cols) : metricAnswerable(ctx.app, s.metric, cols) && (s.by ?? []).every((b) => splitAnswerable(ctx.app, s.metric, b, splits)));
     const fit = (list) => list.filter(ok).map(({ text, tag }) => ({ text, tag }));
     const ga4 = { ...SUGGEST.ga4, check: "ga4_vs_orders" };
-    if (mode.mode === "model" && mode.exploratory) return [...fit([ga4]), ...[...cross, ...Object.values(EXPLORE_Q)].map((text) => ({ text, tag: "exploratory" }))];
-    const main = [ga4, { ...SUGGEST.meta, check: "meta_vs_orders" }, { ...SUGGEST.roas, metric: "roas" }, { ...SUGGEST.revenue_week, metric: "revenue" }];
+    const explore = [
+      { text: EXPLORE_Q.weekday, metric: "revenue" },
+      { text: EXPLORE_Q.channel_device, metric: "revenue", by: ["channel", "device"] },
+      { text: EXPLORE_Q.aov_device_week, metric: "aov", by: ["device"] },
+      { text: EXPLORE_Q.spend_growth, metric: "ad_spend", by: ["channel"] },
+    ].map((q) => ({ ...q, tag: "exploratory" }));
+    if (mode.mode === "model" && mode.exploratory) return [...fit([ga4]), ...cross.map((text) => ({ text, tag: "exploratory" })), ...fit(explore)];
+    const main = [ga4, { ...SUGGEST.meta, check: "meta_vs_orders" }, { ...SUGGEST.roas, metric: "roas", by: ["channel"] }, { ...SUGGEST.revenue_week, metric: "revenue" }];
     if (!cols) return fit(main);
     // Questions that take the place of the ones the source cannot answer, in this order.
     const more = [
-      { text: NEAR.revenue_channel_28, tag: "by_channel", metric: "revenue" },
-      { text: FOLLOW.conversion_device, tag: "chart", metric: "conversion_rate" },
-      { text: FOLLOW.orders_device, tag: "chart", metric: "orders" },
-      { text: NEAR.aov_device_28, tag: "chart", metric: "aov" },
+      { text: NEAR.revenue_channel_28, tag: "by_channel", metric: "revenue", by: ["channel"] },
+      { text: FOLLOW.conversion_device, tag: "chart", metric: "conversion_rate", by: ["device"] },
+      { text: FOLLOW.orders_device, tag: "chart", metric: "orders", by: ["device"] },
+      { text: NEAR.aov_device_28, tag: "chart", metric: "aov", by: ["device"] },
       { text: FOLLOW.revenue_day, tag: "chart", metric: "revenue" },
     ];
     return fit([...main, ...more]).slice(0, 4);

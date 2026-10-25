@@ -12,7 +12,8 @@ export const MART = {
   measures: ["sessions", "orders", "revenue", "ga4_purchases", "ga4_revenue", "platform_conversions", "ad_spend"],
   dimensions: {
     // "other": a source's channel with no mart channel; "unknown": the source cannot attribute (connectors).
-    channel: ["organic", "direct", "google_ads", "meta_ads", "tiktok_ads", "email", "other", "unknown"],
+    // referral and organic_social: from the connectors (GA4's channel groups, UTM medium, the shop's own data).
+    channel: ["organic", "direct", "google_ads", "meta_ads", "tiktok_ads", "email", "referral", "organic_social", "other", "unknown"],
     device: ["mobile", "desktop", "unknown"],
   },
   groupBy: ["none", "day", "week", "month", "channel", "device"],
@@ -27,6 +28,8 @@ export const NAMES = {
     meta_ads: { en: "Meta Ads", tr: "Meta Ads" },
     tiktok_ads: { en: "TikTok Ads", tr: "TikTok Ads" },
     email: { en: "Email", tr: "E-posta" },
+    referral: { en: "Referral", tr: "Yönlendirme" },
+    organic_social: { en: "Organic social", tr: "Organik sosyal" },
     other: { en: "Other channels", tr: "Diğer kanallar" },
     unknown: { en: "Unknown", tr: "Bilinmiyor" },
   },

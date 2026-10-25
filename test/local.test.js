@@ -45,8 +45,8 @@ function ga4Stub() {
       if (body.orderBys) return { rows: [{ dimensionValues: [{ value: compact(body.orderBys[0].desc ? TO : FROM) }] }] };
       if (body.dimensions.length === 1) return { rows: days.slice(0, 1).map((d) => ({ dimensionValues: [{ value: compact(d) }], metricValues: [{ value: "150" }] })), rowCount: 1 };
       const rows = days.flatMap((d) => [
-        { dimensionValues: [{ value: compact(d) }, { value: "Organic Search" }, { value: "mobile" }], metricValues: [{ value: "100" }, { value: "3" }, { value: "300" }] },
-        { dimensionValues: [{ value: compact(d) }, { value: "Paid Social" }, { value: "desktop" }], metricValues: [{ value: "50" }, { value: "2" }, { value: "400" }] },
+        { dimensionValues: [{ value: compact(d) }, { value: "Organic Search" }, { value: "mobile" }, { value: "google" }], metricValues: [{ value: "100" }, { value: "3" }, { value: "300" }] },
+        { dimensionValues: [{ value: compact(d) }, { value: "Paid Social" }, { value: "desktop" }, { value: "instagram" }], metricValues: [{ value: "50" }, { value: "2" }, { value: "400" }] },
       ]);
       return { rows, rowCount: rows.length, metadata: { currencyCode: "TRY" }, propertyQuota: { tokensPerDay: { remaining: 199000 } } };
     },

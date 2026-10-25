@@ -537,6 +537,7 @@ export const en = {
       step_names: { credentials: "Credentials", jobs: "Can run queries", dataset: "Dataset found", table: "Table matches", read: "Can read the table", allowed: "Can read the allowed tables", cost: "Cost of a typical question" },
       method: { adc: "gcloud application default credentials", key_file: "key file" },
       err: {
+        api_disabled: "{service} is not enabled in the Google Cloud project that signs in ({project}). Enable it, wait a minute, then test again.",
         no_credentials: "No Google sign-in on this machine. Run gcloud auth application-default login, or choose a key file.",
         no_jobs: "{id} cannot run queries in {p}. Grant it BigQuery Job User there, or choose a project where it has that role.",
         dataset_not_found: "Dataset {p}.{d} was not found in {loc}. Check the name and the location, and that {id} can see it.",
@@ -747,6 +748,7 @@ export const en = {
 
   format: {
     dash: "–",
+    no_data_period: "No data for this period",
     no_data: "No data",
     noPrevious: "No data for the previous period",
     up: "up {value}",
@@ -770,7 +772,7 @@ export const en = {
   },
 
   dimensions: {
-    channel: { organic: "Organic search", direct: "Direct", google_ads: "Google Ads", meta_ads: "Meta Ads", tiktok_ads: "TikTok Ads", email: "Email", other: "Other", unknown: "Not attributed" },
+    channel: { organic: "Organic search", direct: "Direct", google_ads: "Google Ads", meta_ads: "Meta Ads", tiktok_ads: "TikTok Ads", email: "Email", referral: "Referral", organic_social: "Organic social", other: "Other", unknown: "Not attributed" },
     device: { mobile: "Mobile", desktop: "Desktop", unknown: "Device not known" },
     weekday: { mon: "Monday", tue: "Tuesday", wed: "Wednesday", thu: "Thursday", fri: "Friday", sat: "Saturday", sun: "Sunday" },
   },
@@ -899,6 +901,9 @@ export const en = {
       empty: "No orders are left with this mapping.",
     },
     err: {
+      api_disabled: "{service} is not enabled in the Google Cloud project that signs in ({project}). Enable it, wait a minute, then test again.",
+      property_api_denied: "Google does not allow this property to be read through the API. Google’s demo properties are like this; use a property with real access.",
+      enable_api: "Enable it",
       upload_too_large: "The file is over 25 MB. Export a shorter period, or split it.",
       upload_kind: "Choose a CSV or XLSX file.",
       file_unreadable: "The file could not be read: no header row with order rows below it. Export it again as CSV or XLSX.",

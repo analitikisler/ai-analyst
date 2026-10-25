@@ -52,13 +52,23 @@ const TYPES = {
 };
 
 const BASE_HEADERS = { "X-Content-Type-Options": "nosniff", "Referrer-Policy": "no-referrer", "X-Frame-Options": "DENY", "Cross-Origin-Opener-Policy": "same-origin", "Cross-Origin-Resource-Policy": "same-origin" };
-const STATUS = { not_found: 404, unknown_action: 404, forbidden: 403, loopback_only: 403, unauthorized: 401, too_large: 413, bad_request: 400, invalid_input: 400, unsupported_media: 415, locked: 409, not_pending: 409, already_undone: 409, undo_gone: 409, only_one: 409, test_required: 409, no_cloud: 503, over_ceiling: 409, no_data: 409, unavailable: 409, source_unavailable: 503, not_undoable: 409, bytes_cap: 422, sql_location_mismatch: 409, sql_table_not_allowed: 409, upload_too_large: 413, upload_kind: 415, file_unreadable: 422, upload_not_found: 404, mapping_invalid: 422, currency_mismatch: 422, connector_not_connected: 409, sync_running: 409, scope_write: 422, scope_extra: 422, scope_unchecked: 422, property_not_found: 422, host_not_allowed: 422, shop_unreachable: 502, key_rejected: 422, rate_limited: 429 };
+const STATUS = { not_found: 404, unknown_action: 404, forbidden: 403, loopback_only: 403, unauthorized: 401, too_large: 413, bad_request: 400, invalid_input: 400, unsupported_media: 415, locked: 409, not_pending: 409, already_undone: 409, undo_gone: 409, only_one: 409, test_required: 409, no_cloud: 503, over_ceiling: 409, no_data: 409, unavailable: 409, source_unavailable: 503, not_undoable: 409, bytes_cap: 422, sql_location_mismatch: 409, sql_table_not_allowed: 409, upload_too_large: 413, upload_kind: 415, file_unreadable: 422, upload_not_found: 404, mapping_invalid: 422, currency_mismatch: 422, connector_not_connected: 409, sync_running: 409, scope_write: 422, api_disabled: 422, property_api_denied: 422, scope_extra: 422, scope_unchecked: 422, property_not_found: 422, host_not_allowed: 422, shop_unreachable: 502, key_rejected: 422, rate_limited: 429 };
 
-const json = (res, status, body, extra = {}) => {
+export const json = (res, status, body, extra = {}) => {
   // The client is gone (or the answer was already sent): nothing to write to.
   if (res.destroyed || res.writableEnded) return;
+  // The body is serialised before any header goes out: a value JSON cannot hold (a BigInt, a cycle) becomes a 500
+  // with a JSON error, never a 200 with an empty body.
+  let text;
+  try {
+    text = JSON.stringify(body);
+  } catch (err) {
+    console.error("[ai-analyst] answer not serialisable:", err?.message);
+    status = 500;
+    text = JSON.stringify({ ok: false, error: { code: "internal", message: "Something went wrong on the server. The log has the details." } });
+  }
   res.writeHead(status, { ...BASE_HEADERS, "Content-Type": "application/json; charset=utf-8", "Cache-Control": "no-store", ...extra });
-  res.end(JSON.stringify(body));
+  res.end(text);
 };
 const fail = (res, status, code, message, params) => json(res, status, { ok: false, error: { code, message, ...(params ? { params } : {}) } });
 
