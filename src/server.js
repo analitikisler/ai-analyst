@@ -55,6 +55,8 @@ const BASE_HEADERS = { "X-Content-Type-Options": "nosniff", "Referrer-Policy": "
 const STATUS = { not_found: 404, unknown_action: 404, forbidden: 403, loopback_only: 403, unauthorized: 401, too_large: 413, bad_request: 400, invalid_input: 400, unsupported_media: 415, locked: 409, not_pending: 409, already_undone: 409, undo_gone: 409, only_one: 409, test_required: 409, no_cloud: 503, over_ceiling: 409, no_data: 409, unavailable: 409, source_unavailable: 503, not_undoable: 409, bytes_cap: 422, sql_location_mismatch: 409, sql_table_not_allowed: 409, upload_too_large: 413, upload_kind: 415, file_unreadable: 422, upload_not_found: 404, mapping_invalid: 422, currency_mismatch: 422, connector_not_connected: 409, sync_running: 409, scope_write: 422, scope_extra: 422, scope_unchecked: 422, property_not_found: 422, host_not_allowed: 422, shop_unreachable: 502, key_rejected: 422, rate_limited: 429 };
 
 const json = (res, status, body, extra = {}) => {
+  // The client is gone (or the answer was already sent): nothing to write to.
+  if (res.destroyed || res.writableEnded) return;
   res.writeHead(status, { ...BASE_HEADERS, "Content-Type": "application/json; charset=utf-8", "Cache-Control": "no-store", ...extra });
   res.end(JSON.stringify(body));
 };
@@ -274,6 +276,10 @@ export function createHandler(app, opts = {}) {
   }
 
   return async function handler(req, res) {
+    // A client that hangs up mid-request or mid-answer errors these streams; there is no one left to answer, so the
+    // error is dropped here instead of surfacing later as an uncaught error.
+    req.on("error", () => {});
+    res.on("error", () => {});
     let url;
     try {
       url = new URL(req.url, "http://localhost");
@@ -290,15 +296,29 @@ export function createHandler(app, opts = {}) {
       // An orders file: the raw CSV or XLSX as the body, streamed to <data_dir>/uploads/ (25 MB at most). Content
       // types a cross-site form cannot send (text/csv and the XLSX type need a preflight, never answered here).
       if (pathname === "/api/uploads/orders" && req.method === "POST") {
-        if (!loopback) return fail(res, 403, "loopback_only", "Files can only be uploaded from this machine.");
+        // A refused upload is answered before its body is read: the answer closes the connection, and the rest of
+        // the body is dropped, never read into anything.
+        const refuse = (...a) => {
+          res.setHeader("Connection", "close");
+          res.once("finish", () => req.destroy());
+          return fail(res, ...a);
+        };
+        if (!loopback) return refuse(403, "loopback_only", "Files can only be uploaded from this machine.");
         const ct = String(req.headers["content-type"] ?? "").toLowerCase().split(";")[0].trim();
-        if (!UPLOAD_TYPES.has(ct)) return fail(res, 415, "unsupported_media", "Send the file as CSV (text/csv) or as an XLSX file.");
+        if (!UPLOAD_TYPES.has(ct)) return refuse(415, "unsupported_media", "Send the file as CSV (text/csv) or as an XLSX file.");
         let name = "";
         try {
           name = decodeURIComponent(String(req.headers["x-file-name"] ?? "")).replace(/[\u0000-\u001f/\\]/g, "").slice(0, 200);
         } catch {}
         const ext = CSV_TYPES.has(ct) ? "csv" : "xlsx";
-        const { file, size } = await receiveUpload(app, req, ext);
+        let got;
+        try {
+          got = await receiveUpload(app, req, ext);
+        } catch (err) {
+          if (err instanceof AppError) return refuse(STATUS[err.code] ?? 400, err.code, err.message, err.params);
+          throw err;
+        }
+        const { file, size } = got;
         return json(res, 200, { ok: true, result: await createUpload(app, { file, size, fileName: name || `orders.${ext}` }) });
       }
 

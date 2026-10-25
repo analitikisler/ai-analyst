@@ -115,6 +115,8 @@ defineAction({
 /** Runs every check over the last N days and stores the run; watches get their changed flag. */
 export async function runAllChecks(ctx, days, actor) {
   const range = await ctx.warehouse.range();
+  // An empty source (your shop's data before any sync landed rows) has nothing to check yet.
+  if (!range?.to) throw new AppError("no_data", "There is no data to check yet: connect a source or import a file first.");
   const from = addDays(range.to, -(days - 1));
   const results = [];
   for (const check of checkIds(ctx.pack)) results.push(await runReconcile(ctx, { check, from, to: range.to }));

@@ -222,14 +222,28 @@ before(async () => {
 });
 after(() => server?.close());
 
+/** One upload; resolved when the answer has arrived and the request is closed, so no stream outlives the test. */
 function send(body, headers = {}) {
   return new Promise((resolve, reject) => {
+    let answer = null;
+    let closed = false;
+    const settle = () => answer?.json !== undefined && closed && resolve(answer);
     const req = request({ host: "127.0.0.1", port, method: "POST", path: "/api/uploads/orders", headers: { Host: `127.0.0.1:${port}`, Origin: base, ...headers } }, (res) => {
       const chunks = [];
+      answer = { status: res.statusCode };
       res.on("data", (c) => chunks.push(c));
-      res.on("end", () => resolve({ status: res.statusCode, json: JSON.parse(Buffer.concat(chunks).toString("utf8") || "null") }));
+      res.on("error", () => {});
+      res.on("end", () => {
+        answer.json = JSON.parse(Buffer.concat(chunks).toString("utf8") || "null");
+        settle();
+      });
     });
-    req.on("error", reject);
+    // A refused upload is answered and its connection closed while the body may still be going out.
+    req.on("error", (e) => (answer || ["EPIPE", "ECONNRESET", "ERR_STREAM_DESTROYED"].includes(e.code) ? null : reject(e)));
+    req.on("close", () => {
+      closed = true;
+      settle();
+    });
     req.end(body);
   });
 }
@@ -271,37 +285,57 @@ test("uploads are loopback only: a request through a proxy is refused before any
 
 test("the 25 MB cap: a declared length is refused unread; a streamed body is cut off and its file removed", async () => {
   const before = files();
-  // Declared: headers only, the body is never sent.
+  // Declared: headers only, the body is never sent. Resolved once the socket is closed, so nothing outlives the test.
   const declared = await new Promise((resolve, reject) => {
     const sock = connect(port, "127.0.0.1");
     let text = "";
+    let answered = false;
     sock.setTimeout(10_000, () => (sock.destroy(), reject(new Error("no answer to a declared oversize upload"))));
     sock.on("data", (c) => {
       text += c.toString("utf8");
-      if (/\r\n\r\n[\s\S]*\}/.test(text)) (sock.destroy(), resolve(text));
+      if (!answered && /\r\n\r\n[\s\S]*\}/.test(text)) (answered = true), sock.destroy();
     });
-    sock.on("error", reject);
+    sock.on("error", (e) => (answered ? null : reject(e)));
+    sock.on("close", () => (answered ? resolve(text) : reject(new Error(`closed without an answer: ${text}`))));
     sock.write(`POST /api/uploads/orders HTTP/1.1\r\nHost: 127.0.0.1:${port}\r\nOrigin: ${base}\r\nContent-Type: text/csv\r\nContent-Length: ${MAX_UPLOAD_BYTES + 1}\r\n\r\n`);
   });
   assert.match(declared, /^HTTP\/1\.1 413/);
   assert.match(declared, /upload_too_large/);
 
-  // Streamed without a length: 1 MB chunks until the server answers, 26 MB at most.
+  // Streamed without a length: 1 MB chunks until the server answers, 26 MB at most. Writing stops at the answer (or
+  // when the stream is gone), and the result waits for the request and its socket to close.
   const streamed = await new Promise((resolve, reject) => {
+    let answer = null;
+    let closed = false;
+    const settle = () => answer?.done && closed && resolve(answer);
     const req = request({ host: "127.0.0.1", port, method: "POST", path: "/api/uploads/orders", headers: { Host: `127.0.0.1:${port}`, Origin: base, "Content-Type": "text/csv", "Transfer-Encoding": "chunked" } }, (res) => {
       const chunks = [];
+      answer = { status: res.statusCode, done: false };
       res.on("data", (c) => chunks.push(c));
-      res.on("end", () => resolve({ status: res.statusCode, body: Buffer.concat(chunks).toString("utf8") }));
+      res.on("error", () => {});
+      res.on("end", () => {
+        answer.body = Buffer.concat(chunks).toString("utf8");
+        answer.done = true;
+        req.destroy();
+        settle();
+      });
     });
-    req.on("error", (e) => (e.code === "EPIPE" || e.code === "ECONNRESET" ? null : reject(e)));
+    // After the server's answer the connection is closed under the writer: EPIPE, ECONNRESET or a write after destroy.
+    req.on("error", (e) => (answer || ["EPIPE", "ECONNRESET", "ERR_STREAM_DESTROYED"].includes(e.code) ? null : reject(e)));
+    req.on("close", () => {
+      closed = true;
+      if (!answer) return reject(new Error("closed without an answer"));
+      settle();
+    });
     const chunk = Buffer.alloc(1024 * 1024, "a,b\n");
     let sent = 0;
     const pump = () => {
       while (sent < 26) {
+        if (answer || req.destroyed || req.writableEnded) return;
         sent++;
         if (!req.write(chunk)) return req.once("drain", pump);
       }
-      req.end();
+      if (!answer && !req.destroyed) req.end();
     };
     pump();
   });

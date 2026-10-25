@@ -45,17 +45,29 @@ export async function receiveUpload(app, req, ext) {
   mkdirSync(dir, { recursive: true, mode: 0o700 });
   const file = path.join(dir, `${newId("up")}.${ext}`);
   const out = createWriteStream(file, { flags: "wx", mode: 0o600 });
+  // Every error of the file stream is handled here: a failed write (a full disk) ends the upload, and nothing is
+  // left to surface later as an uncaught error once the stream is destroyed.
+  let outError = null;
+  const failed = new Promise((_, reject) => out.on("error", (err) => reject((outError ??= err))));
+  failed.catch(() => {});
+  const closed = new Promise((r) => out.once("close", r));
   let size = 0;
   try {
     for await (const chunk of req) {
+      if (outError) throw outError;
       size += chunk.length;
       if (size > MAX_UPLOAD_BYTES) throw tooLarge();
-      if (!out.write(chunk)) await new Promise((r) => out.once("drain", r));
+      if (!out.write(chunk)) await Promise.race([new Promise((r) => out.once("drain", r)), failed]);
     }
-    await new Promise((resolve, reject) => out.end((err) => (err ? reject(err) : resolve())));
+    await Promise.race([new Promise((resolve) => out.end(resolve)), failed]);
+    await closed;
+    if (outError) throw outError;
   } catch (err) {
-    out.destroy();
+    // Destroy the file stream and wait until it is closed before removing the partial file.
+    if (!out.destroyed) out.destroy();
+    await closed;
     rmSync(file, { force: true });
+    if (err?.code === "ENOSPC") throw new AppError("upload_too_large", "There is no space left on this machine for the file.", { params: { max: MAX_UPLOAD_BYTES } });
     throw err;
   }
   if (!size) {
