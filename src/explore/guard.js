@@ -71,7 +71,7 @@ export const GUARD_MESSAGES = {
   sql_not_select: "Only a read-only query can run: it must start with SELECT or WITH.",
   sql_forbidden_keyword: "The query uses a word that writes, loads, changes settings or reads another statement form, so it does not run.",
   sql_forbidden_function: "The query calls a function that exploratory queries may not use (only aggregate, window, math, date, string and conditional functions), so it does not run.",
-  sql_table_not_allowed: "The query reads a table that is not on the list of tables the agent may read (Settings › Data source). On BigQuery every table is written in full, project.dataset.table.",
+  sql_table_not_allowed: "The query reads a table that is not on the list of tables the agent may read (Settings › Sources). On BigQuery every table is written in full, project.dataset.table.",
   sql_protected_column: "The query uses a protected column outside the two places it may appear, so it does not run. A protected column can only be a join key compared with another column (a.col = b.col, or USING) or sit alone inside COUNT(DISTINCT …).",
   sql_location_mismatch: "The query reads a dataset in another location than the mart. A BigQuery query runs in one location.",
   sql_unsupported_syntax: "The query uses a form the guard does not read the same way as the warehouse (block comments, backslashes, prefixed or dollar-quoted strings, @ variables), so it does not run.",

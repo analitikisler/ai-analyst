@@ -111,7 +111,7 @@ export async function openBigQuery(cfg, opts = {}) {
     const views = stats.query?.referencedViews ?? [];
     const type = stats.query?.statementType;
     const name = (r) => `${r.projectId}.${r.datasetId}.${r.tableId}`;
-    const notAllowed = (detail, table) => new AppError("sql_table_not_allowed", "The query reads a table that is not on the list of tables the agent may read (Settings › Data source).", { params: { detail, ...(table ? { table } : {}) } });
+    const notAllowed = (detail, table) => new AppError("sql_table_not_allowed", "The query reads a table that is not on the list of tables the agent may read (Settings › Sources).", { params: { detail, ...(table ? { table } : {}) } });
     if (policy) {
       if (!refs || !refs.length) throw notAllowed("referenced tables");
       if (refs.length >= BQ_TABLES_LIMIT) throw notAllowed("too many tables to check");
@@ -120,7 +120,7 @@ export async function openBigQuery(cfg, opts = {}) {
       // Protection is by column name, and a view can rename a column: a view is read only when the person added
       // it by name, never because its dataset is allowed (security review 2, M3).
       const looseView = views.find((v) => !(policy.allowed ?? []).includes(`${String(v.projectId).toLowerCase()}.${v.datasetId}.${v.tableId}`));
-      if (looseView) throw notAllowed("a view allowed only through its dataset; add the view by name in Settings › Data source", name(looseView));
+      if (looseView) throw notAllowed("a view allowed only through its dataset; add the view by name in Settings › Sources", name(looseView));
       if (type !== "SELECT") throw new AppError("sql_not_select", "Only a read-only query can run: it must start with SELECT or WITH.", { params: { detail: String(type ?? "unknown statement") } });
     } else if (refs || type) {
       const names = (refs ?? []).map((r) => name(r).toLowerCase());
@@ -160,7 +160,7 @@ export async function openBigQuery(cfg, opts = {}) {
      * the cap and a timeout. maxBytes: what is left of the per-question cap, when lower than the per-query cap.
      */
     async explore(sql, { timeoutMs = 30000, policy, maxBytes, onBytes } = {}) {
-      if (!policy) throw new AppError("sql_table_not_allowed", "The query reads a table that is not on the list of tables the agent may read (Settings › Data source).", { params: { detail: "no allowlist" } });
+      if (!policy) throw new AppError("sql_table_not_allowed", "The query reads a table that is not on the list of tables the agent may read (Settings › Sources).", { params: { detail: "no allowlist" } });
       const question = maxBytes != null && maxBytes < cfg.maxBytes;
       const cap = question ? Math.max(0, Math.floor(maxBytes)) : cfg.maxBytes;
       const dry = await dryRun(sql, cap, { policy, question });

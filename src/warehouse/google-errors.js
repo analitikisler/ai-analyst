@@ -31,5 +31,5 @@ export function sourceUnavailable(err, service = "BigQuery") {
   const reason = safeGoogleMessage(err) ?? "no answer";
   const status = Number(err?.code ?? err?.response?.status) || undefined;
   console.error(`[ai-analyst] source_unavailable: ${service}${status ? ` ${status}` : ""}: ${reason}`);
-  return new AppError("source_unavailable", `${service} could not be reached with the saved connection (${reason}). Check it in Settings › Data source.`, { params: { service, reason, ...(status ? { status } : {}) } });
+  return new AppError("source_unavailable", `${service} could not be reached with the saved connection (${reason}). Check it in Settings › Sources.`, { params: { service, reason, ...(status ? { status } : {}) } });
 }

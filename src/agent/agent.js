@@ -99,14 +99,14 @@ export function exploreRules({ table, dialect, tables = [] }) {
   const sqlName = dialect === "bigquery" ? "BigQuery standard SQL" : "DuckDB SQL";
   const close = 'Then call publish_answer with its explore_id and no check_id: an exploratory answer never carries a verdict. Say the answer is exploratory and not checked. If a figure overlaps a checked metric (revenue, orders), you may also run_query that metric for the same period and say in one sentence whether the two agree, never as a verdict.';
   if (!tables.length) {
-    return `When the metric pack cannot answer a question about the mart, you may call run_sql with one read-only aggregate query on the mart, written ${table} in ${sqlName}. ${close} If the mart has no column for it (products, returns, customers), say so instead, and that more tables can be allowed in Settings › Data source.`;
+    return `When the metric pack cannot answer a question about the mart, you may call run_sql with one read-only aggregate query on the mart, written ${table} in ${sqlName}. ${close} If the mart has no column for it (products, returns, customers), say so instead, and that more tables can be allowed in Settings › Sources.`;
   }
   return [
     `When the metric pack cannot answer a question, you may call run_sql with one read-only query in ${sqlName} on the tables you may read: the mart ${table}, and ${tables.join(", ")}.`,
     `Before writing SQL across tables, call describe_tables for their columns, grain, partitioning and protected columns, and use the table names exactly as it lists them${dialect === "bigquery" ? " (in full, `project.dataset.table`)" : ""}. Filter a partitioned table by its date column.`,
     "Joins can multiply rows: take an order-level amount from the order table, never sum it after joining order lines. A protected column may be used only as a join key compared with another column (a.col = b.col, or USING) or alone inside COUNT(DISTINCT col); never selected, grouped, ordered, filtered, compared with a value or passed to a function. Prefer aggregates; a row-level result is cut to 200 rows for you.",
     close,
-    "If no allowed table holds what the question needs, say so, and that more tables can be allowed in Settings › Data source.",
+    "If no allowed table holds what the question needs, say so, and that more tables can be allowed in Settings › Sources.",
   ].join(" ");
 }
 

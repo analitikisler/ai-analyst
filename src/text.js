@@ -56,8 +56,8 @@ export const REFUSAL = {
     }),
     /** When the person allowed more tables than the mart. */
     body_tables: (tables) => ({
-      en: `Exploratory answers read the tables allowed in Settings › Data source: ${tables}. None of them holds what this question needs.`,
-      tr: `Keşif cevapları Ayarlar › Veri kaynağı bölümünde izin verilen tabloları okur: ${tables}. Bu sorunun gerektirdiği veri bu tabloların hiçbirinde yok.`,
+      en: `Exploratory answers read the tables allowed in Settings › Sources: ${tables}. None of them holds what this question needs.`,
+      tr: `Keşif cevapları Ayarlar › Kaynaklar bölümünde izin verilen tabloları okur: ${tables}. Bu sorunun gerektirdiği veri bu tabloların hiçbirinde yok.`,
     }),
   },
   metric_howto: {

@@ -390,7 +390,7 @@ test("a dead BigQuery credential: state still loads with a source error, reads f
   } finally {
     console.error = err;
   }
-  assert.deepEqual(state.source.error, { code: "source_unavailable", message: "BigQuery could not be reached with the saved connection (Account deleted: 1234567890). Check it in Settings › Data source.", params: { service: "BigQuery", reason: "Account deleted: 1234567890", status: 404 } });
+  assert.deepEqual(state.source.error, { code: "source_unavailable", message: "BigQuery could not be reached with the saved connection (Account deleted: 1234567890). Check it in Settings › Sources.", params: { service: "BigQuery", reason: "Account deleted: 1234567890", status: 404 } });
   assert.deepEqual([state.workspace.data_from, state.workspace.rows], [null, null]);
   assert.ok(Array.isArray(state.dashboards) && state.dashboards.length >= 1, "the shell still has what it needs");
   assert.ok(logs.length >= 1 && logs.every((l) => /source_unavailable: BigQuery 404: Account deleted/.test(l)), logs.join("\n"));

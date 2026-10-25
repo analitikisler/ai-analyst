@@ -179,8 +179,8 @@ export function switchNote(config) {
   }
   if (config.warehouse === "bigquery") {
     return T(
-      "Your shop's data is ready. The app still reads your BigQuery data, which is never replaced on its own: switch to Your shop's data in Settings › Data source when you want it.",
-      "Mağazanın verisi hazır. Uygulama hâlâ BigQuery verisini okuyor; bu kaynak kendiliğinden değiştirilmez. Mağazanın kendi verisine geçiş Ayarlar › Veri kaynağı bölümünden yapılır.",
+      "Your shop's data is ready. The app still reads your BigQuery data, which is never replaced on its own: switch to Your shop's data in Settings › Sources when you want it.",
+      "Mağazanın verisi hazır. Uygulama hâlâ BigQuery verisini okuyor; bu kaynak kendiliğinden değiştirilmez. Mağazanın kendi verisine geçiş Ayarlar › Kaynaklar bölümünden yapılır.",
     );
   }
   return null;

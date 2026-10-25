@@ -112,7 +112,7 @@ defineAction({
   input: z.object({}).strict(),
   run(ctx) {
     const mode = agentMode(ctx.app);
-    // On the demo, one question across the shop's tables (it needs them on the list in Settings › Data source).
+    // On the demo, one question across the shop's tables (it needs them on the list in Settings › Sources).
     const cross = ctx.warehouse.demo ? [CROSS_Q.returns_category] : [];
     // On your shop's data, only what the connected sources can answer: no ad checks or ROAS without ad data.
     const cols = availableColumns(ctx.app);

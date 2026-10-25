@@ -567,7 +567,7 @@ test("the mart: 0 on a day a source covered without rows, NULL on a day it did n
 test("the switch note: none on the demo or local; BigQuery and an environment-fixed source say to switch by hand", () => {
   assert.equal(switchNote({ warehouse: "duckdb", warehouseSetting: { locked: false } }), null);
   assert.equal(switchNote({ warehouse: "local", warehouseSetting: { locked: true, env: "AI_ANALYST_WAREHOUSE" } }), null);
-  assert.match(switchNote({ warehouse: "bigquery", warehouseSetting: { locked: false } }).en, /Settings › Data source/);
+  assert.match(switchNote({ warehouse: "bigquery", warehouseSetting: { locked: false } }).en, /Settings › Sources/);
   const env = switchNote({ warehouse: "bigquery", warehouseSetting: { locked: true, env: "AI_ANALYST_WAREHOUSE" } });
   assert.match(env.en, /AI_ANALYST_WAREHOUSE=local/);
   assert.match(env.tr, /AI_ANALYST_WAREHOUSE=local/);

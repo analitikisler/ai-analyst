@@ -184,7 +184,7 @@ export function loadConfig({ env = process.env, cwd = process.cwd(), file } = {}
       checkedAt: bq.checkedAt ?? null,
       jobTimeoutMs: Number(pick("BIGQUERY_JOB_TIMEOUT_MS", bq.jobTimeoutMs, 60000)),
     },
-    // The tables exploratory answers may read (Settings › Data source; AI_ANALYST_EXPLORE_ALLOW locks the list).
+    // The tables exploratory answers may read (Settings › Sources; AI_ANALYST_EXPLORE_ALLOW locks the list).
     explore: loadExploreConfig(env, fromFile),
     providers,
     connectors: connectorsConfig(env, fromFile, secrets),
