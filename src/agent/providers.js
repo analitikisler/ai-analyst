@@ -19,12 +19,26 @@ export class ModelError extends Error {
   }
 }
 
+const n = (v) => (Number.isFinite(v) ? v : 0);
+/** Token usage of one response: { input, output, cache_read, cache_write }, or null when the response has none. */
+export function anthropicUsage(u) {
+  if (!u) return null;
+  return { input: n(u.input_tokens), output: n(u.output_tokens), cache_read: n(u.cache_read_input_tokens), cache_write: n(u.cache_creation_input_tokens) };
+}
+export function openAiUsage(u) {
+  if (!u) return null;
+  const cached = n(u.prompt_tokens_details?.cached_tokens);
+  return { input: Math.max(0, n(u.prompt_tokens) - cached), output: n(u.completion_tokens), cache_read: cached, cache_write: 0 };
+}
+
 /** The Anthropic adapter. client: an SDK client, or a stub with beta.messages.stream. */
 export function anthropicAdapter({ client, model }) {
   return {
     provider: "anthropic",
     start: ({ system, tools, history, question }) => ({
-      system,
+      // Tools render first, then the system prompt: one breakpoint on the system block caches both across calls and
+      // rounds (the prefix holds no timestamps or ids). The top-level cache_control below caches the growing messages.
+      system: [{ type: "text", text: system, cache_control: { type: "ephemeral" } }],
       tools: tools.map((t) => ({ ...t, eager_input_streaming: true })),
       messages: [...history.map((m) => ({ role: m.role, content: m.text })), { role: "user", content: question }],
       jsonRetries: 0,
@@ -61,14 +75,15 @@ export function anthropicAdapter({ client, model }) {
           if (state.jsonRetries++ >= 2) throw err;
         }
       }
-      if (message.stop_reason === "refusal") return { text: "", calls: [], stop: "refusal" };
+      const usage = anthropicUsage(message.usage);
+      if (message.stop_reason === "refusal") return { text: "", calls: [], stop: "refusal", usage };
       const text = message.content.filter((b) => b.type === "text").map((b) => b.text).join("").trim();
       state.messages.push({ role: "assistant", content: message.content });
-      if (message.stop_reason === "pause_turn") return { text, calls: [], stop: "pause" };
+      if (message.stop_reason === "pause_turn") return { text, calls: [], stop: "pause", usage };
       const calls = message.content.filter((b) => b.type === "tool_use").map((b) => ({ id: b.id, name: b.name, input: b.input }));
       // A tool input cut off at max_tokens can still parse; never run it.
-      if (message.stop_reason === "max_tokens" && calls.length) return { text, calls: [], stop: "max_tokens" };
-      return { text, calls, stop: calls.length ? "tool_use" : "end" };
+      if (message.stop_reason === "max_tokens" && calls.length) return { text, calls: [], stop: "max_tokens", usage };
+      return { text, calls, stop: calls.length ? "tool_use" : "end", usage };
     },
     addResults(state, results) {
       state.messages.push({ role: "user", content: results.map((r) => ({ type: "tool_result", tool_use_id: r.id, content: r.content, ...(r.is_error ? { is_error: true } : {}) })) });
@@ -103,11 +118,12 @@ export function openAiAdapter({ baseUrl, key, model, fetch: fetchFn = cloudFetch
       if (res.status === 429) throw new ModelError("rate_limited", "Rate limited.", 429);
       if (!res.ok) throw new ModelError("model_error", `The model server answered ${res.status}.`, res.status);
       const body = await res.json();
+      const usage = openAiUsage(body.usage);
       const choice = body.choices?.[0];
       if (!choice) throw new ModelError("model_error", "The model server sent no answer.");
       const msg = choice.message ?? {};
       state.messages.push({ role: "assistant", content: msg.content ?? null, ...(msg.tool_calls?.length ? { tool_calls: msg.tool_calls } : {}) });
-      if (choice.finish_reason === "content_filter") return { text: "", calls: [], stop: "refusal" };
+      if (choice.finish_reason === "content_filter") return { text: "", calls: [], stop: "refusal", usage };
       const calls = [];
       for (const c of msg.tool_calls ?? []) {
         let input;
@@ -118,8 +134,8 @@ export function openAiAdapter({ baseUrl, key, model, fetch: fetchFn = cloudFetch
         }
         calls.push({ id: c.id, name: c.function?.name, input });
       }
-      if (choice.finish_reason === "length" && calls.length) return { text: msg.content ?? "", calls: [], stop: "max_tokens" };
-      return { text: (msg.content ?? "").trim(), calls, stop: calls.length ? "tool_use" : "end" };
+      if (choice.finish_reason === "length" && calls.length) return { text: msg.content ?? "", calls: [], stop: "max_tokens", usage };
+      return { text: (msg.content ?? "").trim(), calls, stop: calls.length ? "tool_use" : "end", usage };
     },
     addResults(state, results) {
       for (const r of results) state.messages.push({ role: "tool", tool_call_id: r.id, content: r.is_error ? `Error: ${r.content}` : r.content });

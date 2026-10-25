@@ -316,7 +316,7 @@ export function checkHistory(checkId: CheckId, weeks = 7, to = RANGE.to): WeekRo
     const wFrom = addDays(wTo, -6);
     if (wFrom < RANGE.from) continue;
     const r = reconcile(checkId, wFrom, wTo, undefined, { seriesLead: 0 });
-    out.push({ from: wFrom, to: wTo, expected: r.expected.value, measured: r.measured.value, ...verdictOf(r.expected.value, r.measured.value, check.tolerance) });
+    out.push({ from: wFrom, to: wTo, expected: r.expected.value ?? 0, measured: r.measured.value ?? 0, ...verdictOf(r.expected.value ?? 0, r.measured.value ?? 0, check.tolerance) });
   }
   return out;
 }

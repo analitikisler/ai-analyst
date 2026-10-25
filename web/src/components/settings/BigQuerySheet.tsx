@@ -102,7 +102,7 @@ export function BigQuerySheet() {
     const d = step.detail ?? {};
     switch (step.id) {
       case "credentials":
-        return fmt(t.set.bq.steps.credentials, { identity: String(d.identity ?? ""), method: t.set.bq.method[(d.method as "adc" | "key_file") ?? "adc"] });
+        return fmt(t.set.bq.steps.credentials, { identity: String(d.identity || t.set.bq.your_account), method: t.set.bq.method[(d.method as "adc" | "key_file") ?? "adc"] });
       case "jobs":
         return fmt(t.set.bq.steps.jobs, { project: String(d.project ?? values.job_project ?? values.data_project) });
       case "dataset":
@@ -120,7 +120,10 @@ export function BigQuerySheet() {
     if (!e) return "";
     // A failure the scripted demo never produces still gets the step and the server's own words.
     const tpl = (t.set.bq.err as Record<string, string>)[e.code] ?? t.set.bq.err.generic;
-    return fmt(tpl, { step: t.set.bq.step_names[step.id], message: String(e.params?.message ?? e.code), ...(e.params as Record<string, string>) });
+    const params = (e.params ?? {}) as Record<string, string>;
+    // Google's own words (short, no secrets) follow the hint, so the real cause is never hidden.
+    const google = params.google && e.code !== "generic" ? ` ${fmt(t.set.bq.err.google, { google: params.google })}` : "";
+    return fmt(tpl, { step: t.set.bq.step_names[step.id], message: String(params.message ?? params.google ?? e.code), ...params, id: params.id || (tpl.startsWith("{id}") ? t.set.bq.your_account.charAt(0).toLocaleUpperCase() + t.set.bq.your_account.slice(1) : t.set.bq.your_account) }) + google;
   };
   const ok = test ? test.steps.filter((x) => x.status === "ok").length : 0;
   const fieldCls = "font-mono";

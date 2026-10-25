@@ -11,7 +11,7 @@ export function CheckBars({ result: c, className, compact }: { result: CheckResu
   const t = useT();
   const f = useFormat();
   const pick = useBilingual();
-  const max = Math.max(...c.breakdown.flatMap((b) => [b.expected, b.measured]), 1);
+  const max = Math.max(...c.breakdown.flatMap((b) => [b.expected ?? 0, b.measured ?? 0]), 1);
   return (
     <div className={className}>
       {!compact && (
@@ -24,7 +24,9 @@ export function CheckBars({ result: c, className, compact }: { result: CheckResu
         />
       )}
       <ul className="flex flex-col gap-3">
-        {c.breakdown.map((b) => {
+        {c.breakdown.map((row) => {
+          // Missing data draws as an empty bar; the figures read "–" and the verdict says there is no data.
+          const b = { ...row, expected: row.expected ?? 0, measured: row.measured ?? 0 };
           const under = b.measured <= b.expected;
           return (
             <li key={b.key} className="grid grid-cols-[minmax(4.5rem,6rem)_minmax(0,1fr)] items-center gap-x-3 gap-y-1">
@@ -42,7 +44,7 @@ export function CheckBars({ result: c, className, compact }: { result: CheckResu
               </span>
               <span className="col-start-2 flex flex-wrap items-center gap-x-3 gap-y-0.5 font-mono text-2xs text-text-muted tnum">
                 <span>
-                  {f.value(b.expected, c.unit)} · {f.value(b.measured, c.unit)}
+                  {f.value(row.expected, c.unit)} · {f.value(row.measured, c.unit)}
                 </span>
                 <span className="text-text">{f.pct(b.delta_pct, 1, true)}</span>
                 <Status verdict={b.verdict} />

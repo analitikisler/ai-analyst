@@ -175,7 +175,7 @@ function TileBody({ tile, result: r, compare, marked }: TileProps) {
   const q = r.query!;
   const cmp = compare !== "off" ? q.comparison : null;
   if (tile.chart === "number") {
-    const value = <span className="font-display text-2xl leading-8 font-heading tracking-[-0.012em] text-text-strong tnum">{f.value(q.total, q.unit)}</span>;
+    const value = <span className="font-display text-2xl leading-8 font-heading tracking-[-0.012em] text-text-strong tnum">{q.total == null ? t.format.no_data : f.value(q.total, q.unit)}</span>;
     const trend = (r.series ?? q).rows.map((x) => x.value);
     return (
       <div className="@container flex h-full flex-col justify-center">

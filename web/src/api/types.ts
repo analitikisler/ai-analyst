@@ -92,15 +92,18 @@ export interface QueryResult {
 export interface CheckSide {
   metric: MetricId;
   label: Text;
-  value: number;
+  /** null: no data (every value in the period is missing), never read as 0. */
+  value: number | null;
 }
 
 export interface BreakdownRow {
   key: string;
-  expected: number;
-  measured: number;
+  expected: number | null;
+  measured: number | null;
   delta_pct: number | null;
   verdict: Verdict;
+  /** Why there is no verdict (insufficient_data). */
+  reason?: Text | null;
 }
 
 export interface Finding {
@@ -116,8 +119,8 @@ export interface Finding {
 
 export interface CheckSeriesPoint {
   date: string;
-  expected: number;
-  measured: number;
+  expected: number | null;
+  measured: number | null;
 }
 
 export interface CheckResult {
@@ -130,10 +133,12 @@ export interface CheckResult {
   unit: Unit;
   expected: CheckSide;
   measured: CheckSide;
-  delta: number;
+  delta: number | null;
   delta_pct: number | null;
   tolerance: number;
   verdict: Verdict;
+  /** insufficient_data: why (a side with no data, or 0 expected). */
+  reason?: Text | null;
   breakdown_by: GroupBy;
   breakdown: BreakdownRow[];
   out_of_tolerance_since: string | null;
@@ -327,6 +332,14 @@ export interface AskContext {
   [key: string]: unknown;
 }
 
+export interface TurnUsage {
+  input: number;
+  output: number;
+  cache_read: number;
+  cache_write: number;
+  calls: number;
+}
+
 export type TurnStatus = "running" | "done" | "error" | "stopped";
 
 export interface Turn {
@@ -343,7 +356,10 @@ export interface Turn {
   /** Proposal ids waiting for a person (B13). */
   approvals: string[];
   refusal: Refusal | null;
+  /** The model's own text for the turn: the closing line under a card, or the whole reply when there is no card. */
   text: Text | null;
+  /** Model turns: tokens used, summed over the turn's calls (cache read and write counted apart). */
+  usage?: TurnUsage | null;
   error: ApiErrorBody | null;
   created_by: Actor;
   status: TurnStatus;

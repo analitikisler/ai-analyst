@@ -136,7 +136,7 @@ test("exploratory answers switched off: no run_sql tool, and the prompt says the
   const client = stubAnthropic([]);
   await ask(withClient(client), "Which weekday brings the most revenue?");
   assert.ok(!client.requests[0].tools.some((t) => t.name === "run_sql"));
-  assert.match(client.requests[0].system, /There is no free SQL/);
+  assert.match(client.requests[0].system[0].text, /There is no free SQL/);
   ws.store.setMeta("preferences", {});
 });
 

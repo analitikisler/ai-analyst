@@ -75,16 +75,18 @@ async function aggregate(ctx, metric, q) {
   const sql = compileQuery(ctx.pack, q, ctx.warehouse);
   const raw = await ctx.warehouse.query(sql);
   const ratio = !metric.sum;
-  const val = (r) => (ratio ? (r.denominator ? r.numerator / r.denominator : null) : r.value ?? 0);
-  let n = 0;
-  let d = 0;
+  // Missing data stays missing: a SUM over only NULLs is null, and a ratio with a null or zero denominator is null
+  // ("no data"), never 0 and never infinity.
+  const val = (r) => (ratio ? (r.numerator != null && r.denominator ? r.numerator / r.denominator : null) : r.value ?? null);
+  let n = null;
+  let d = null;
   for (const r of raw) {
     if (ratio) {
-      n += r.numerator ?? 0;
-      d += r.denominator ?? 0;
-    } else n += r.value ?? 0;
+      if (r.numerator != null) n = (n ?? 0) + Number(r.numerator);
+      if (r.denominator != null) d = (d ?? 0) + Number(r.denominator);
+    } else if (r.value != null) n = (n ?? 0) + Number(r.value);
   }
-  const total = ratio ? (d ? n / d : null) : n;
+  const total = ratio ? (n != null && d ? n / d : null) : n;
   const rows = q.group_by === "none" ? [] : sortRows(raw.map((r) => ({ key: String(r[q.group_by]), value: val(r) })), q.group_by);
   return { sql, rows, total };
 }

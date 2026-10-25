@@ -16,16 +16,64 @@ import { isDataset, isProject } from "../warehouse/bigquery.js";
 import { ACT, SOURCE_LABEL } from "../text.js";
 import { defineAction } from "./registry.js";
 
-/** Google sign-in on this machine, read from local files only (no network). */
+/** The account gcloud is signed in with, from its local config files (no network); null when not there. */
+function gcloudAccount(dir) {
+  try {
+    const active = existsSync(path.join(dir, "active_config")) ? readFileSync(path.join(dir, "active_config"), "utf8").trim() || "default" : "default";
+    const conf = readFileSync(path.join(dir, "configurations", `config_${active.replace(/[^\w.-]/g, "")}`), "utf8");
+    const m = conf.match(/^\s*account\s*=\s*(\S+@\S+)\s*$/m);
+    return m ? m[1] : null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Google sign-in on this machine, read from local files only (no network). kind: the credential type
+ * (service_account, authorized_user, impersonated_service_account, external_account). For a user sign-in the email
+ * comes from the file when it has one, else from gcloud's own config; null when neither has it.
+ */
 export function localCredentials(env = process.env) {
-  const file = env.GOOGLE_APPLICATION_CREDENTIALS || path.join(env.CLOUDSDK_CONFIG || path.join(os.homedir(), ".config", "gcloud"), "application_default_credentials.json");
-  if (!existsSync(file)) return { adc_found: false, identity: null };
+  const dir = env.CLOUDSDK_CONFIG || path.join(os.homedir(), ".config", "gcloud");
+  const file = env.GOOGLE_APPLICATION_CREDENTIALS || path.join(dir, "application_default_credentials.json");
+  if (!existsSync(file)) return { adc_found: false, identity: null, kind: null };
   try {
     const j = JSON.parse(readFileSync(file, "utf8"));
-    return { adc_found: true, identity: j.client_email ?? j.service_account_impersonation_url?.match(/serviceAccounts\/([^:]+):/)?.[1] ?? null };
+    const user = j.type === "authorized_user";
+    const identity = j.client_email ?? j.service_account_impersonation_url?.match(/serviceAccounts\/([^:]+):/)?.[1] ?? (user ? j.account || gcloudAccount(dir) : null) ?? null;
+    return { adc_found: true, identity, kind: j.type ?? null };
   } catch {
-    return { adc_found: true, identity: null };
+    return { adc_found: true, identity: null, kind: null };
   }
+}
+
+/**
+ * Google's own words for a failed call, short and safe to show: the first line, no tokens or secrets, under 200
+ * characters. null when there is nothing to say.
+ */
+export function safeGoogleMessage(err) {
+  const raw = err?.errors?.[0]?.message || err?.response?.data?.error?.message || err?.message;
+  if (!raw || typeof raw !== "string") return null;
+  let m = raw.split("\n")[0];
+  m = m
+    .replace(/Bearer\s+\S+/gi, "Bearer [hidden]")
+    .replace(/\b(access_token|refresh_token|id_token|client_secret|private_key|api[_-]?key|token)\b(["']?\s*[:=]\s*["']?)[^\s"',&]+/gi, "$1$2[hidden]")
+    .replace(/ya29\.[\w.-]+/g, "[hidden]")
+    .replace(/eyJ[\w-]+\.[\w-]+\.[\w-]*/g, "[hidden]")
+    .replace(/[A-Za-z0-9_\-+/]{40,}={0,2}/g, "[hidden]")
+    .replace(/\s+/g, " ")
+    .trim();
+  if (!m) return null;
+  return m.length > 199 ? `${m.slice(0, 198).trimEnd()}…` : m;
+}
+
+/** A quota project (from the person's application default credentials) that is deleted or missing. */
+export function quotaProjectProblem(message, known = []) {
+  if (!message) return null;
+  const m = message.match(/project\s+['"]?([a-z0-9][a-z0-9:.-]{4,62})['"]?\s+(?:has been deleted|was deleted|is deleted|not found|does not exist|was not found)/i);
+  if (m && !known.includes(m[1])) return m[1];
+  if (/quota project/i.test(message) && /(deleted|not found|does not exist|invalid|missing)/i.test(message)) return m?.[1] ?? "–";
+  return null;
 }
 
 defineAction({
@@ -95,6 +143,7 @@ export async function realBigQueryTester(values) {
 }
 
 const MART_COLUMNS = ["date", "channel", "device", "sessions", "orders", "revenue", "ga4_purchases", "ga4_revenue", "platform_conversions", "ad_spend"];
+const g = (google) => (google ? { google } : {});
 const status = (err) => err?.code ?? err?.response?.status ?? err?.errors?.[0]?.reason;
 
 defineAction({
@@ -139,9 +188,12 @@ defineAction({
     }
     const tester = ctx.app.bigQueryTester ? await ctx.app.bigQueryTester(values) : await realBigQueryTester(values);
     let identity;
+    const local = localCredentials(ctx.config.env);
+    // A user sign-in shows its email when it is on this machine; otherwise the app says "your Google account".
+    const identityKind = values.auth.impersonate ? "service_account" : values.auth.kind === "key_file" ? "service_account" : local.kind === "authorized_user" ? "user" : local.kind ? "service_account" : null;
     try {
-      identity = values.auth.impersonate || (await tester.identity()) || localCredentials(ctx.config.env).identity || "–";
-      steps.push({ id: "credentials", status: "ok", detail: { identity, method } });
+      identity = values.auth.impersonate || (await tester.identity()) || local.identity || "";
+      steps.push({ id: "credentials", status: "ok", detail: { identity, method, identity_kind: identityKind } });
     } catch {
       steps.push({ id: "credentials", status: "failed", error: { code: "no_credentials", params: {} } });
       return finish(null);
@@ -149,8 +201,10 @@ defineAction({
     try {
       await tester.canRunJobs();
       steps.push({ id: "jobs", status: "ok", detail: { project: jobProject } });
-    } catch {
-      steps.push({ id: "jobs", status: "failed", detail: { project: jobProject }, error: { code: "no_jobs", params: { id: identity, p: jobProject } } });
+    } catch (err) {
+      const google = safeGoogleMessage(err);
+      const quota = quotaProjectProblem(google, [jobProject, values.data_project]);
+      steps.push({ id: "jobs", status: "failed", detail: { project: jobProject }, error: quota ? { code: "quota_project", params: { q: quota, p: jobProject, ...g(google) } } : { code: "no_jobs", params: { id: identity, p: jobProject, ...g(google) } } });
       return finish(null);
     }
     let location;
@@ -158,7 +212,7 @@ defineAction({
       ({ location } = await tester.dataset());
       steps.push({ id: "dataset", status: "ok", detail: { project: values.data_project, dataset: values.dataset, location: location ?? "–" } });
     } catch (err) {
-      steps.push({ id: "dataset", status: "failed", error: { code: status(err) === 403 ? "dataset_denied" : "dataset_not_found", params: { p: values.data_project, d: values.dataset, loc: values.location ?? "–", id: identity } } });
+      steps.push({ id: "dataset", status: "failed", error: { code: status(err) === 403 ? "dataset_denied" : "dataset_not_found", params: { p: values.data_project, d: values.dataset, loc: values.location ?? "–", id: identity, ...g(safeGoogleMessage(err)) } } });
       return finish(null);
     }
     const table = `\`${values.data_project}.${values.dataset}.daily_channel_device\``;
@@ -170,15 +224,15 @@ defineAction({
         return finish(location);
       }
       steps.push({ id: "table", status: "ok", detail: { table: "daily_channel_device", n: t.columns.length, time: t.modified ?? "–" } });
-    } catch {
-      steps.push({ id: "table", status: "failed", error: { code: "table_not_found", params: { p: values.data_project, d: values.dataset } } });
+    } catch (err) {
+      steps.push({ id: "table", status: "failed", error: { code: "table_not_found", params: { p: values.data_project, d: values.dataset, table: "daily_channel_device", ...g(safeGoogleMessage(err)) } } });
       return finish(location);
     }
     try {
       const r = await tester.read(table);
       steps.push({ id: "read", status: "ok", detail: { from: r.from ?? "–", to: r.to ?? "–", rows: r.rows } });
-    } catch {
-      steps.push({ id: "read", status: "failed", error: { code: "read_denied", params: { id: identity } } });
+    } catch (err) {
+      steps.push({ id: "read", status: "failed", error: { code: "read_denied", params: { id: identity, p: values.data_project, d: values.dataset, table: "daily_channel_device", ...g(safeGoogleMessage(err)) } } });
       return finish(location);
     }
     try {
@@ -188,8 +242,8 @@ defineAction({
         return finish(location);
       }
       steps.push({ id: "cost", status: "ok", detail: { bytes, cap: values.max_bytes } });
-    } catch {
-      steps.push({ id: "cost", status: "failed", error: { code: "dry_run_failed", params: {} } });
+    } catch (err) {
+      steps.push({ id: "cost", status: "failed", error: { code: "dry_run_failed", params: { ...g(safeGoogleMessage(err)) } } });
       return finish(location);
     }
     return finish(location);

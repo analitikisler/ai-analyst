@@ -167,7 +167,7 @@ export function checkSentence(c, data) {
   const p = { en: pct("en", abs(c.delta_pct)), tr: pct("tr", abs(c.delta_pct)) };
   const inside = { en: ok ? `inside the ±${t.en} tolerance` : `outside the ±${t.en} tolerance`, tr: ok ? `kabul edilen ±⁠${t.tr} sapma içinde` : `kabul edilen ±⁠${t.tr} sapmanın dışında` };
   const head = { en: ok ? "Adds up." : "Does not add up.", tr: ok ? "Tutuyor." : "Tutmuyor." };
-  if (c.verdict === "insufficient_data") return T("There are no back-office orders in this period to compare with.", "Bu dönemde sipariş panelinde karşılaştırılacak sipariş yok.");
+  if (c.verdict === "insufficient_data") return c.reason ?? T("There are no back-office orders in this period to compare with.", "Bu dönemde sipariş panelinde karşılaştırılacak sipariş yok.");
   const sinceStart = c.out_of_tolerance_since === data.from && !ok;
   switch (c.check) {
     case "ga4_vs_orders":
@@ -229,7 +229,7 @@ function whyText(c, data) {
   };
 }
 
-function whyDetail(c) {
+export function whyDetail(c) {
   const bad = c.breakdown.filter((b) => b.verdict === "does_not_add_up");
   const ok = c.breakdown.filter((b) => b.verdict === "adds_up");
   const seg = bad.length === 1 && ok.length ? bad[0] : null;
@@ -251,6 +251,7 @@ function splitSentence(pack, q) {
   const v = (l, x) => f[l].value(x, q.unit);
   const rows = q.rows;
   const top = rows[0];
+  if (q.total == null) return { en: `${m.label.en} · ${range2(q.from, q.to).en}: no data in this period.`, tr: `${m.label.tr} · ${range2(q.from, q.to).tr}: bu dönemde veri yok.` };
   if (q.metric === "roas" && top) {
     return {
       en: `ROAS for ${r.en} is ${v("en", q.total)} overall. ${dimName(top.key, "en")} leads at ${v("en", top.value)}${rows.length > 1 ? `, then ${rows.slice(1).map((x) => `${dimName(x.key, "en")} at ${v("en", x.value)}`).join(" and ")}` : ""}.`,
@@ -269,6 +270,7 @@ function numberSentence(pack, q, singleDay) {
   const m = pack.metrics[q.metric];
   const v = (l, x) => f[l].value(x ?? null, q.unit);
   const c = q.comparison;
+  if (q.total == null) return { en: `${m.label.en} · ${range2(q.from, q.to).en}: no data in this period.`, tr: `${m.label.tr} · ${range2(q.from, q.to).tr}: bu dönemde veri yok.` };
   if (singleDay) {
     return {
       en: `${m.label.en} on ${f.en.date(q.from, true)}, the last full day with data: ${v("en", q.total)}.${c ? ` ${c.delta != null && c.delta >= 0 ? "Up" : "Down"} ${pct("en", abs(c.delta_pct))} against ${v("en", c.total)} on ${f.en.date(c.from)}.` : ""}`,

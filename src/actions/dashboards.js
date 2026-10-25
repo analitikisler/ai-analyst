@@ -14,11 +14,14 @@ const summary = (d) => ({ id: d.id, name: d.name, example: d.example, tiles: d.t
 
 defineAction({
   name: "list_dashboards",
-  description: "The dashboards, in order.",
+  description: "The dashboards, in order: dashboard_id, name and the number of tiles. Call it before propose_pin when the person names a dashboard.",
   kind: "read",
+  agent: true,
   mcp: false,
   input: z.object({}).strict(),
   run: (ctx) => listDashboards(ctx.store).map(summary),
+  forModel: (list) => list.map((d) => ({ dashboard_id: d.id, name: d.name, tiles: d.tiles })),
+  summary: (list) => T(`Read the dashboards (${list.length})`, `Dashboard’lar okundu (${list.length})`),
 });
 
 defineAction({

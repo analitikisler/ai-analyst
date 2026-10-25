@@ -60,7 +60,7 @@ export async function openDuckDB(file) {
       await wc.run(`CREATE TABLE ${MART.model} (date DATE, channel VARCHAR, device VARCHAR, sessions BIGINT, orders BIGINT, revenue DECIMAL(18, 2), ga4_purchases BIGINT, ga4_revenue DECIMAL(18, 2), platform_conversions BIGINT, ad_spend DECIMAL(18, 2))`);
       const lit = (v) => `'${String(v).replace(/'/g, "''")}'`;
       for (let i = 0; i < rows.length; i += 500) {
-        const values = rows.slice(i, i + 500).map((r) => `(DATE ${lit(String(r.date).slice(0, 10))}, ${lit(r.channel)}, ${lit(r.device)}, ${COLUMNS.slice(3).map((col) => Number(r[col]) || 0).join(", ")})`).join(",\n");
+        const values = rows.slice(i, i + 500).map((r) => `(DATE ${lit(String(r.date).slice(0, 10))}, ${lit(r.channel)}, ${lit(r.device)}, ${COLUMNS.slice(3).map((col) => (r[col] == null || r[col] === "" || !Number.isFinite(Number(r[col])) ? "NULL" : Number(r[col]))).join(", ")})`).join(",\n");
         await wc.run(`INSERT INTO ${MART.model} VALUES ${values}`);
       }
       await wc.run("CHECKPOINT");

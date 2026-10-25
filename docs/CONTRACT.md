@@ -151,7 +151,7 @@ Who: P person (web app), A agent tool, M chat app over MCP, S settings (loopback
 | `list_conversations`, `get_conversation` | read | P | |
 | `decide_proposal` | write | P | approve runs the watch, pin or event; Activity row with `proposal_id` |
 | `undo` | write | P | every undo kind of the prototype (tiles, order, period, watch, dashboards, events, GTM import); `undo_gone` when what it changed was removed since |
-| `list_dashboards`, `get_dashboard` | read | P | `get_dashboard` → `DashboardResult` (tiles follow the dashboard period and compare; the strip over the same period) |
+| `list_dashboards`, `get_dashboard` | read | P (`list_dashboards` also A, so `propose_pin` gets a real id) | `get_dashboard` → `DashboardResult` (tiles follow the dashboard period and compare; the strip over the same period) |
 | `create_dashboard`, `rename_dashboard`, `delete_dashboard`, `set_dashboard_period` | write | P | undoable; one dashboard always stays |
 | `pin_answer`, `update_tile`, `move_tile`, `duplicate_tile`, `remove_tile` | write | P | undoable; chart grammar and width rules enforced |
 | `list_events` | read | P A M | sorted by date; the model sees them labelled as data |
@@ -168,7 +168,7 @@ Who: P person (web app), A agent tool, M chat app over MCP, S settings (loopback
 | `test_model_key`, `save_model_key`, `remove_model_key`, `set_model_provider` | read (test), write | P S | one small real call only when the person presses Test or Save; keys to `secrets.json` (0600) |
 | `set_preference` | write | P | `make_it_yours`, `not_now`, `exploratory` |
 | `get_workspace` | read | A M | name, demo, data range, rows |
-| `publish_answer` | write | A | `{ sentence: Text, title?: Text, query_id? , check_id?, explore_id?, followups?: Text[] }`; the number-grounding validator checks both languages; refused twice, then published with `validation.ok = false` |
+| `publish_answer` | write | A | `{ sentence: Text, title?: Text, query_id? , check_id?, explore_id?, kind?: "answer"\|"why", segment?: { dimension: "device"\|"channel", key }, lead?: "metric"\|"check", followups?: Text[] }`; the number-grounding validator checks both languages; refused twice, then published with `validation.ok = false`. `kind: "why"` needs a check that does not add up and fills `why`; `segment` makes a `check_split` with the segment's figures and `overall`; `lead: "metric"` (the default when the query has a comparison or is not one of the check's metrics) leads with the metric and keeps the check below. `explore_id` with `check_id` is refused: exploratory answers never carry a verdict |
 | `propose_watch`, `propose_pin`, `propose_event`, `propose_metric` | write | A | a pending `Proposal` (or a proposed metric); nothing changes until a person approves |
 | `run_sql` | read | A | exploratory only (a model is set and the switch is on); see "Exploratory SQL" |
 
@@ -183,6 +183,7 @@ Removed from 0.1, replaced by the prototype's actions: `pin_answer` (frozen answ
   fallbacks `"default"`, eager input streaming on tools). OpenAI (`https://api.openai.com/v1`), Gemini (its
   OpenAI-compatible endpoint `https://generativelanguage.googleapis.com/v1beta/openai`) and OpenAI-compatible
   servers (a base URL: Ollama, OpenRouter) go through one fetch-based chat-completions adapter with tool calls.
+- A turn keeps the model's own text (`text`, capped: 400 characters after a card, 1,500 without one) and, for model turns, `usage: { input, output, cache_read, cache_write, calls }` summed over its calls. A check side with no data (all NULL) is `insufficient_data` with `reason: Text`; ratio metrics over a NULL or zero denominator are `null` (no data).
 - The model writes every text in both languages (`publish_answer` takes `Text`). Steps stream as tools run; an
   answer or approval is sent right after its tool's step. Follow-ups never repeat a question already asked in
   the conversation.
@@ -264,7 +265,7 @@ as a four-character hint.
 | `AI_ANALYST_MODEL` | the active provider's model (defaults: claude-opus-5-5, gpt-5.5, gemini-pro-latest) |
 | `AI_ANALYST_CLOUD_URL`, `AI_ANALYST_CLOUD_TOKEN` | Analitik İşler Cloud, an Anthropic-compatible endpoint |
 | `AI_ANALYST_NO_CLOUD` | `1`: every call to an outside service is refused with `no_cloud` (see below); `--no-cloud` on `serve` sets it |
-| `AI_ANALYST_WORKSPACE`, `AI_ANALYST_LANG`, `AI_ANALYST_HELP`, `AI_ANALYST_HELP_EMAIL`, `AI_ANALYST_PACK_DIR` | as in 0.1 |
+| `AI_ANALYST_WORKSPACE`, `AI_ANALYST_LANG`, `AI_ANALYST_HELP`, `AI_ANALYST_HELP_EMAIL`, `AI_ANALYST_PACK_DIR` | as in 0.1; with no workspace name set, demo data is "Örnek Moda" and own data is named after the BigQuery dataset (else the project) |
 
 Watched checks run again when the server starts, every hour while it runs, and on every `ai-analyst check`.
 

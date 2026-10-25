@@ -4,7 +4,7 @@ import { parseArgs } from "node:util";
 import { callAction } from "./actions/index.js";
 import { runAllChecks } from "./actions/data.js";
 import { runTurn } from "./agent/agent.js";
-import { loadConfig } from "./config.js";
+import { loadConfig, workspaceName } from "./config.js";
 import { fmtPct } from "./format.js";
 import { startMcp } from "./mcp.js";
 import { startServer } from "./server.js";
@@ -68,7 +68,7 @@ async function main(argv) {
     const { port } = server.address();
     const mode = ws.config.provider.value === "planner" ? "built-in planner" : `${ws.config.provider.value} · ${ws.config.model}`;
     if (process.env.AI_ANALYST_NO_CLOUD === "1") console.log("No calls to outside services (AI_ANALYST_NO_CLOUD=1): BigQuery and model providers are refused.");
-    console.log(`ai analyst · ${ws.config.workspace} · ${ws.warehouse.dialect} · answers: ${mode}`);
+    console.log(`ai analyst · ${workspaceName(ws.config, ws.warehouse)} · ${ws.warehouse.dialect} · answers: ${mode}`);
     const shown = ["0.0.0.0", "::"].includes(config.host) ? "127.0.0.1" : config.host;
     console.log(`Open http://${shown.includes(":") ? `[${shown}]` : shown}:${port}/${config.token ? "?token=<AI_ANALYST_TOKEN>" : ""}`);
     // Watched checks run again at start and every hour while the server runs.

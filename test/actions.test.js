@@ -38,7 +38,7 @@ test("every action of the web contract is registered and a person may call it", 
 
 test("the agent's tools: reads, the check run, publishing, proposals and SQL; never a person's write", () => {
   const tools = actionsFor("agent").map((a) => a.name).sort();
-  assert.deepEqual(tools, ["explain_metric", "get_workspace", "list_checks", "list_events", "list_metrics", "list_sources", "propose_event", "propose_metric", "propose_pin", "propose_watch", "publish_answer", "reconcile", "run_all_checks", "run_query", "run_sql"]);
+  assert.deepEqual(tools, ["explain_metric", "get_workspace", "list_checks", "list_dashboards", "list_events", "list_metrics", "list_sources", "propose_event", "propose_metric", "propose_pin", "propose_watch", "publish_answer", "reconcile", "run_all_checks", "run_query", "run_sql"]);
   const defs = toolDefinitions(ws.pack, { eager: true });
   const rq = defs.find((t) => t.name === "run_query");
   assert.equal(rq.input_schema.type, "object");

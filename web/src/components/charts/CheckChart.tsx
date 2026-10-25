@@ -24,7 +24,7 @@ export function CheckChart({ result: c, height = 220, className }: { result: Che
   const data = useMemo(
     () =>
       series.map((p, i) => {
-        const outside = p.expected ? Math.abs((p.measured - p.expected) / p.expected) > c.tolerance : false;
+        const outside = p.expected && p.measured != null ? Math.abs((p.measured - p.expected) / p.expected) > c.tolerance : false;
         const inPeriod = p.date >= c.from && p.date <= c.to;
         const provisional = prov != null && p.date >= prov;
         const joinsProvisional = prov != null && series[i + 1]?.date === prov;
@@ -34,13 +34,13 @@ export function CheckChart({ result: c, height = 220, className }: { result: Che
           measured: provisional ? null : p.measured,
           expectedP: provisional || joinsProvisional ? p.expected : null,
           measuredP: provisional || joinsProvisional ? p.measured : null,
-          gap: c.verdict === "does_not_add_up" && outside && inPeriod ? [Math.min(p.expected, p.measured), Math.max(p.expected, p.measured)] : null,
+          gap: c.verdict === "does_not_add_up" && outside && inPeriod && p.expected != null && p.measured != null ? [Math.min(p.expected, p.measured), Math.max(p.expected, p.measured)] : null,
           raw: p,
         };
       }),
     [series, c.tolerance, c.from, c.to, c.verdict, prov],
   );
-  const max = niceMax(Math.max(...series.flatMap((p) => [p.expected, p.measured]), 1), c.unit);
+  const max = niceMax(Math.max(...series.flatMap((p) => [p.expected ?? 0, p.measured ?? 0]), 1), c.unit);
   const leadEnd = addDays(c.from, -1);
   const hasLead = (c.series_from ?? c.from) < c.from;
   const anim = !prefersReducedMotion();
@@ -127,7 +127,7 @@ export function DiffChart({ result: c, height = 220, className }: { result: Chec
   const data = useMemo(
     () =>
       series.map((p, i) => {
-        const d = p.expected ? (p.measured - p.expected) / p.expected : null;
+        const d = p.expected && p.measured != null ? (p.measured - p.expected) / p.expected : null;
         const inPeriod = p.date >= c.from && p.date <= c.to;
         const provisional = prov != null && p.date >= prov;
         const joins = prov != null && series[i + 1]?.date === prov;

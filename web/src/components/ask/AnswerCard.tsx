@@ -68,10 +68,13 @@ function StreamText({ id, text, active, onDone, className }: { id: string; text:
 export function AnswerCard({ answer: a, fresh, narrow, actions }: AnswerCardProps) {
   const pick = useBilingual();
   const c = a.check;
+  // The check leads only a check answer; a metric answer leads with its figure and the check sits below it.
+  const checkLed = !!c && (a.kind === "check" || a.kind === "check_split");
+  const checkBelow = !!c && !checkLed && a.kind !== "why" && !a.explore;
   const [revealed, setRevealed] = useState(!fresh || streamed.has(a.id));
   return (
     <div className="@container flex min-w-0 flex-col gap-3" aria-label={pick(a.title)}>
-      {a.explore ? <ExploreHead answer={a} /> : a.kind === "why" && c ? <WhyHead check={c} /> : c ? <CheckHead check={c} overall={a.overall ?? null} fresh={fresh} /> : <FigureHead answer={a} fresh={fresh} />}
+      {a.explore ? <ExploreHead answer={a} /> : a.kind === "why" && c ? <WhyHead check={c} /> : checkLed && c ? <CheckHead check={c} overall={a.overall ?? null} fresh={fresh} /> : <FigureHead answer={a} fresh={fresh} />}
       <StreamText id={a.id} text={pick(a.sentence)} active={!!fresh} onDone={() => setRevealed(true)} className="max-w-[68ch] text-[15px] leading-6 text-text" />
       {revealed && (
         <div className={cn("flex min-w-0 flex-col gap-3", fresh && "animate-[aia-fade-in_220ms_var(--ease-out)_both]")}>
@@ -86,6 +89,11 @@ export function AnswerCard({ answer: a, fresh, narrow, actions }: AnswerCardProp
             <WhyBody answer={a} check={c} narrow={narrow} />
           ) : (
             <Evidence answer={a} fresh={fresh} narrow={narrow} />
+          )}
+          {checkBelow && c && (
+            <section aria-label={pick(c.label)} className="rounded-lg border border-border bg-surface p-3 sm:p-4">
+              <CheckHead check={c} overall={null} />
+            </section>
           )}
           {c && a.kind === "check" && <WhereLine check={c} />}
           {c && a.kind !== "why" && c.findings.length > 0 && <FindingLine check={c} defaultOpen={a.kind === "check_split" && a.handmade} />}
@@ -129,8 +137,8 @@ function CheckHead({ check: c, overall, fresh }: { check: CheckResult; overall: 
   const f = useFormat();
   const pick = useBilingual();
   const pctText = f.pct(c.delta_pct, 1, true);
-  const diff = Math.abs(c.delta);
-  const fewerMore = c.delta < 0 ? fmt(t.ask.fewer, { n: f.value(diff, c.unit) }) : fmt(t.ask.more_n, { n: f.value(diff, c.unit) });
+  const diff = Math.abs(c.delta ?? 0);
+  const fewerMore = (c.delta ?? 0) < 0 ? fmt(t.ask.fewer, { n: f.value(diff, c.unit) }) : fmt(t.ask.more_n, { n: f.value(diff, c.unit) });
   return (
     <header>
       <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
@@ -138,7 +146,7 @@ function CheckHead({ check: c, overall, fresh }: { check: CheckResult; overall: 
         <span className="font-mono text-[13px] text-text-muted tnum">{f.range(c.from, c.to)}</span>
       </div>
       <p className="mt-2 text-[13px] leading-[18px] font-medium text-text-muted">{pick(c.label)}</p>
-      {c.verdict === "insufficient_data" ? null : (
+      {c.verdict === "insufficient_data" ? (c.reason ? <p className="mt-1 max-w-[68ch] text-[13px] leading-[18px] text-text-muted">{pick(c.reason)}</p> : null) : (
         <div className="mt-1 flex flex-wrap items-baseline gap-x-4 gap-y-2">
           <Marked draw={fresh} label={fmt(t.ask.figure_label, { value: pctText })}>
             <DeltaFigure value={pctText} className={cn("text-[28px] leading-9 text-text-strong", fresh && "animate-[aia-fade-in_220ms_var(--ease-out)_both]")} />
@@ -256,7 +264,7 @@ function FigureHead({ answer: a, fresh }: { answer: Answer; fresh?: boolean }) {
       </p>
       <div className="mt-1 flex flex-wrap items-baseline gap-x-3 gap-y-2">
         <Marked draw={fresh}>
-          <span className={cn("font-display text-[28px] leading-9 font-heading tracking-[-0.012em] text-text-strong tnum", fresh && "animate-[aia-fade-in_220ms_var(--ease-out)_both]")}>{f.value(q.total, q.unit)}</span>
+          <span className={cn("font-display text-[28px] leading-9 font-heading tracking-[-0.012em] text-text-strong tnum", fresh && "animate-[aia-fade-in_220ms_var(--ease-out)_both]")}>{q.total == null ? t.format.no_data : f.value(q.total, q.unit)}</span>
         </Marked>
         {cmp && (
           <span className="flex flex-wrap items-center gap-2 text-[13px] text-text-muted tnum">
@@ -283,14 +291,14 @@ function Evidence({ answer: a, fresh, narrow }: { answer: Answer; fresh?: boolea
   );
   const block = "min-w-0 rounded-lg border border-border bg-surface p-3 sm:p-4";
   if (a.kind === "number") return null;
-  if (c) {
+  if (c && (a.kind === "check" || a.kind === "check_split")) {
     const split = a.kind === "check_split";
     const tableEl = (
       <DataTable
         label={pick(c.label)}
         dense
         maxHeight={240}
-        rows={split ? c.breakdown.map((b) => ({ key: (t.dimensions.device as Record<string, string>)[b.key] ?? b.key, e: b.expected, m: b.measured, d: b.delta_pct })) : (c.series ?? []).map((p) => ({ key: f.date(p.date), e: p.expected, m: p.measured, d: p.expected ? (p.measured - p.expected) / p.expected : null }))}
+        rows={split ? c.breakdown.map((b) => ({ key: (t.dimensions.device as Record<string, string>)[b.key] ?? b.key, e: b.expected, m: b.measured, d: b.delta_pct })) : (c.series ?? []).map((p) => ({ key: f.date(p.date), e: p.expected, m: p.measured, d: p.expected && p.measured != null ? (p.measured - p.expected) / p.expected : null }))}
         columns={[
           { key: "k", label: split ? t.ask.by_device : t.check.chart, render: (r) => r.key },
           { key: "e", label: pick(c.expected.label), num: true, render: (r) => f.value(r.e, c.unit) },

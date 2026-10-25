@@ -4,6 +4,7 @@ import { agentMode } from "../agent/mode.js";
 import { listDashboards } from "../dashboards.js";
 import { runQuery, runReconcile } from "../engine.js";
 import { AppError } from "../errors.js";
+import { workspaceName } from "../config.js";
 import { addDays } from "../format.js";
 import { compileQuery, resolveQuery } from "../metrics/compile.js";
 import { listOverlay, writeOverlay } from "../metrics/overlay.js";
@@ -254,7 +255,7 @@ defineAction({
 export async function workspaceInfo(ctx) {
   const range = await ctx.warehouse.range();
   return {
-    name: ctx.config.workspace,
+    name: workspaceName(ctx.config, ctx.warehouse),
     demo: ctx.warehouse.demo,
     data_from: range.from,
     data_to: range.to,

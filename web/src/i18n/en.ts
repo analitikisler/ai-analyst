@@ -487,7 +487,10 @@ export const en = {
         read_denied: "{id} cannot read {p}.{d}.{table}. Grant it BigQuery Data Viewer on the dataset.",
         over_cap: "A typical question would read {bytes}, over the {cap} cap. Partition the table by date or raise the cap.",
         generic: "{step} failed: {message}",
+        quota_project: "The quota project in the application default credentials on this machine, {q}, is deleted or missing. Run gcloud auth application-default set-quota-project {p}, then test again.",
+        google: "Google says: {google}",
       },
+      your_account: "your Google account",
       m6: { body: "Analitik İşler can set this up with the team.", guide: "Open the guide", email: "Email about setup" },
     },
     model: {

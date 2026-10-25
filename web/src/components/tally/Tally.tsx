@@ -133,7 +133,8 @@ export function useTallySentence(c: CheckResult) {
   });
 }
 
-export function signedValue(f: ReturnType<typeof useFormat>, v: number, unit: Unit) {
+export function signedValue(f: ReturnType<typeof useFormat>, v: number | null, unit: Unit) {
+  if (v == null) return f.dash;
   const s = f.value(Math.abs(v), unit);
   return v > 0 ? `+${s}` : v < 0 ? `−${s}` : s;
 }
@@ -143,7 +144,7 @@ export function Tally({ result: c, form = "stacked", mark, play, showLabel = tru
   const f = useFormat();
   const pick = useBilingual();
   const sr = useTallySentence(c);
-  const g = geometry(c.expected.value, c.measured.value, c.tolerance);
+  const g = geometry(c.expected.value ?? 0, c.measured.value ?? 0, c.tolerance);
   const tickLabel = `${g.under ? "−" : "+"}${f.pct(c.tolerance, 0)}`;
   const deltaText = signedValue(f, c.delta, c.unit);
   const figure = <DeltaFigure value={deltaText} className={form === "inline" ? "text-[28px] leading-8 text-text-strong" : "text-2xl leading-7 text-text-strong"} />;
@@ -172,6 +173,7 @@ export function Tally({ result: c, form = "stacked", mark, play, showLabel = tru
         <p className="mt-1.5 font-mono text-2xs text-text-muted tnum">
           {f.pct(c.delta_pct, 1, true)} · {fmt(t.ask.tolerance, { t: f.pct(c.tolerance, 0) })} · {f.range(c.from, c.to)}
         </p>
+        {c.reason && <p className="mt-1.5 text-[13px] leading-[18px] text-text-muted">{pick(c.reason)}</p>}
       </div>
     </figure>
   );
@@ -209,7 +211,7 @@ export function TallyCompact({ result: c, mark, className }: { result: CheckResu
   const f = useFormat();
   const pick = useBilingual();
   const sr = useTallySentence(c);
-  const g = geometry(c.expected.value, c.measured.value, c.tolerance);
+  const g = geometry(c.expected.value ?? 0, c.measured.value ?? 0, c.tolerance);
   const tickLabel = `${g.under ? "−" : "+"}${f.pct(c.tolerance, 0)}`;
   const figure = <DeltaFigure value={f.pct(c.delta_pct, 1, true)} className="text-2xl leading-7 text-text-strong" />;
   const label = (text: string, sub: string, value: string) => (
@@ -235,6 +237,7 @@ export function TallyCompact({ result: c, mark, className }: { result: CheckResu
       <p aria-hidden className="mt-1 font-mono text-2xs text-text-muted tnum">
         {fmt(t.tally.compact_meta, { delta: signedValue(f, c.delta, c.unit), t: f.pct(c.tolerance, 0) })}
       </p>
+      {c.reason && <p className="mt-1 text-2xs leading-4 text-text-muted">{pick(c.reason)}</p>}
     </figure>
   );
 }

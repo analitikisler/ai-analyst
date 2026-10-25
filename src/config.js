@@ -133,9 +133,19 @@ export function loadConfig({ env = process.env, cwd = process.cwd(), file } = {}
     // Kept for the Anthropic path and older callers.
     anthropicApiKey: provider.value === "anthropic" && providers.anthropic.source && !providers.anthropic.cloud ? providers.anthropic.key : null,
     cloud,
-    workspace: pick("AI_ANALYST_WORKSPACE", fromFile.workspace, "Örnek Moda"),
+    // null: named after the data (workspaceName). The demo name is only ever used on demo data.
+    workspace: pick("AI_ANALYST_WORKSPACE", fromFile.workspace, null) || null,
     help: helpOn ? { email: pick("AI_ANALYST_HELP_EMAIL", fromFile.helpEmail, "hello@analitikisler.com") } : null,
     // The language the workspace reports in; seeded content and the terminal use it.
     language: pick("AI_ANALYST_LANG", fromFile.language, "en") === "tr" ? "tr" : "en",
   };
+}
+
+export const DEMO_WORKSPACE = "Örnek Moda";
+/** The workspace name: the configured one, else the demo shop on demo data, else the BigQuery dataset or project. */
+export function workspaceName(config, warehouse) {
+  if (config.workspace) return config.workspace;
+  if (!warehouse || warehouse.demo !== false) return DEMO_WORKSPACE;
+  const bq = config.bigquery ?? {};
+  return bq.dataset || bq.project || "BigQuery";
 }

@@ -61,7 +61,7 @@ export function TileDrawer({ result, onAsk }: { result: DashboardResult; onAsk: 
               ) : q ? (
                 <div className="flex flex-col gap-4">
                   <p className="flex flex-wrap items-baseline gap-3">
-                    <span className="font-display text-[28px] leading-9 font-heading text-text-strong tnum">{f.value(q.total, q.unit)}</span>
+                    <span className="font-display text-[28px] leading-9 font-heading text-text-strong tnum">{q.total == null ? t.format.no_data : f.value(q.total, q.unit)}</span>
                     {compare && q.comparison && <DeltaBadge current={q.total} previous={q.comparison.total} unit={q.unit} size="md" />}
                     {compare && q.comparison && <span className="text-[13px] text-text-muted">{fmt(t.ask.against, { value: f.value(q.comparison.total, q.unit), range: f.range(q.comparison.from, q.comparison.to) })}</span>}
                   </p>

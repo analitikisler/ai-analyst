@@ -1,13 +1,13 @@
 // The agent's own tools: publish an answer (with the number-grounding check), propose a watch, a pin or an
 // event for a person to approve, and, when exploratory answers are on, run one read-only query on the mart.
 import { z } from "zod";
-import { metricRef } from "../agent/planner.js";
+import { metricRef, whyDetail } from "../agent/planner.js";
 import { validateSentence } from "../agent/validate.js";
-import { lastDashboardId, getDashboard, tileFromAnswer } from "../dashboards.js";
+import { lastDashboardId, getDashboard, listDashboards, tileFromAnswer } from "../dashboards.js";
 import { AppError } from "../errors.js";
 import { DIMS, exploreForModel, exploreQuery, MEASURES, runExploreSql } from "../explore/run.js";
 import { newId } from "../store/store.js";
-import { ACT, APPROVAL, CHART_NAMES, METRIC_PROPOSED, STEP, T } from "../text.js";
+import { ACT, APPROVAL, CHART_NAMES, dimName, METRIC_PROPOSED, STEP, T } from "../text.js";
 import { defineAction } from "./registry.js";
 
 // The model gets two chances to fix ungrounded numbers; the third attempt publishes, flagged.
@@ -16,11 +16,46 @@ export const MAX_FAILED_PUBLISHES = 2;
 const text = (max) => z.object({ en: z.string().min(1).max(max), tr: z.string().min(1).max(max) }).strict();
 const date = z.string().regex(/^\d{4}-\d{2}-\d{2}$/);
 
-function answerKind(query, check, explore) {
+/** Which leads the card: the check when the question is whether numbers match, the metric otherwise. */
+export function leadOf(pack, query, check, lead) {
+  if (!check) return "metric";
+  if (lead) return lead;
+  const ck = pack.checks[check.check];
+  const own = ck ? [ck.expected.metric, ck.measured.metric] : [];
+  return query.comparison || !own.includes(query.metric) ? "metric" : "check";
+}
+
+function answerKind(query, check, explore, lead = "check") {
   if (explore) return "explore";
-  if (check) return check.filters?.device ? "check_split" : "check";
+  if (check && lead === "check") return check.filters?.device || check.filters?.channel ? "check_split" : "check";
   if (query.group_by === "none") return "number";
   return query.group_by === "channel" || query.group_by === "device" ? "split" : "series";
+}
+
+/**
+ * A segment of a check as its own check (check_split): the segment's expected, measured, delta and verdict, the
+ * whole check's breakdown kept. A check already filtered to that segment is used as it is.
+ */
+export function segmentCheck(ctx, check, { dimension, key }) {
+  if ((check.filters?.[dimension] ?? []).length === 1 && check.filters[dimension][0] === key) return check;
+  const seg = check.breakdown_by === dimension ? check.breakdown.find((b) => b.key === key) : null;
+  if (!seg) {
+    throw new AppError("invalid_input", `The check is split by ${check.breakdown_by}, and has no ${dimension} "${key}". Run reconcile with filters { ${dimension}: "${key}" } and pass that check_id with the segment.`);
+  }
+  const delta = seg.expected == null || seg.measured == null ? null : seg.measured - seg.expected;
+  return ctx.store.saveCheck({
+    ...check,
+    id: newId("c"),
+    label: { en: `${check.label.en} · ${dimName(key, "en")}`, tr: `${check.label.tr} · ${dimName(key, "tr")}` },
+    filters: { ...(check.filters ?? {}), [dimension]: [key] },
+    expected: { ...check.expected, value: seg.expected },
+    measured: { ...check.measured, value: seg.measured },
+    delta,
+    delta_pct: seg.delta_pct,
+    verdict: seg.verdict,
+    ...(seg.reason ? { reason: seg.reason } : {}),
+    findings: seg.verdict === "does_not_add_up" ? check.findings : [],
+  });
 }
 
 /** Stores a proposal and attaches it to the turn. */
@@ -46,7 +81,14 @@ defineAction({
       title: text(80).optional().describe("A short tile title, under 50 characters, in both languages."),
       query_id: z.string().max(64).optional().describe("The query_id run_query returned."),
       check_id: z.string().max(64).optional().describe("The check_id reconcile returned, if you ran one."),
-      explore_id: z.string().max(64).optional().describe("The explore_id run_sql returned, for an exploratory answer."),
+      explore_id: z.string().max(64).optional().describe("The explore_id run_sql returned, for an exploratory answer. Never with check_id: an exploratory answer carries no verdict."),
+      kind: z.enum(["answer", "why"]).optional().describe('"why" explains a check that does not add up (when it started, where it is, what to do next); needs the check_id of a reconcile over the period with the gap. Default "answer".'),
+      segment: z
+        .object({ dimension: z.enum(["device", "channel"]), key: z.string().min(1).max(40) })
+        .strict()
+        .optional()
+        .describe("For a question about one device or channel of a check: the card shows that segment's figures. Needs check_id."),
+      lead: z.enum(["metric", "check"]).optional().describe('"metric": the metric answer leads and the check sits below it (a question about a metric). "check": the check leads (whether numbers match). Default: check when the query is one of the check\'s own metrics without a comparison.'),
       followups: z.array(text(160)).max(3).optional().describe("Up to three follow-up questions, each in both languages; never one already asked."),
     })
     .strict(),
@@ -54,13 +96,25 @@ defineAction({
     const stored = input.explore_id ? ctx.store.get("queries", input.explore_id) : null;
     const explore = stored?.explore ?? null;
     if (input.explore_id && !explore) throw new AppError("not_found", `Unknown explore_id "${input.explore_id}". Pass the explore_id run_sql returned.`);
+    if (explore && (input.check_id || input.segment || input.kind === "why")) throw new AppError("invalid_input", "An exploratory answer carries no check and no verdict. Call publish_answer again with the explore_id and without check_id.");
     let query = input.query_id ? ctx.store.getQuery(input.query_id) : null;
     if (input.query_id && !query) throw new AppError("not_found", `Unknown query_id "${input.query_id}". Run run_query first and pass the query_id it returned.`);
     if (!query && !explore) throw new AppError("invalid_input", "Pass the query_id of run_query, or the explore_id of run_sql.");
     if (explore) query = exploreQuery(explore, ctx.warehouse.dialect);
-    const check = input.check_id ? ctx.store.getCheck(input.check_id) : null;
+    let check = input.check_id ? ctx.store.getCheck(input.check_id) : null;
     if (input.check_id && !check) throw new AppError("not_found", `Unknown check_id "${input.check_id}". Pass the check_id reconcile returned.`);
+    if ((input.kind === "why" || input.segment) && !check) throw new AppError("invalid_input", `${input.kind === "why" ? 'kind "why"' : "segment"} needs the check_id of a reconcile.`);
+    if (input.kind === "why" && check.verdict !== "does_not_add_up") {
+      throw new AppError("invalid_input", `This check ${check.verdict === "adds_up" ? "adds up" : "has no data to compare"} for ${check.from} to ${check.to}, so there is no gap to explain. Run reconcile over the period with the gap, or publish it as a check.`);
+    }
     const validation = validateSentence(input.sentence, { query, check, explore });
+    let overall = null;
+    if (input.segment) {
+      const seg = segmentCheck(ctx, check, input.segment);
+      if (seg !== check) overall = { delta_pct: check.delta_pct, verdict: check.verdict };
+      check = seg;
+    }
+    const lead = input.kind === "why" || input.segment ? "check" : leadOf(ctx.pack, query, check, input.lead);
     if (!validation.ok) {
       const turn = ctx.turn ?? {};
       turn.failedPublishes = (turn.failedPublishes ?? 0) + 1;
@@ -72,16 +126,16 @@ defineAction({
         );
       }
     }
-    const metrics = explore ? [] : check ? [metricRef(ctx.pack, ctx.pack.checks[check.check].expected.metric), metricRef(ctx.pack, ctx.pack.checks[check.check].measured.metric)] : [metricRef(ctx.pack, query.metric)];
+    const metrics = explore ? [] : check && lead === "check" ? [metricRef(ctx.pack, ctx.pack.checks[check.check].expected.metric), metricRef(ctx.pack, ctx.pack.checks[check.check].measured.metric)] : [metricRef(ctx.pack, query.metric)];
     const m = ctx.pack.metrics[query.metric];
     const mode = ctx.mode ?? {};
     const answer = ctx.store.saveAnswer({
       id: newId("ans"),
       turn_id: ctx.turn?.id ?? null,
       question: ctx.turn?.question ?? "",
-      kind: answerKind(query, check, explore),
+      kind: input.kind === "why" ? "why" : answerKind(query, check, explore, lead),
       sentence: input.sentence,
-      title: input.title ?? (explore ? explore.label : check ? ctx.pack.checks[check.check].label : m.label),
+      title: input.title ?? (explore ? explore.label : check && lead === "check" ? ctx.pack.checks[check.check].label : m.label),
       followups: ctx.freshFollowups ? ctx.freshFollowups(input.followups ?? []) : input.followups ?? [],
       interpretation: null,
       query,
@@ -93,8 +147,8 @@ defineAction({
       model_label: T(mode.model_label ?? "Model", mode.model_label ?? "Model"),
       seconds: 0,
       created_at: new Date().toISOString(),
-      overall: null,
-      why: null,
+      overall,
+      why: input.kind === "why" ? whyDetail(check) : null,
       ...(explore ? { explore } : {}),
     });
     if (ctx.turn) ctx.turn.answers.push(answer.id);
@@ -121,9 +175,19 @@ defineAction({
   summary: (p, input, ctx) => STEP.propose_watch(ctx.pack.checks[input.check].label),
 });
 
+/** A dashboard by id or by name (any case); none given is the dashboard last opened. */
+export function resolveDashboard(store, ref) {
+  if (!ref) return getDashboard(store, lastDashboardId(store));
+  const all = listDashboards(store);
+  const norm = (x) => String(x).trim().toLocaleLowerCase("tr");
+  const hit = all.find((d) => d.id === ref) ?? all.find((d) => [d.name?.en, d.name?.tr, typeof d.name === "string" ? d.name : null].filter(Boolean).some((n) => norm(n) === norm(ref)));
+  if (!hit) throw new AppError("not_found", `Unknown dashboard "${ref}". The dashboards are: ${all.map((d) => `${d.id} (${d.name?.en ?? d.name})`).join(", ")}.`);
+  return hit;
+}
+
 defineAction({
   name: "propose_pin",
-  description: "Proposes pinning a published answer to a dashboard. A person approves it. Use it only when the person asks to pin or keep an answer.",
+  description: "Proposes pinning a published answer to a dashboard. A person approves it. Use it only when the person asks to pin or keep an answer. dashboard_id: an id from list_dashboards (a dashboard's exact name also works); leave it out for the dashboard last opened.",
   kind: "write",
   agent: true,
   person: false,
@@ -132,7 +196,7 @@ defineAction({
   run(ctx, { answer_id, dashboard_id }) {
     const a = ctx.store.getAnswer(answer_id);
     if (!a) throw new AppError("not_found", `Unknown answer_id "${answer_id}".`);
-    const dash = getDashboard(ctx.store, dashboard_id ?? lastDashboardId(ctx.store));
+    const dash = resolveDashboard(ctx.store, dashboard_id);
     const t = tileFromAnswer(ctx.pack, a, dash.id);
     return createProposal(ctx, { kind: "pin", payload: { answer_id, dashboard_id: dash.id }, title: APPROVAL.pin_title(dash.name), body: APPROVAL.pin_body(CHART_NAMES[t.chart], t.size.w) });
   },

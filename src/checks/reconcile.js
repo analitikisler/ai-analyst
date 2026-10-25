@@ -7,8 +7,20 @@ import { addDays, isISODate } from "../format.js";
 import { compileAggregate, echoFilters, mergeWhere, normalizeFilters } from "../metrics/compile.js";
 import { MART } from "../metrics/load.js";
 
+// Why a side has no verdict: missing (NULL) data is never read as zero.
+const REASONS = {
+  missing_expected: (l) => ({ en: `No data for ${l.en.toLowerCase()} in this period: the column is empty, so there is nothing to compare.`, tr: `Bu dönemde ${l.tr} için veri yok: sütun boş, karşılaştırılacak bir şey yok.` }),
+  missing_measured: (l) => ({ en: `No data for ${l.en.toLowerCase()} in this period: the column is empty, so there is nothing to compare.`, tr: `Bu dönemde ${l.tr} için veri yok: sütun boş, karşılaştırılacak bir şey yok.` }),
+  missing_both: () => ({ en: "No data on either side in this period: both columns are empty.", tr: "Bu dönemde iki tarafta da veri yok: iki sütun da boş." }),
+  zero_expected: (l) => ({ en: `${l.en} is 0 in this period, so a difference in percent cannot be worked out.`, tr: `Bu dönemde ${l.tr} 0; yüzde fark hesaplanamıyor.` }),
+};
+
+/** null when no row has a value: SUM over only NULLs stays missing, never 0. */
+const sumN = (rows, keep) => rows.reduce((acc, r) => (keep(r) && r.value != null ? (acc ?? 0) + Number(r.value) : acc), null);
+
 const verdictOf = (expected, measured, tolerance) => {
-  if (!expected) return { delta_pct: null, verdict: "insufficient_data" };
+  if (expected == null || measured == null) return { delta_pct: null, verdict: "insufficient_data", missing: expected == null && measured == null ? "both" : expected == null ? "expected" : "measured" };
+  if (!expected) return { delta_pct: null, verdict: "insufficient_data", missing: null };
   const deltaPct = (measured - expected) / expected;
   // The epsilon keeps a delta that equals the tolerance on the right side of it despite float rounding.
   return { delta_pct: deltaPct, verdict: Math.abs(deltaPct) <= tolerance + 1e-12 ? "adds_up" : "does_not_add_up" };
@@ -50,35 +62,39 @@ export async function reconcile({ pack, warehouse, check: checkId, from, to, fil
   }
   const [expRows, measRows] = await Promise.all([warehouse.query(sides.expected.sql), warehouse.query(sides.measured.sql)]);
 
-  const sumWhere = (rows, keep) => rows.reduce((acc, r) => (keep(r) ? acc + (r.value ?? 0) : acc), 0);
   const inPeriod = (r) => r.day >= start && r.day <= end;
-  const expected = sumWhere(expRows, inPeriod);
-  const measured = sumWhere(measRows, inPeriod);
+  const expected = sumN(expRows, inPeriod);
+  const measured = sumN(measRows, inPeriod);
   const overall = verdictOf(expected, measured, check.tolerance);
+  const reasonOf = (v) => (v.verdict !== "insufficient_data" ? null : v.missing ? REASONS[`missing_${v.missing}`](check[v.missing === "measured" ? "measured" : "expected"].label) : REASONS.zero_expected(check.expected.label));
 
   const segments = f[check.breakdown] ?? MART.dimensions[check.breakdown];
   const breakdown = segments.map((key) => {
     const keep = (r) => inPeriod(r) && r[check.breakdown] === key;
-    const e = sumWhere(expRows, keep);
-    const m = sumWhere(measRows, keep);
-    return { key, expected: e, measured: m, ...verdictOf(e, m, check.tolerance) };
+    const e = sumN(expRows, keep);
+    const m = sumN(measRows, keep);
+    const { missing, ...v } = verdictOf(e, m, check.tolerance);
+    const reason = reasonOf({ ...v, missing });
+    return { key, expected: e, measured: m, ...v, ...(reason ? { reason } : {}) };
   });
 
   // The first day of the current unbroken run of days outside tolerance; a day with no expected value counts as inside.
-  const byDay = (rows) => rows.reduce((acc, r) => acc.set(r.day, (acc.get(r.day) ?? 0) + (r.value ?? 0)), new Map());
+  // A day with no value on either side (NULL) counts as inside, and stays null in the series.
+  const byDay = (rows) => rows.reduce((acc, r) => (r.value == null ? acc : acc.set(r.day, (acc.get(r.day) ?? 0) + Number(r.value))), new Map());
   const expDay = byDay(expRows);
   const measDay = byDay(measRows);
   let since = null;
   for (let d = range.from; d <= end; d = addDays(d, 1)) {
-    const e = expDay.get(d) ?? 0;
-    const r = e ? ((measDay.get(d) ?? 0) - e) / e : 0;
+    const e = expDay.get(d);
+    const mv = measDay.get(d);
+    const r = e && mv != null ? (mv - e) / e : 0;
     if (Math.abs(r) > check.tolerance) since ??= d;
     else since = null;
   }
 
   const seriesFrom = clamp(addDays(start, -seriesLead));
   const series = [];
-  for (let d = seriesFrom; d <= end; d = addDays(d, 1)) series.push({ date: d, expected: expDay.get(d) ?? 0, measured: measDay.get(d) ?? 0 });
+  for (let d = seriesFrom; d <= end; d = addDays(d, 1)) series.push({ date: d, expected: expDay.get(d) ?? null, measured: measDay.get(d) ?? null });
 
   const lang2 = (side) => ({ metric: check[side].metric, label: check[side].label });
   return {
@@ -91,10 +107,11 @@ export async function reconcile({ pack, warehouse, check: checkId, from, to, fil
     unit: sides.expected.metric.unit,
     expected: { ...lang2("expected"), value: expected },
     measured: { ...lang2("measured"), value: measured },
-    delta: measured - expected,
+    delta: expected == null || measured == null ? null : measured - expected,
     delta_pct: overall.delta_pct,
     tolerance: check.tolerance,
     verdict: overall.verdict,
+    reason: reasonOf(overall),
     breakdown_by: check.breakdown,
     breakdown,
     out_of_tolerance_since: since,

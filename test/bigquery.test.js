@@ -3,7 +3,7 @@ import "./setup.js";
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { normalizeRow, openBigQuery, queryOptions, tableName } from "../src/warehouse/bigquery.js";
-import { loadConfig } from "../src/config.js";
+import { loadConfig, workspaceName } from "../src/config.js";
 
 const cfg = { project: "ornek-moda", dataset: "marts", location: "EU", maxBytes: 2 * 1024 ** 3 };
 
@@ -66,7 +66,14 @@ test("config: env first, then the config file, with the CONTRACT defaults", () =
   assert.equal(c.bigquery.location, "EU");
   assert.equal(c.bigquery.maxBytes, 2 * 1024 ** 3);
   assert.equal(c.model, "claude-opus-5-5");
-  assert.equal(c.workspace, "Örnek Moda");
+  assert.equal(c.workspace, null);
+  // B8: the demo name only on demo data; own data is named after the config, else the dataset or project.
+  assert.equal(workspaceName(c, { demo: true }), "Örnek Moda");
+  const own = loadConfig({ env: { AI_ANALYST_WAREHOUSE: "bigquery", BIGQUERY_PROJECT: "shop-data-1", BIGQUERY_DATASET: "marts" }, cwd: "/nonexistent" });
+  assert.equal(workspaceName(own, { demo: false }), "marts");
+  assert.equal(workspaceName({ ...own, bigquery: { ...own.bigquery, dataset: null } }, { demo: false }), "shop-data-1");
+  const named = loadConfig({ env: { AI_ANALYST_WORKSPACE: "Acme", AI_ANALYST_WAREHOUSE: "bigquery", BIGQUERY_PROJECT: "shop-data-1" }, cwd: "/nonexistent" });
+  assert.equal(workspaceName(named, { demo: false }), "Acme");
   assert.equal(c.anthropicApiKey, null);
   const e = loadConfig({ env: { AI_ANALYST_WAREHOUSE: "bigquery", BIGQUERY_PROJECT: "p-12345", AI_ANALYST_MODEL: "claude-sonnet-5-5", PORT: "9000" }, cwd: "/nonexistent" });
   assert.deepEqual([e.warehouse, e.bigquery.project, e.model, e.port], ["bigquery", "p-12345", "claude-sonnet-5-5", 9000]);

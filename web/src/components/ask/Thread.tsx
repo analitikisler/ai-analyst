@@ -22,6 +22,7 @@ import { bytesCapSentence } from "@/lib/errors";
 import { useFormat } from "@/lib/format";
 import { notify } from "@/lib/notify";
 import { AnswerCard, MessageActions } from "./AnswerCard";
+import { ModelText } from "./ModelText";
 
 export interface ThreadActions {
   onAsk: (question: string) => void;
@@ -264,7 +265,7 @@ export function TurnView({ turn, live, fresh, last, actions, contextName }: { tu
         <Message align="start" aria-busy={running || undefined}>
           <MessageContent className="gap-4">
             <StepsTrace steps={turn.steps} seconds={seconds} running={running} sources={sourcesOf(answers)} />
-            {running && !answers.length && !turn.refusal && !proposals.length && <AnswerSkeleton />}
+            {running && !answers.length && !turn.refusal && !proposals.length && !turn.text && <AnswerSkeleton />}
             {answers.map((a, i) => (
               <div key={a.id} id={`answer-${a.id}`} className="scroll-mt-20">
                 <AnswerCard
@@ -287,6 +288,9 @@ export function TurnView({ turn, live, fresh, last, actions, contextName }: { tu
               <ApprovalCard key={p.id} proposal={p} />
             ))}
             {proposals.some((p) => p.status === "pending") && turn.text && <p className="text-[13px] text-text-muted">{pick(turn.text)}</p>}
+            {turn.text && !proposals.length && !answers.some((a) => a.created_by === "planner") && (
+              <ModelText text={pick(turn.text)} className={answers.length ? "flex max-w-[68ch] flex-col gap-2 text-[13px] leading-[18px] text-text-muted" : undefined} />
+            )}
             {status === "stopped" && (
               <div className="flex flex-wrap items-center gap-3 text-[13px] text-text-muted">
                 <span>{t.err.stopped}</span>
