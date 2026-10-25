@@ -7,6 +7,7 @@ import { createQueryClient, keys } from "../src/api/queries";
 import { httpDriver, mockDriver } from "./smoke-driver";
 import { groupEvents } from "../src/components/charts/events";
 import { AnswerCard } from "../src/components/ask/AnswerCard";
+import { CheckBars } from "../src/components/charts/CheckBars";
 import { TurnView } from "../src/components/ask/Thread";
 import { MessageScroller, MessageScrollerContent, MessageScrollerProvider, MessageScrollerViewport } from "../src/components/ui/message-scroller";
 import { MAIN_NAV } from "../src/components/layout/nav";
@@ -150,7 +151,11 @@ const refusedNoCloud = async (fn: () => Promise<unknown>, service: string) => {
 const bqInput = { data_project: "ornek-moda-data", job_project: null, dataset: "ai_analyst", location: null, auth: { kind: "adc" as const }, max_bytes: 2 * 1024 ** 3 };
 if (driver.kind === "http" && !driver.noCloud) skip("F8 BigQuery test and F9 model key test (start the server with --no-cloud)");
 else if (driver.kind === "http") {
-  check("F8 no-cloud server: the BigQuery test is refused with no_cloud", await refusedNoCloud(() => driver.act("test_bigquery", bqInput, "en"), "BigQuery"));
+  // Without Google credentials on the machine the test stops at step 1 (a local check), before any call; with them
+  // the guard refuses it. Either way nothing leaves the machine.
+  const bqNo = await refusedNoCloud(() => driver.act("test_bigquery", bqInput, "en"), "BigQuery");
+  const bqLocal = bqNo ? null : await driver.act("test_bigquery", bqInput, "en").catch(() => null);
+  check("F8 no-cloud server: the BigQuery test is refused (no_cloud) or stops at local credentials", bqNo || (!!bqLocal && bqLocal.steps[0]?.status === "failed" && bqLocal.steps.slice(1).every((x) => x.status === "skipped")), bqLocal?.steps[0]);
   check("F9 no-cloud server: the key test is refused with no_cloud", await refusedNoCloud(() => driver.act("test_model_key", { provider: "anthropic", key: "abc", model: "claude-opus-5-5" }, "en"), "Anthropic"));
   check("F9 no-cloud server: saving a key is refused with no_cloud", await refusedNoCloud(() => driver.act("save_model_key", { provider: "anthropic", key: "sk-ant-x1", model: "claude-opus-5-5" }, "en"), "Anthropic"));
   check("F9 no-cloud server: no key saved, the built-in planner answers", (await driver.state()).agent.mode !== "model");
@@ -246,7 +251,7 @@ check("tr formats", trf.value(2753, "count") === "2.753" && trf.value(1843210, "
   // Across tables: refused while only the mart is on the list; answered, with the tables it read, once the shop tables are.
   const cross = "Which product categories are returned most often?";
   const crossOff = (await ask(cross, "en", "new")).find((e) => e.event === "refusal")?.data as { code: string; body: { en: string } } | undefined;
-  check("cross-table question with only the mart allowed: refused, pointing at Settings › Data source", crossOff?.code === "explore_failed" && /Settings › Data source/.test(crossOff.body.en), crossOff);
+  check("cross-table question with only the mart allowed: refused, pointing at Settings › Sources", crossOff?.code === "explore_failed" && /Settings › Sources/.test(crossOff.body.en), crossOff);
   const allowed = await driver.act("set_explore_tables", { allow: [{ project: null, dataset: "demo", table: null }] }, "en");
   check("set_explore_tables adds the demo shop tables", allowed.data_source.explore.allow.length === 1 && allowed.data_source.explore.allow[0]!.table === null);
   const described = await driver.act("describe_tables", {}, "en");
@@ -333,12 +338,90 @@ check("tr formats", trf.value(2753, "count") === "2.753" && trf.value(1843210, "
     const again = (await driver.act("start_tracking_audit", { check: "ga4_vs_orders", url: "ornekmoda.example", device: "mobile_safari", platforms: ["ga4"] }, "en"));
     check("after the simulated fix the audit passes", again.result.ok && again.fixed);
   }
-  // Events: add, delete with Undo, import from GTM.
+  // Events: add, delete with Undo (the GTM import is gone; events are added by hand or proposed by the agent).
   const added = (await driver.act("save_event", { event: { date: "2026-10-20", title: { en: "Test", tr: "Test" }, type: "other", note: null } }, "en"));
   const del = (await driver.act("delete_event", { id: added.event.id }, "en"));
   (await driver.act("undo", { activity_id: del.activity_id }, "en"));
-  const imp = (await driver.act("import_gtm_events", {}, "en"));
-  check("events: add, delete with Undo, scripted GTM import", (await driver.state()).events.some((e) => e.id === added.event.id) && imp.added === 2);
+  check("events: add, delete with Undo", (await driver.state()).events.some((e) => e.id === added.event.id));
+  let gtmGone = false;
+  try {
+    await driver.act("import_gtm_events" as never, {} as never, "en");
+  } catch (err) {
+    gtmGone = (err as { code?: string }).code === "unknown_action" || (err as { status?: number }).status === 404;
+  }
+  check("the GTM import action is gone", gtmGone);
+
+  // Sources: the connectors, the waitlist, and the orders file flow (simulated in the fixtures build).
+  if (HTTP) {
+    if (!driver.noCloud) skip("connector tests (start the server with --no-cloud)");
+    else {
+      let refused = "";
+      let local: Awaited<ReturnType<typeof driver.act<"test_ga4">>> | null = null;
+      try {
+        local = await driver.act("test_ga4", { property_id: "123456789", auth: { kind: "adc" } }, "en");
+      } catch (err) {
+        refused = (err as { code?: string }).code ?? "";
+      }
+      check("no-cloud server: the GA4 test is refused (no_cloud) or stops at local credentials", refused === "no_cloud" || (!!local && local.steps[0]?.status === "failed" && local.steps.slice(1).every((x) => x.status === "skipped")), refused || local?.steps[0]);
+      let shop = "";
+      try {
+        const r = await driver.act("test_shopify", { shop: "ornek-moda.myshopify.com", token: "shpat_smoke" }, "en");
+        shop = r.steps.find((x) => x.status === "failed")?.error?.code ?? "passed";
+      } catch (err) {
+        shop = (err as { code?: string }).code ?? "";
+      }
+      check("no-cloud server: the Shopify test makes no call (no_cloud)", shop === "no_cloud", shop);
+    }
+    const st = await driver.state();
+    check("state lists the four connectors and the seven waitlist items", st.connectors.length === 4 && st.waitlist.length === 7, { connectors: st.connectors.length, waitlist: st.waitlist.length });
+  } else {
+    const st0 = await driver.state();
+    check("Sources: four connectors, all not connected; seven waitlist items", st0.connectors.map((c) => `${c.id}:${c.status}`).join(",") === "ga4:not_connected,orders_file:not_connected,shopify:not_connected,woocommerce:not_connected" && st0.waitlist.length === 7);
+    check("waitlist: each a mailto to hello@analitikisler.com with the Cloud waitlist subject", st0.waitlist.every((w) => w.mailto.startsWith("mailto:hello@analitikisler.com?subject=") && decodeURIComponent(w.mailto.split("subject=")[1]!) === `Analitik İşler Cloud waitlist: ${w.name.en}`), st0.waitlist[0]);
+    const badGa4 = await driver.act("test_ga4", { property_id: "G-ABC123", auth: { kind: "adc" } }, "en");
+    check("GA4 test: a measurement id instead of a property id fails at step 2 with property_not_found", !badGa4.ok && badGa4.steps[1]?.error?.code === "property_not_found" && badGa4.steps.slice(2).every((x) => x.status === "skipped"));
+    const ga4 = await driver.act("test_ga4", { property_id: "412345678", auth: { kind: "adc" } }, "en");
+    check("GA4 test passes six steps", ga4.ok && ga4.steps.length === 6);
+    const conn = await driver.act("connect_ga4", { test_id: ga4.test_id, history_days: 90 }, "en");
+    const st1 = await driver.state();
+    check("GA4 connected over 90 days; the active source becomes the shop's", conn.status === "connected" && conn.last_sync?.days === 90 && st1.source.kind === "local", { conn, kind: st1.source.kind });
+    const write = await driver.act("test_shopify", { shop: "ornek-moda.myshopify.com", token: "shpat_write_x" }, "en");
+    check("Shopify test: a write scope is refused with scope_write", !write.ok && write.steps[1]?.error?.code === "scope_write");
+    const host = await driver.act("test_woocommerce", { url: "http://192.168.1.4", key: "ck_x", secret: "cs_x" }, "en");
+    check("WooCommerce test: a private http address is refused with host_not_allowed", !host.ok && host.steps[0]?.error?.code === "host_not_allowed");
+    // The orders mapping flow on the sample export (Turkish ikas-style headers).
+    const mock = await import("../src/api/mock/server");
+    const up = mock.uploadOrders("ornek-moda-siparisler.csv", "csv", mock.sampleOrdersFile(), 50_000);
+    const m = up.mapping;
+    check("orders file: the mapping is guessed from Turkish headers", m.created_at === "Sipariş Tarihi" && m.total === "Toplam Tutar" && m.status === "Sipariş Durumu" && m.channel === "Kaynak" && m.device === "Cihaz" && m.currency === "Para Birimi", m);
+    check("orders file: only test orders are left out by default, cancelled ones are counted", m.exclude_statuses.join(",") === "Test Siparişi" && up.statuses.some((x) => x.value === "İptal Edildi"), m.exclude_statuses);
+    const testCount = up.statuses.find((x) => x.value === "Test Siparişi")?.count ?? 0;
+    check("orders file: the preview holds daily totals over 60 days, the test orders counted as left out", up.preview.days === 60 && up.preview.daily.length === 60 && up.preview.excluded.status === testCount && up.preview.orders > 0 && up.preview.devices.some((d) => d.key === "mobile"), { days: up.preview.days, excluded: up.preview.excluded });
+    const cancelled = up.statuses.find((x) => x.value === "İptal Edildi")?.count ?? 0;
+    const narrower = await driver.act("preview_orders_file", { upload_id: up.upload_id, mapping: { ...m, exclude_statuses: [...m.exclude_statuses, "İptal Edildi"] } }, "en");
+    check("orders file: leaving cancelled orders out too lowers the count by exactly those", narrower.preview.orders === up.preview.orders - cancelled && narrower.preview.excluded.status === testCount + cancelled);
+    let bad = "";
+    try {
+      await driver.act("preview_orders_file", { upload_id: up.upload_id, mapping: { ...m, total: "No such column" } }, "en");
+    } catch (err) {
+      bad = (err as { code?: string }).code ?? "";
+    }
+    check("orders file: a mapping to a missing column is refused with mapping_invalid", bad === "mapping_invalid", bad);
+    const imported = await driver.act("import_orders_file", { upload_id: up.upload_id, mapping: m, time_zone: "Europe/Istanbul" }, "en");
+    check("orders file imported: connected with its range", imported.status === "connected" && imported.last_sync?.days === 60);
+    let gone = "";
+    try {
+      await driver.act("preview_orders_file", { upload_id: up.upload_id }, "en");
+    } catch (err) {
+      gone = (err as { code?: string }).code ?? "";
+    }
+    check("orders file: the upload is forgotten after the import", gone === "upload_not_found", gone);
+    (await driver.act("disconnect_source", { connector: "ga4" }, "en"));
+    const st2 = await driver.state();
+    check("disconnecting GA4 keeps the shop's data active while the file is connected", st2.source.kind === "local" && st2.connectors.find((c) => c.id === "ga4")?.status === "not_connected");
+    (await driver.act("save_data_source", { kind: "demo" }, "en"));
+    check("one action back to demo data", (await driver.state()).source.kind === "demo");
+  }
   (await driver.reset());
 }
 
@@ -374,6 +457,23 @@ if (process.env.WRITE_HANDMADE) {
     await writeFile(new URL(`${name}.json`, dir), JSON.stringify({ handmade: true, question: q, lang, after: before ?? null, events }, null, 2) + "\n");
   }
   console.log(`wrote ${cases.length} handmade fixtures`);
+}
+
+// A source with no device split (all unknown): the check runs on totals and says so instead of a device table.
+{
+  const st = await driver.state();
+  const base = st.checks[0];
+  if (base) {
+    const html = renderToString(
+      <LanguageProvider lang="en">
+        <CheckBars result={{ ...base, breakdown: [], breakdown_available: false }} />
+      </LanguageProvider>,
+    );
+    check("a check without a device split says No device split from this source", html.includes("No device split from this source"), html.slice(0, 200));
+  }
+  const tr = (await import("../src/i18n/tr")).tr;
+  const en = (await import("../src/i18n/en")).en;
+  check("labels for the other and unknown channel and the unknown device, en and tr", !!en.dimensions.channel.other && !!en.dimensions.channel.unknown && !!en.dimensions.device.unknown && !!tr.dimensions.channel.unknown && !!tr.dimensions.device.unknown);
 }
 
 // A model turn that ends in text only (no card), as it comes back after a reload: the reply is the text, with its

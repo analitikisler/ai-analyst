@@ -10,7 +10,7 @@ import { CopyIcon, EyeIcon, PinIcon, RotateCcwIcon, ScanSearchIcon } from "lucid
 import { useAppState } from "@/api/queries";
 import type { Answer, CheckResult } from "@/api/types";
 import { useOpenMetric, usePin, useWatchToggle } from "@/ask/hooks";
-import { CheckBars, CheckEvidenceChart, DataTable, DiffChart, SplitBars, TrendChart } from "@/components/charts";
+import { CheckBars, CheckEvidenceChart, DataTable, DiffChart, NoDeviceSplit, SplitBars, TrendChart } from "@/components/charts";
 import { CodeBlock, DeltaBadge, DeltaFigure, Disclosure, Marked, Status } from "@/components/kit";
 import { Hatch, signedValue, Tally } from "@/components/tally/Tally";
 import { Button } from "@/components/ui/button";
@@ -74,7 +74,7 @@ export function AnswerCard({ answer: a, fresh, narrow, actions }: AnswerCardProp
   const [revealed, setRevealed] = useState(!fresh || streamed.has(a.id));
   return (
     <div className="@container flex min-w-0 flex-col gap-3" aria-label={pick(a.title)}>
-      {a.explore ? <ExploreHead answer={a} /> : a.kind === "why" && c ? <WhyHead check={c} /> : checkLed && c ? <CheckHead check={c} overall={a.overall ?? null} fresh={fresh} /> : <FigureHead answer={a} fresh={fresh} />}
+      {a.explore ? <ExploreHead answer={a} /> : a.kind === "why" && c ? <WhyHead check={c} /> : checkLed && c ? <CheckHead check={c} overall={a.overall ?? null} fresh={fresh} sentence={pick(a.sentence)} /> : <FigureHead answer={a} fresh={fresh} />}
       <StreamText id={a.id} text={pick(a.sentence)} active={!!fresh} onDone={() => setRevealed(true)} className="max-w-[68ch] text-[15px] leading-6 text-text" />
       {revealed && (
         <div className={cn("flex min-w-0 flex-col gap-3", fresh && "animate-[aia-fade-in_220ms_var(--ease-out)_both]")}>
@@ -132,7 +132,7 @@ function ExploreHead({ answer: a }: { answer: Answer }) {
   );
 }
 
-function CheckHead({ check: c, overall, fresh }: { check: CheckResult; overall: Answer["overall"]; fresh?: boolean }) {
+function CheckHead({ check: c, overall, fresh, sentence }: { check: CheckResult; overall: Answer["overall"]; fresh?: boolean; sentence?: string }) {
   const t = useT();
   const f = useFormat();
   const pick = useBilingual();
@@ -146,7 +146,7 @@ function CheckHead({ check: c, overall, fresh }: { check: CheckResult; overall: 
         <span className="font-mono text-[13px] text-text-muted tnum">{f.range(c.from, c.to)}</span>
       </div>
       <p className="mt-2 text-[13px] leading-[18px] font-medium text-text-muted">{pick(c.label)}</p>
-      {c.verdict === "insufficient_data" ? (c.reason ? <p className="mt-1 max-w-[68ch] text-[13px] leading-[18px] text-text-muted">{pick(c.reason)}</p> : null) : (
+      {c.verdict === "insufficient_data" ? (c.reason && !sentence?.includes(pick(c.reason)) ? <p className="mt-1 max-w-[68ch] text-[13px] leading-[18px] text-text-muted">{pick(c.reason)}</p> : null) : (
         <div className="mt-1 flex flex-wrap items-baseline gap-x-4 gap-y-2">
           <Marked draw={fresh} label={fmt(t.ask.figure_label, { value: pctText })}>
             <DeltaFigure value={pctText} className={cn("text-[28px] leading-9 text-text-strong", fresh && "animate-[aia-fade-in_220ms_var(--ease-out)_both]")} />
@@ -316,7 +316,7 @@ function Evidence({ answer: a, fresh, narrow }: { answer: Answer; fresh?: boolea
     const evidence = split ? (
       <>
         {header}
-        {table ? tableEl : <CheckBars result={c} />}
+        {c.breakdown_available === false ? <NoDeviceSplit /> : table ? tableEl : <CheckBars result={c} />}
       </>
     ) : table ? (
       <>
@@ -364,6 +364,7 @@ function Evidence({ answer: a, fresh, narrow }: { answer: Answer; fresh?: boolea
 function WhereLine({ check: c }: { check: CheckResult }) {
   const t = useT();
   const f = useFormat();
+  if (c.breakdown_available === false) return <NoDeviceSplit />;
   const bad = c.breakdown.filter((b) => b.verdict === "does_not_add_up");
   const ok = c.breakdown.filter((b) => b.verdict === "adds_up");
   if (c.verdict !== "does_not_add_up" || bad.length !== 1 || !ok.length) return null;

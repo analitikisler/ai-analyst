@@ -19,12 +19,14 @@ const lastActivity = () => ws.store.listActivity(1)[0];
 
 // Every entry of Actions in web/src/api/types.ts, the web app's API.
 const WEB_ACTIONS = [
-  "list_sources", "list_suggestions", "list_metrics", "list_metric_entries", "get_metric", "decide_metric", "list_events", "save_event", "delete_event", "import_gtm_events",
+  "list_sources", "list_suggestions", "list_metrics", "list_metric_entries", "get_metric", "decide_metric", "list_events", "save_event", "delete_event",
   "start_tracking_audit", "get_audit", "explain_metric", "list_checks", "run_query", "reconcile", "run_all_checks", "get_check", "watch_check", "unwatch_check", "mark_checks_seen",
   "list_conversations", "get_conversation", "decide_proposal", "undo", "list_dashboards", "get_dashboard", "create_dashboard", "rename_dashboard", "delete_dashboard",
   "set_dashboard_period", "pin_answer", "update_tile", "move_tile", "duplicate_tile", "remove_tile", "get_settings", "test_bigquery", "save_data_source", "set_bytes_cap", "set_currency",
   "rebuild_demo", "test_model_key", "save_model_key", "remove_model_key", "set_model_provider", "get_chat_app_setup", "list_chat_app_calls", "set_preference",
   "list_tables", "set_explore_tables", "set_protected_columns", "set_table_description", "describe_tables",
+  "list_connectors", "test_ga4", "connect_ga4", "test_shopify", "connect_shopify", "test_woocommerce", "connect_woocommerce",
+  "preview_orders_file", "import_orders_file", "sync_sources", "disconnect_source",
 ];
 
 test("every action of the web contract is registered and a person may call it", () => {
@@ -206,12 +208,7 @@ test("events: add, edit, delete, each undone; GTM import simulated on demo data,
   assert.ok(ws.store.get("events", added.event.id));
   await act("undo", { activity_id: added.activity_id });
   assert.equal(ws.store.get("events", added.event.id), null);
-  const imp = await act("import_gtm_events");
-  assert.equal(imp.added, 2, "version 58 is already there");
-  await act("undo", { activity_id: imp.activity_id });
-  assert.equal(ws.store.get("events", "ev_gtm56"), null);
-  const own = { ...ws, warehouse: { ...ws.warehouse, demo: false } };
-  await assert.rejects(callAction("import_gtm_events", {}, ctxFor(own)), (e) => e.code === "unavailable" && /Google Tag Manager API/.test(e.message));
+  await assert.rejects(act("import_gtm_events"), (e) => e.code === "unknown_action", "the simulated GTM import is removed (GTM is on the waitlist)");
 });
 
 test("tracking audit: simulated on demo data; on own data a handoff with the MCP steps, then a finding attached back", async () => {

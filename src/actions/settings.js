@@ -283,13 +283,20 @@ defineAction({
 
 defineAction({
   name: "save_data_source",
-  description: "Switches the data source: the demo, or a BigQuery connection that passed its test.",
+  description: "Switches the data source: the demo, your shop's own data from the connected sources, or a BigQuery connection that passed its test.",
   kind: "write",
   settings: true,
-  input: z.union([z.object({ kind: z.literal("demo") }).strict(), z.object({ kind: z.literal("bigquery"), test_id: z.string().min(1).max(64) }).strict()]),
+  input: z.union([z.object({ kind: z.literal("demo") }).strict(), z.object({ kind: z.literal("local") }).strict(), z.object({ kind: z.literal("bigquery"), test_id: z.string().min(1).max(64) }).strict()]),
   async run(ctx, input) {
     const c = ctx.config;
     assertUnlocked(c.warehouseSetting.locked, "AI_ANALYST_WAREHOUSE");
+    if (input.kind === "local") {
+      const was = c.warehouse;
+      const next = updateConfigFile(c, (file) => (file.warehouse = "local"));
+      await ctx.app.applyConfig(next);
+      if (was !== "local") ctx.log(ACT.data_source(SOURCE_LABEL.local));
+      return settingsView({ ...ctx.app, credentials: localCredentials(c.env) });
+    }
     if (input.kind === "demo") {
       const was = c.warehouse;
       const next = updateConfigFile(c, (file) => (file.warehouse = "duckdb"));

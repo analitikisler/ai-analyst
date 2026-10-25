@@ -31,7 +31,7 @@ export async function mockDriver(): Promise<Driver> {
   };
 }
 
-const CLOUD_ACTIONS = new Set<string>(["test_bigquery", "test_model_key", "save_model_key", "save_data_source"]);
+const CLOUD_ACTIONS = new Set<string>(["test_bigquery", "test_model_key", "save_model_key", "save_data_source", "test_ga4", "connect_ga4", "test_shopify", "connect_shopify", "test_woocommerce", "connect_woocommerce", "sync_sources"]);
 
 /** The flows that reach BigQuery or a model run only when the server refuses them (--no-cloud). The probe itself is
  *  safe either way: an OpenAI-compatible test against a closed loopback port never leaves this machine. */

@@ -25,7 +25,7 @@ export interface PlanContext {
   demo?: boolean;
   /** Events (Settings › Events): an answer names one that falls in its spike or gap. */
   events?: ChartEvent[];
-  /** The demo shop's tables are on the list in Settings › Data source. */
+  /** The demo shop's tables are on the list in Settings › Sources. */
   shopTables?: boolean;
 }
 
@@ -296,6 +296,8 @@ const dimName = (key: string, lang: Lang): string => {
     meta_ads: T("Meta Ads", "Meta Ads"),
     tiktok_ads: T("TikTok Ads", "TikTok Ads"),
     email: T("Email", "E-posta"),
+    other: T("Other", "Diğer"),
+    unknown: T("Not attributed", "Atanmamış"),
     mobile: T("Mobile", "Mobil"),
     desktop: T("Desktop", "Masaüstü"),
   };
@@ -409,7 +411,7 @@ export function plan(question: string, ctx: PlanContext): Plan {
   if (has(s, /as an event/, /olay olarak/)) {
     const ev = (ctx.events ?? []).find((e) => e.type === "release" && e.date === RELEASE.date);
     if (!ev) {
-      return { kind: "propose_event", event: { date: RELEASE.date, title: RELEASE.label, type: "release", note: T("New checkout and thank-you page.", "Yeni ödeme ve teşekkür sayfası."), source: "agent" }, steps: [{ tool: "propose_event", summary: T("Proposed an event: v4.12 release, 9 Oct", "Olay önerildi: v4.12 sürümü, 9 Ekim"), ok: true }] };
+      return { kind: "propose_event", event: { date: RELEASE.date, title: RELEASE.label, type: "release", note: T("New checkout and thank-you page.", "Yeni ödeme ve teşekkür sayfası."), source: "agent", data_source: "demo" }, steps: [{ tool: "propose_event", summary: T("Proposed an event: v4.12 release, 9 Oct", "Olay önerildi: v4.12 sürümü, 9 Ekim"), ok: true }] };
     }
   }
   if (has(s, /turn this into a metric/, /metriğe dönüştür/) && ctx.lastAnswer?.explore) {
@@ -420,7 +422,7 @@ export function plan(question: string, ctx: PlanContext): Plan {
     return { kind: "refusal", refusal: { code: "metric_howto", heading: m.heading, body: ctx.demo === false ? m.own : m.demo, nearest: [] } };
   }
 
-  // Across the demo shop's tables: needs them on the list in Settings › Data source.
+  // Across the demo shop's tables: needs them on the list in Settings › Sources.
   if (ctx.explore && ctx.model && ctx.demo !== false && has(s, /categor.*return|return.*categor/, /iade edilen ürün kategori|kategori.*iade/)) {
     return ctx.shopTables ? crossPlan(ctx) : { kind: "refusal", refusal: { code: "explore_failed", heading: REFUSAL.explore_failed.heading, body: REFUSAL.explore_failed.not_allowed, nearest: [EXPLORE_Q.weekday, EXPLORE_Q.channel_device] } };
   }

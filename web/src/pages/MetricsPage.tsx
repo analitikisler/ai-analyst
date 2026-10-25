@@ -151,7 +151,7 @@ function MetricDetail({ id }: { id: string }) {
       setBusy(false);
     }
   };
-  const demo = state?.source.kind !== "bigquery";
+  const demo = state?.source.kind === "demo";
   return (
     <Page className="max-w-[1080px] min-w-0 overflow-x-clip">
       <TopBarContent />

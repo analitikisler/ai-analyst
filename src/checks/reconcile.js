@@ -8,9 +8,11 @@ import { compileAggregate, echoFilters, mergeWhere, normalizeFilters } from "../
 import { MART } from "../metrics/load.js";
 
 // Why a side has no verdict: missing (NULL) data is never read as zero.
+// A metric label inside a sentence: "Orders" reads "orders", while "GA4 purchases" and "ROAS" keep their capitals.
+const inSentence = (s) => (/^[A-Z0-9]{2}/.test(s) ? s : s.charAt(0).toLowerCase() + s.slice(1));
 const REASONS = {
-  missing_expected: (l) => ({ en: `No data for ${l.en.toLowerCase()} in this period: the column is empty, so there is nothing to compare.`, tr: `Bu dönemde ${l.tr} için veri yok: sütun boş, karşılaştırılacak bir şey yok.` }),
-  missing_measured: (l) => ({ en: `No data for ${l.en.toLowerCase()} in this period: the column is empty, so there is nothing to compare.`, tr: `Bu dönemde ${l.tr} için veri yok: sütun boş, karşılaştırılacak bir şey yok.` }),
+  missing_expected: (l) => ({ en: `No data for ${inSentence(l.en)} in this period: the column is empty, so there is nothing to compare.`, tr: `Bu dönemde ${l.tr} için veri yok: sütun boş, karşılaştırılacak bir şey yok.` }),
+  missing_measured: (l) => ({ en: `No data for ${inSentence(l.en)} in this period: the column is empty, so there is nothing to compare.`, tr: `Bu dönemde ${l.tr} için veri yok: sütun boş, karşılaştırılacak bir şey yok.` }),
   missing_both: () => ({ en: "No data on either side in this period: both columns are empty.", tr: "Bu dönemde iki tarafta da veri yok: iki sütun da boş." }),
   zero_expected: (l) => ({ en: `${l.en} is 0 in this period, so a difference in percent cannot be worked out.`, tr: `Bu dönemde ${l.tr} 0; yüzde fark hesaplanamıyor.` }),
 };
@@ -66,9 +68,19 @@ export async function reconcile({ pack, warehouse, check: checkId, from, to, fil
   const expected = sumN(expRows, inPeriod);
   const measured = sumN(measRows, inPeriod);
   const overall = verdictOf(expected, measured, check.tolerance);
-  const reasonOf = (v) => (v.verdict !== "insufficient_data" ? null : v.missing ? REASONS[`missing_${v.missing}`](check[v.missing === "measured" ? "measured" : "expected"].label) : REASONS.zero_expected(check.expected.label));
+  // The metric's own label (the pack's), not the check side's short one.
+  const labelOf = (side) => sides[side].metric.label ?? check[side].label;
+  const reasonOf = (v) => (v.verdict !== "insufficient_data" ? null : v.missing ? REASONS[`missing_${v.missing}`](labelOf(v.missing === "measured" ? "measured" : "expected")) : REASONS.zero_expected(labelOf("expected")));
 
-  const segments = f[check.breakdown] ?? MART.dimensions[check.breakdown];
+  // Only the segments the data holds (the demo: mobile and desktop). When a side has no split at all (every row
+  // "unknown", such as an orders file without a device column), the check runs on totals and the split is not
+  // available.
+  const seen = (rows) => new Set(rows.filter((r) => inPeriod(r) && r.value != null).map((r) => r[check.breakdown]));
+  const expSeen = seen(expRows);
+  const measSeen = seen(measRows);
+  const noSplit = (s) => s.size > 0 && [...s].every((k) => k === "unknown");
+  const breakdownAvailable = !noSplit(expSeen) && !noSplit(measSeen);
+  const segments = !breakdownAvailable ? [] : f[check.breakdown] ?? MART.dimensions[check.breakdown].filter((k) => expSeen.has(k) || measSeen.has(k) || (!expSeen.size && !measSeen.size && k !== "unknown" && k !== "other"));
   const breakdown = segments.map((key) => {
     const keep = (r) => inPeriod(r) && r[check.breakdown] === key;
     const e = sumN(expRows, keep);
@@ -114,6 +126,7 @@ export async function reconcile({ pack, warehouse, check: checkId, from, to, fil
     reason: reasonOf(overall),
     breakdown_by: check.breakdown,
     breakdown,
+    ...(breakdownAvailable ? {} : { breakdown_available: false }),
     out_of_tolerance_since: since,
     findings:
       overall.verdict === "does_not_add_up"

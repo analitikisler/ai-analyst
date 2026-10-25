@@ -6,6 +6,8 @@
 import { addDays } from "@/lib/dates";
 import { ApiError } from "../client";
 import type {
+  ConnectorId,
+  OrdersUpload,
   Actions,
   Activity,
   AllowEntry,
@@ -52,7 +54,8 @@ import { plan } from "./planner";
 import shop from "../fixtures/shop.json";
 import { exploreQuery, runExplore } from "./explore";
 import { runAudit } from "./audit";
-import { checksUsing, definitionRows, gtmImport, historyOf, seedEvents } from "./catalogue";
+import { checksUsing, definitionRows, historyOf, seedEvents } from "./catalogue";
+import * as conn from "./connectors";
 import { METRIC_PROPOSED } from "./text";
 import { ACT, APPROVAL, CHART_NAMES, COMPARE_NAMES, CROSS_Q, EXPLORE_Q, f, FOLLOW_POOL, KNOWN_QUESTIONS, PERIOD_NAMES, PLANNER_TEXT, SOURCE_LABEL, SUGGEST, T } from "./text";
 
@@ -96,7 +99,9 @@ interface ProposedMetric {
 }
 
 interface Db {
-  source: { kind: "demo" | "bigquery"; bigquery: BigQueryConfig | null; checked_at: string | null };
+  source: { kind: "demo" | "bigquery" | "local"; bigquery: BigQueryConfig | null; checked_at: string | null };
+  /** Simulated connectors (older saved states lack it). */
+  connectors?: conn.ConnDb;
   max_bytes: number;
   currency?: string;
   providers: Record<ProviderId, { set: boolean; hint?: string; model: string | null; base_url?: string | null }>;
@@ -122,6 +127,7 @@ interface Db {
 }
 
 const SHOP = shop as unknown as { listing: TableListing; describe: { dialect: "duckdb"; tables: DescribedTable[] }; demo_tables: string[] };
+const connDb = () => (db.connectors ??= conn.seedConnectors());
 const exploreDb = () => (db.explore ??= { allow: [], protected: {}, descriptions: {}, cap: 5 * 1024 ** 3 });
 const shopAllowed = () => exploreDb().allow.map((e) => e.table ?? "*");
 const allowedTables = () => ["daily_channel_device", ...(shopAllowed().includes("*") ? ["order_items", "orders", "products", "returns"] : shopAllowed())];
@@ -601,6 +607,28 @@ function watch(check: CheckId, actor: Activity["actor"]): { watch: Watch; activi
   return { watch: w, activity };
 }
 
+// ---------------------------------------------------------------- connectors (simulated, see connectors.ts)
+
+const stateOf = (id: ConnectorId) => conn.connectorStates(connDb()).find((c) => c.id === id)!;
+/** Connecting switches to the shop's data only from the demo; from BigQuery the person switches by hand. */
+function toLocal() {
+  if (db.source.kind !== "demo") return;
+  db.source = { ...db.source, kind: "local" };
+  log("system", "save_data_source", ACT.data_source(SOURCE_LABEL.local));
+}
+function connected(id: ConnectorId, test_id: string, history_days?: number) {
+  conn.connect(connDb(), id, test_id, history_days);
+  log("person", `connect_${id}`, ACT.connected(stateOf(id).name));
+  toLocal();
+  return stateOf(id);
+}
+
+/** An orders upload in the fixtures build: the browser reads the file and hands its text here. */
+export function uploadOrders(file_name: string, kind: "csv" | "xlsx", text: string, size: number): OrdersUpload {
+  return conn.upload(file_name, kind, text, size, db.currency ?? "TRY");
+}
+export const sampleOrdersFile = () => conn.sampleOrdersCsv();
+
 // ---------------------------------------------------------------- state
 
 function state(): AppState {
@@ -610,7 +638,7 @@ function state(): AppState {
     workspace: { name: "Örnek Moda", demo: db.source.kind === "demo", data_from: RANGE.from, data_to: RANGE.to, refreshed_at: SEED_AT, rows: MART_ROWS },
     source: {
       kind: db.source.kind,
-      label: db.source.kind === "demo" ? SOURCE_LABEL.demo : SOURCE_LABEL.bigquery(db.source.bigquery?.data_project ?? ""),
+      label: db.source.kind === "demo" ? SOURCE_LABEL.demo : db.source.kind === "local" ? SOURCE_LABEL.local : SOURCE_LABEL.bigquery(db.source.bigquery?.data_project ?? ""),
       project: db.source.bigquery?.data_project ?? null,
       table: db.source.bigquery ? `${db.source.bigquery.data_project}.${db.source.bigquery.dataset}` : null,
     },
@@ -627,9 +655,14 @@ function state(): AppState {
     check_run: run ? { id: run.id, created_at: run.created_at, days: run.days, from: run.from, to: run.to, actor: run.actor } : null,
     activity: clone(db.activity.slice(0, 100)),
     proposals: clone(db.proposals),
-    events: clone(db.events).sort((a, b) => a.date.localeCompare(b.date)),
+    // Each source lists only its own events; events saved before data_source existed show everywhere.
+    events: clone(db.events)
+      .filter((e) => !e.data_source || e.data_source === db.source.kind)
+      .sort((a, b) => a.date.localeCompare(b.date)),
     audits: clone(db.audits),
     audit_fixed: db.audit_fixed,
+    connectors: conn.connectorStates(connDb()),
+    waitlist: conn.waitlist(),
     metric_proposals: db.metrics_proposed.filter((m) => m.status === "proposed").length,
     conversations: db.conversations
       .map(({ turn_list, ...c }) => ({ ...c, turns: turn_list.length }))
@@ -732,7 +765,7 @@ const handlers: { [N in keyof Actions]: Handler<N> } = {
     const act = log("person", "decide_metric", accept ? ACT.metric_accepted(p.label) : ACT.metric_declined(p.label));
     return { entry: accept ? proposedEntry(p) : null, activity_id: act.id };
   },
-  list_events: () => clone(db.events),
+  list_events: () => clone(db.events).filter((e) => !e.data_source || e.data_source === db.source.kind),
   save_event: ({ event }) => {
     const old = event.id ? db.events.find((e) => e.id === event.id) : undefined;
     if (old) {
@@ -741,7 +774,7 @@ const handlers: { [N in keyof Actions]: Handler<N> } = {
       const act = log("person", "save_event", ACT.event_edited(next.title), { kind: "event_update", event: clone(old) });
       return { event: clone(next), activity_id: act.id };
     }
-    const added: ChartEvent = { id: newId("ev"), date: event.date, title: event.title, type: event.type, note: event.note ?? null, source: "manual" };
+    const added: ChartEvent = { id: newId("ev"), date: event.date, title: event.title, type: event.type, note: event.note ?? null, source: "manual", data_source: db.source.kind };
     db.events.push(added);
     const act = log("person", "save_event", ACT.event_added(added.title), { kind: "event_add", event_id: added.id });
     return { event: clone(added), activity_id: act.id };
@@ -752,12 +785,6 @@ const handlers: { [N in keyof Actions]: Handler<N> } = {
     db.events = db.events.filter((e) => e.id !== id);
     const act = log("person", "delete_event", ACT.event_deleted(ev.title), { kind: "event_delete", event: clone(ev) });
     return { activity_id: act.id };
-  },
-  import_gtm_events: () => {
-    const fresh = gtmImport().filter((g) => !db.events.some((e) => e.id === g.id));
-    db.events.push(...fresh);
-    const act = log("person", "import_gtm_events", ACT.gtm_import(gtmImport().length), { kind: "events_import", ids: fresh.map((x) => x.id) });
-    return { added: fresh.length, activity_id: act.id };
   },
   start_tracking_audit: (input) => {
     const run = runAudit(input, db.audit_fixed, now(), newId("aud"));
@@ -859,7 +886,7 @@ const handlers: { [N in keyof Actions]: Handler<N> } = {
       if (p.kind === "watch" && p.payload.check) watch(p.payload.check, "agent");
       if (p.kind === "pin" && p.payload.answer_id) pinAnswer(p.payload.answer_id, p.payload.dashboard_id, "person");
       if (p.kind === "event" && p.payload.event) {
-        const ev = { ...clone(p.payload.event), id: newId("ev"), source: "agent" as const };
+        const ev = { ...clone(p.payload.event), id: newId("ev"), source: "agent" as const, data_source: db.source.kind };
         db.events.push(ev);
         log("person", "save_event", ACT.event_added(ev.title), { kind: "event_add", event_id: ev.id });
       }
@@ -1004,7 +1031,43 @@ const handlers: { [N in keyof Actions]: Handler<N> } = {
     return settings();
   },
   test_bigquery: (v) => testBigQuery(v),
+  list_connectors: () => conn.connectorStates(connDb()),
+  test_ga4: (input) => conn.testGa4(input),
+  test_shopify: (input) => conn.testShopify(input),
+  test_woocommerce: (input) => conn.testWoo(input),
+  connect_ga4: ({ test_id, history_days }) => connected("ga4", test_id, history_days),
+  connect_shopify: ({ test_id, history_days }) => connected("shopify", test_id, history_days),
+  connect_woocommerce: ({ test_id, history_days }) => connected("woocommerce", test_id, history_days),
+  preview_orders_file: (input) => conn.preview(input, db.currency ?? "TRY"),
+  import_orders_file: (input) => {
+    const p = conn.importFile(connDb(), input, db.currency ?? "TRY");
+    log("person", "import_orders_file", ACT.orders_imported(p.orders, p.days));
+    toLocal();
+    return stateOf("orders_file");
+  },
+  sync_sources: ({ connector, history_days }) => {
+    conn.sync(connDb(), connector, history_days);
+    log("person", "sync_sources", ACT.synced(connector ? conn.connectorStates(connDb()).find((c) => c.id === connector)!.name : null));
+    return conn.connectorStates(connDb());
+  },
+  disconnect_source: ({ connector }) => {
+    const c = connDb();
+    if (c[connector].status === "not_connected") throw new ApiError("connector_not_connected", "This source is not connected.", 409);
+    c[connector] = conn.seedConnectors()[connector];
+    log("person", "disconnect_source", ACT.disconnected(conn.connectorStates(c).find((x) => x.id === connector)!.name));
+    if (db.source.kind === "local" && !Object.values(c).some((x) => x.status === "connected")) {
+      db.source = { ...db.source, kind: "demo" };
+      return { ...stateOf(connector), warnings: [T("No source is connected now, so the demo data is in use again.", "Artık bağlı kaynak yok; demo veri yeniden kullanılıyor.")] };
+    }
+    return stateOf(connector);
+  },
   save_data_source: (input) => {
+    if (input.kind === "local") {
+      if (!Object.values(connDb()).some((c) => c.status === "connected")) throw new ApiError("connector_not_connected", "Connect a source first.", 409);
+      if (db.source.kind !== "local") log("person", "save_data_source", ACT.data_source(SOURCE_LABEL.local));
+      db.source = { ...db.source, kind: "local" };
+      return settings();
+    }
     if (input.kind === "demo") {
       if (db.source.kind !== "demo") log("person", "save_data_source", ACT.data_source(SOURCE_LABEL.demo));
       db.source = { kind: "demo", bigquery: db.source.bigquery, checked_at: db.source.checked_at };

@@ -8,7 +8,8 @@ import { workspaceName } from "../config.js";
 import { addDays } from "../format.js";
 import { compileQuery, resolveQuery } from "../metrics/compile.js";
 import { listOverlay, writeOverlay } from "../metrics/overlay.js";
-import { ACT, CROSS_Q, EXPLORE_Q, SUGGEST, T } from "../text.js";
+import { ACT, CROSS_Q, EXPLORE_Q, FOLLOW, NEAR, SUGGEST, T } from "../text.js";
+import { availableColumns, checkAnswerable, metricAnswerable } from "../connectors/index.js";
 import { defineAction } from "./registry.js";
 
 export const metricInfo = (m) => ({
@@ -86,13 +87,19 @@ const DEMO_SOURCES = [
 
 defineAction({
   name: "list_sources",
-  description: "The systems behind the mart. On demo data these are the demo shop's (described, not connected); on BigQuery, the mart table itself.",
+  description: "The systems behind the mart. On demo data these are the demo shop's (described, not connected); on your shop's own data, the connected sources; on BigQuery, the mart table itself.",
   kind: "read",
   agent: true,
   input: z.object({}).strict(),
   async run(ctx) {
     if (ctx.warehouse.demo) return DEMO_SOURCES;
     const range = await ctx.warehouse.range();
+    if (ctx.warehouse.local) {
+      const { connectorStates } = await import("../connectors/index.js");
+      return connectorStates(ctx.app)
+        .filter((s) => s.status !== "not_connected")
+        .map((s) => ({ id: s.id, name: s.name, detail: [s.target, s.last_sync?.from && s.last_sync?.to ? `${s.last_sync.from} – ${s.last_sync.to}` : null, s.fills.join(", ")].filter(Boolean).join(" · "), rows: null }));
+    }
     return [{ id: "mart", name: T("BigQuery mart", "BigQuery mart tablosu"), detail: ctx.warehouse.table.replace(/`/g, ""), rows: range.rows }];
   },
 });
@@ -107,8 +114,23 @@ defineAction({
     const mode = agentMode(ctx.app);
     // On the demo, one question across the shop's tables (it needs them on the list in Settings › Data source).
     const cross = ctx.warehouse.demo ? [CROSS_Q.returns_category] : [];
-    if (mode.mode === "model" && mode.exploratory) return [SUGGEST.ga4, ...[...cross, ...Object.values(EXPLORE_Q)].map((text) => ({ text, tag: "exploratory" }))];
-    return [SUGGEST.ga4, SUGGEST.meta, SUGGEST.roas, SUGGEST.revenue_week];
+    // On your shop's data, only what the connected sources can answer: no ad checks or ROAS without ad data.
+    const cols = availableColumns(ctx.app);
+    const ok = (s) => (s.check ? checkAnswerable(ctx.app, s.check, cols) : metricAnswerable(ctx.app, s.metric, cols));
+    const fit = (list) => list.filter(ok).map(({ text, tag }) => ({ text, tag }));
+    const ga4 = { ...SUGGEST.ga4, check: "ga4_vs_orders" };
+    if (mode.mode === "model" && mode.exploratory) return [...fit([ga4]), ...[...cross, ...Object.values(EXPLORE_Q)].map((text) => ({ text, tag: "exploratory" }))];
+    const main = [ga4, { ...SUGGEST.meta, check: "meta_vs_orders" }, { ...SUGGEST.roas, metric: "roas" }, { ...SUGGEST.revenue_week, metric: "revenue" }];
+    if (!cols) return fit(main);
+    // Questions that take the place of the ones the source cannot answer, in this order.
+    const more = [
+      { text: NEAR.revenue_channel_28, tag: "by_channel", metric: "revenue" },
+      { text: FOLLOW.conversion_device, tag: "chart", metric: "conversion_rate" },
+      { text: FOLLOW.orders_device, tag: "chart", metric: "orders" },
+      { text: NEAR.aov_device_28, tag: "chart", metric: "aov" },
+      { text: FOLLOW.revenue_day, tag: "chart", metric: "revenue" },
+    ];
+    return fit([...main, ...more]).slice(0, 4);
   },
 });
 

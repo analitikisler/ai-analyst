@@ -230,7 +230,7 @@ and no sessions; the next run fills it. Run the full refresh again after any cha
      --role="roles/bigquery.jobUser"
    ```
 
-4. Connect AI Analyst. In the web app, Settings › Data source › Connect BigQuery tests the connection in six
+4. Connect AI Analyst. In the web app, Settings › Sources › Connect BigQuery tests the connection in six
    steps (credentials, running queries in the job project, the dataset, the table, reading it, the cost of a
    typical question) and saves it to `ai-analyst.config.json` once every step passes. Or set it in the
    environment, which wins over the file and locks the field in Settings:

@@ -14,7 +14,7 @@ export function flowLinks(lang: Lang): string[] {
     "/dashboards/db_example?edit=1&menu=pin_rev_day",
     "/dashboards/db_example",
     "/dashboards/db_example?check=ga4_vs_orders",
-    "/settings/data?connect=bigquery",
+    "/settings/sources?connect=bigquery",
     "/settings/model?provider=anthropic",
     "/settings/chat-apps/claude-desktop",
     "/ask",

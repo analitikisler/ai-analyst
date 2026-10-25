@@ -20,7 +20,7 @@ export const registry = new Map();
  */
 export function defineAction(def) {
   for (const k of ["name", "description", "input", "kind", "run"]) if (!def[k]) throw new Error(`Action ${def.name ?? "?"} needs ${k}.`);
-  if (!/^[a-z_]+$/.test(def.name)) throw new Error(`Action name "${def.name}" must be lowercase with _.`);
+  if (!/^[a-z][a-z0-9_]*$/.test(def.name)) throw new Error(`Action name "${def.name}" must be lowercase with _.`);
   if (registry.has(def.name)) throw new Error(`Action "${def.name}" is defined twice.`);
   const action = { agent: false, person: true, mcp: def.kind === "read" && def.agent !== false, settings: false, ...def };
   registry.set(def.name, action);

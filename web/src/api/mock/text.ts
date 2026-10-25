@@ -48,10 +48,10 @@ export const REFUSAL = {
       en: `Exploratory answers read one table, daily_channel_device, with these columns: ${cols}. Products, returns and customers are not in it.`,
       tr: `Keşif cevapları tek bir tabloyu, daily_channel_device, okur; sütunları: ${cols}. Ürün, iade ve müşteri verisi bu tabloda yoktur.`,
     }),
-    /** The demo shop's tables exist but are not on the list in Settings › Data source. */
+    /** The demo shop's tables exist but are not on the list in Settings › Sources. */
     not_allowed: T(
-      "Exploratory answers read the tables allowed in Settings › Data source, and only the mart is on the list. Adding the demo shop tables there (orders, order lines, products, returns) makes this answerable.",
-      "Keşif cevapları Ayarlar › Veri kaynağı bölümünde izin verilen tabloları okur; listede yalnızca mart tablosu var. Demo mağaza tabloları (siparişler, sipariş satırları, ürünler, iadeler) oraya eklenirse bu soru cevaplanabilir.",
+      "Exploratory answers read the tables allowed in Settings › Sources, and only the mart is on the list. Adding the demo shop tables there (orders, order lines, products, returns) makes this answerable.",
+      "Keşif cevapları Ayarlar › Kaynaklar bölümünde izin verilen tabloları okur; listede yalnızca mart tablosu var. Demo mağaza tabloları (siparişler, sipariş satırları, ürünler, iadeler) oraya eklenirse bu soru cevaplanabilir.",
     ),
   },
   metric_howto: {
@@ -213,7 +213,6 @@ export const ACT = {
   event_added: (title: Text): Text => ({ en: `Added the event “${title.en}”`, tr: `“${title.tr}” olayı eklendi` }),
   event_edited: (title: Text): Text => ({ en: `Edited the event “${title.en}”`, tr: `“${title.tr}” olayı düzenlendi` }),
   event_deleted: (title: Text): Text => ({ en: `Deleted the event “${title.en}”`, tr: `“${title.tr}” olayı silindi` }),
-  gtm_import: (n: number): Text => ({ en: `Imported ${n} GTM versions as events (simulated)`, tr: `${n} GTM sürümü olay olarak içe aktarıldı (canlandırma)` }),
   metric_proposed: (label: Text): Text => ({ en: `Proposed the metric “${label.en}” from an exploratory answer`, tr: `Bir keşif cevabından “${label.tr}” metriği önerildi` }),
   metric_accepted: (label: Text): Text => ({ en: `Accepted the metric “${label.en}” from an exploratory answer`, tr: `Bir keşif cevabından gelen “${label.tr}” metriği kabul edildi` }),
   metric_declined: (label: Text): Text => ({ en: `Declined the proposed metric “${label.en}”`, tr: `Önerilen “${label.tr}” metriği reddedildi` }),
@@ -247,6 +246,10 @@ export const ACT = {
   approved: (what: Text): Text => ({ en: `Approved: ${what.en}`, tr: `Onaylandı: ${what.tr}` }),
   declined: (what: Text): Text => ({ en: `Declined: ${what.en}`, tr: `Reddedildi: ${what.tr}` }),
   undid: (what: Text): Text => ({ en: `Undid: ${what.en}`, tr: `Geri alındı: ${what.tr}` }),
+  connected: (name: Text): Text => ({ en: `Connected ${name.en} (simulated)`, tr: `${name.tr} bağlandı (canlandırma)` }),
+  disconnected: (name: Text): Text => ({ en: `Disconnected ${name.en}`, tr: `${name.tr} bağlantısı kaldırıldı` }),
+  synced: (name: Text | null): Text => (name ? { en: `Synced ${name.en} (simulated)`, tr: `${name.tr} eşitlendi (canlandırma)` } : { en: "Synced the sources (simulated)", tr: "Kaynaklar eşitlendi (canlandırma)" }),
+  orders_imported: (orders: number, days: number): Text => ({ en: `Imported the daily totals of ${orders} orders over ${days} days from a file; the file was deleted`, tr: `Bir dosyadan ${days} günlük ${orders} siparişin günlük toplamları alındı; dosya silindi` }),
   data_source: (source: Text): Text => ({ en: `Switched the data source to ${source.en}`, tr: `Veri kaynağı ${source.tr} olarak değiştirildi` }),
   model_saved: (provider: string): Text => ({ en: `Saved a model key for ${provider}`, tr: `${provider} için model anahtarı kaydedildi` }),
   model_removed: (provider: string): Text => ({ en: `Removed the model key for ${provider}`, tr: `${provider} model anahtarı kaldırıldı` }),
@@ -284,6 +287,7 @@ export const COMPARE_NAMES: Record<string, Text> = {
 
 export const SOURCE_LABEL = {
   demo: T("Demo data", "Demo veri"),
+  local: T("Your shop", "Mağaza verisi"),
   bigquery: (project: string): Text => ({ en: `BigQuery · ${project}`, tr: `BigQuery · ${project}` }),
 };
 

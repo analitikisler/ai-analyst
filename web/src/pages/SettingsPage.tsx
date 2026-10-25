@@ -10,6 +10,10 @@ import type { ChatAppCall, ChatClient, ProviderId, ProviderStatus, Settings } fr
 import { CHECK_PLATFORM } from "@/ask/labels";
 import { BigQuerySheet } from "@/components/settings/BigQuerySheet";
 import { KeySheet } from "@/components/settings/KeySheet";
+import { ConnectorCards, WaitlistCards } from "@/components/settings/Connectors";
+import { Ga4Sheet } from "@/components/settings/Ga4Sheet";
+import { OrdersSheet } from "@/components/settings/OrdersSheet";
+import { ShopSheet } from "@/components/settings/ShopSheet";
 import { ExploreTables } from "@/components/settings/ExploreTables";
 import { ActivityList } from "@/components/activity/ActivityList";
 import { EventsList } from "@/components/settings/EventsSection";
@@ -30,7 +34,7 @@ import { notify } from "@/lib/notify";
 import { usePref } from "@/lib/prefs";
 import { useTheme, type ThemePref } from "@/lib/theme";
 
-export const SECTIONS = ["data", "events", "model", "chat-apps", "language", "help", "activity", "about"] as const;
+export const SECTIONS = ["sources", "events", "model", "chat-apps", "language", "help", "activity", "about"] as const;
 export type Section = (typeof SECTIONS)[number];
 const CLIENTS: ChatClient[] = ["claude-desktop", "claude-code", "cursor", "codex"];
 const PROVIDERS: ProviderId[] = ["anthropic", "openai", "gemini", "openai_compatible"];
@@ -85,7 +89,7 @@ export default function SettingsPage() {
   const navigate = useNavigate();
   const { section: sectionParam, client } = useParams();
   const section = client ? "chat-apps" : sectionParam;
-  const active: Section = (SECTIONS as readonly string[]).includes(section ?? "") ? (section as Section) : "data";
+  const active: Section = (SECTIONS as readonly string[]).includes(section ?? "") ? (section as Section) : "sources";
   const { data: s } = useSettings();
   const loaded = !!s;
   usePhoneTitle(t.set.title);
@@ -164,6 +168,9 @@ export default function SettingsPage() {
         </div>
       </div>
       <BigQuerySheet />
+      <Ga4Sheet />
+      <OrdersSheet />
+      <ShopSheet />
       <KeySheet />
     </div>
   );
@@ -179,8 +186,13 @@ function DataSection({ s }: { s: Settings }) {
   const { data: sources } = useSources();
   const [confirm, setConfirm] = useState(false);
   const [rebuilding, setRebuilding] = useState(false);
-  const demo = s.data_source.kind.value === "demo";
+  const kind = s.data_source.kind.value;
+  const demo = kind === "demo";
   const bq = s.data_source.bigquery;
+  const connected = (state?.connectors ?? []).filter((c) => c.status !== "not_connected");
+  const froms = connected.map((c) => c.last_sync?.from).filter((x): x is string => !!x).sort();
+  const tos = connected.map((c) => c.last_sync?.to).filter((x): x is string => !!x).sort();
+  const localRange = froms.length && tos.length ? f.range(froms[0]!, tos[tos.length - 1]!) : t.format.dash;
   const rebuild = async () => {
     setRebuilding(true);
     await call("rebuild_demo", {});
@@ -189,8 +201,9 @@ function DataSection({ s }: { s: Settings }) {
     notify(t.set.data.rebuilt_toast, { type: "success" });
   };
   return (
-    <Card id="data" title={t.set.nav.data} lead={t.set.data.lead}>
-      <Row label={t.set.data.in_use}>
+    <Card id="sources" title={t.set.nav.sources} lead={t.sources.lead}>
+      <Row label={t.sources.active}>
+        <EnvLock value={s.data_source.kind} />
         {demo ? (
           <>
             <p className="text-sm text-text">{t.set.data.demo_name}</p>
@@ -208,6 +221,13 @@ function DataSection({ s }: { s: Settings }) {
               <p className="mt-2 text-2xs text-text-muted">{t.set.data.demo_note}</p>
             </Disclosure>
           </>
+        ) : kind === "local" ? (
+          <>
+            <p className="text-sm text-text">{t.sources.kind.local}</p>
+            <p className="mt-0.5 font-mono text-2xs text-text-muted tnum">
+              {connected.length ? fmt(t.sources.local_meta, { range: localRange, sources: connected.map((c) => pick(c.name)).join(", ") }) : t.sources.local_none}
+            </p>
+          </>
         ) : (
           <>
             <p className="text-sm text-text">{fmt(t.set.data.bq.in_use_name, { table: bq ? `${bq.data_project}.${bq.dataset}` : (state?.source.table ?? state?.source.project ?? "–"), location: bq?.location ?? "–" })}</p>
@@ -220,35 +240,54 @@ function DataSection({ s }: { s: Settings }) {
             {sourceUnavailableSentence(t, state?.source.error)}
           </p>
         )}
-      </Row>
-      <Row label={t.set.data.demo_title} hint={t.set.data.demo_note}>
-        <EnvLock value={s.data_source.kind} />
-        <div className="flex flex-wrap items-center gap-2">
-          {demo ? (
-            <span className="inline-flex h-6 items-center rounded-sm border border-accent/40 bg-accent-soft px-2 text-xs font-medium text-accent-ink">{t.set.data.in_use}</span>
-          ) : (
+        <div className="mt-2 flex flex-wrap items-center gap-2">
+          {!demo && (
             <Button
               variant="outline"
               size="sm"
               disabled={s.data_source.kind.locked}
               onClick={async () => {
                 await call("save_data_source", { kind: "demo" });
-                notify(t.set.data.toast.demo, { type: "success" });
+                notify(t.sources.demo_toast, { type: "success" });
               }}
             >
-              {t.set.data.use_demo}
+              {t.sources.use_demo}
             </Button>
           )}
-          <Button variant="ghost" size="sm" onClick={() => setConfirm(true)} disabled={rebuilding}>
-            {rebuilding && <Spinner data-icon="inline-start" />}
-            {rebuilding ? t.set.data.rebuilding : t.set.data.rebuild}
-          </Button>
+          {kind !== "local" && connected.length > 0 && (
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={s.data_source.kind.locked}
+              onClick={async () => {
+                await call("save_data_source", { kind: "local" });
+                notify(t.sources.local_toast, { type: "success" });
+              }}
+            >
+              {t.sources.use_local}
+            </Button>
+          )}
+          {demo && (
+            <Button variant="ghost" size="sm" onClick={() => setConfirm(true)} disabled={rebuilding}>
+              {rebuilding && <Spinner data-icon="inline-start" />}
+              {rebuilding ? t.set.data.rebuilding : t.set.data.rebuild}
+            </Button>
+          )}
         </div>
       </Row>
-      <Row label={t.set.data.bq.title} hint={t.set.data.bq.lead}>
+      <div className="flex flex-col gap-3 px-4 py-4">
+        <div>
+          <h3 className="text-sm font-semibold text-text-strong">{t.sources.connect_title}</h3>
+          <p className="mt-0.5 text-[13px] text-text-muted">{t.sources.connect_lead}</p>
+          {__DEMO__ && <p className="mt-0.5 text-2xs text-text-subtle">{t.sources.simulated}</p>}
+        </div>
+        <ConnectorCards />
+      </div>
+      <Row label={t.sources.card.bigquery.title} hint={t.sources.card.bigquery.lead}>
         <div className="flex flex-wrap items-center gap-3">
+          {kind === "bigquery" && <span className="inline-flex h-6 items-center rounded-sm border border-accent/40 bg-accent-soft px-2 text-xs font-medium text-accent-ink">{t.set.data.in_use}</span>}
           <Button variant="outline" size="sm" disabled={s.data_source.kind.locked} onClick={() => setParams({ connect: "bigquery" })}>
-            {demo ? t.set.data.bq.connect : t.set.data.bq.change}
+            {kind === "bigquery" ? t.set.data.bq.change : t.set.data.bq.connect}
           </Button>
           <a href="https://github.com/analitikisler/ai-analyst/blob/main/docs/connecting-bigquery.md" target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-[13px] font-medium text-accent hover:underline">
             {t.set.data.bq.guide}
@@ -284,6 +323,13 @@ function DataSection({ s }: { s: Settings }) {
       <Row label={t.set.data.explore.title} hint={t.set.data.explore.hint}>
         <ExploreTables s={s} />
       </Row>
+      <div className="flex flex-col gap-3 px-4 py-4">
+        <div>
+          <h3 className="text-sm font-semibold text-text-strong">{t.sources.waitlist.title}</h3>
+          <p className="mt-0.5 text-[13px] text-text-muted">{t.sources.waitlist.lead}</p>
+        </div>
+        <WaitlistCards />
+      </div>
       <Dialog open={confirm} onOpenChange={setConfirm}>
         <DialogContent>
           <DialogHeader>

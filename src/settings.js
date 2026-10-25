@@ -39,6 +39,18 @@ export function writeSecret(config, provider, key) {
   return reload(config);
 }
 
+/** Saves (or with values null removes) one connector's secrets in secrets.json under connectors, mode 0600. */
+export function writeConnectorSecret(config, connector, values) {
+  const file = secretsFile(config.dataDir);
+  const current = readJson(file);
+  current.version = 1;
+  current.connectors ??= {};
+  if (values == null) delete current.connectors[connector];
+  else current.connectors[connector] = { ...values, saved_at: new Date().toISOString() };
+  writeAtomic(file, `${JSON.stringify(current, null, 2)}\n`, 0o600);
+  return reload(config);
+}
+
 export const reload = (config) => loadConfig({ env: config.env, cwd: config.cwd, file: config.configFile });
 
 export const keyHint = (key) => (key && key.length >= 8 ? `…${key.slice(-4)}` : key ? "…" : undefined);
@@ -92,8 +104,10 @@ export function settingsView(app) {
 export function exploreView(app) {
   const c = app.config;
   const ex = c.explore;
-  const demo = c.warehouse !== "bigquery";
-  const list = demo ? ex.demoAllow : ex.allow;
+  const local = c.warehouse === "local";
+  const demo = c.warehouse === "duckdb";
+  // On the local source the agent reads the mart only.
+  const list = local ? [] : demo ? ex.demoAllow : ex.allow;
   const protectedCols = {};
   const confirmed = [];
   for (const [k, v] of Object.entries(ex.protected ?? {})) {
@@ -103,7 +117,7 @@ export function exploreView(app) {
   return {
     allow: list.map(({ project, dataset, table, meta }) => ({ project, dataset, table, ...(meta ? { meta } : {}) })),
     allow_setting: { source: ex.source, locked: ex.locked, ...(ex.env ? { env: ex.env } : {}) },
-    mart: demo ? martKey(c, true) : c.bigquery.project && c.bigquery.dataset ? martKey(c, false) : null,
+    mart: demo || local ? martKey(c, true) : c.bigquery.project && c.bigquery.dataset ? martKey(c, false) : null,
     protected_columns: protectedCols,
     confirmed,
     descriptions: ex.descriptions ?? {},

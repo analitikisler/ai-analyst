@@ -24,8 +24,10 @@ export type CheckId = "ga4_vs_orders" | "ga4_rev_vs_revenue" | "meta_vs_orders" 
 
 export type Unit = "count" | "try" | "pct" | "ratio";
 export type GroupBy = "none" | "day" | "week" | "month" | "channel" | "device";
-export type Channel = "organic" | "direct" | "google_ads" | "meta_ads" | "tiktok_ads" | "email";
-export type Device = "mobile" | "desktop";
+export type SourceKind = "demo" | "bigquery" | "local";
+/** other: a GA4 group with no mart channel; unknown: the source cannot attribute. */
+export type Channel = "organic" | "direct" | "google_ads" | "meta_ads" | "tiktok_ads" | "email" | "other" | "unknown";
+export type Device = "mobile" | "desktop" | "unknown";
 export type Dialect = "duckdb" | "bigquery";
 export type Actor = "person" | "agent" | "system" | "chat_app";
 export type Verdict = "adds_up" | "does_not_add_up" | "insufficient_data" | "not_checked";
@@ -141,6 +143,8 @@ export interface CheckResult {
   reason?: Text | null;
   breakdown_by: GroupBy;
   breakdown: BreakdownRow[];
+  /** false when a side has no device split (all unknown): the check ran on totals, breakdown is []. */
+  breakdown_available?: boolean;
   out_of_tolerance_since: string | null;
   findings: Finding[];
   sql: { expected: string; measured: string };
@@ -214,6 +218,8 @@ export interface ChartEvent {
   type: EventType;
   note: Text | null;
   source: EventSource;
+  /** The data source the event was added on; charts show the active source's events (the demo's are "demo"). */
+  data_source: SourceKind;
 }
 
 // ---------------------------------------------------------------- the metrics page (owner round 5)
@@ -591,7 +597,7 @@ export interface DescribedTable {
 export interface Settings {
   server: { loopback: boolean; config_file: string; data_dir: string; pack_dir: string; address: string; version: string };
   data_source: {
-    kind: SettingValue<"demo" | "bigquery">;
+    kind: SettingValue<SourceKind>;
     bigquery: BigQueryConfig | null;
     checked_at: string | null;
     credentials: { adc_found: boolean; identity: string | null };
@@ -693,7 +699,7 @@ export interface CheckRun {
 export interface AppState {
   workspace: Workspace;
   source: {
-    kind: "demo" | "bigquery";
+    kind: SourceKind;
     label: Text;
     project: string | null;
     table: string | null;
@@ -719,6 +725,8 @@ export interface AppState {
   host_is_loopback: boolean;
   events: ChartEvent[];
   audits: AuditRun[];
+  connectors: ConnectorState[];
+  waitlist: WaitlistItem[];
   /** A simulated fix is in place (the reviewer menu), so the next audit passes. */
   audit_fixed: boolean;
   metric_proposals: number;
@@ -785,6 +793,37 @@ export interface CheckDetail {
 }
 
 /** Inputs and results of every action the web app calls. */
+// ---------------------------------------------------------------- connectors and the local source (CONTRACT.md)
+
+export type ConnectorId = "ga4" | "orders_file" | "shopify" | "woocommerce";
+export type ConnectorStatus = "not_connected" | "connected" | "syncing" | "error";
+export type MartColumn = "sessions" | "ga4_purchases" | "ga4_revenue" | "orders" | "revenue";
+export interface ConnectorSecret { set: boolean; source: "env" | "saved" | null; locked: boolean; env?: string; hint?: string }
+export interface ConnectorState {
+  id: ConnectorId; name: Text; fills: MartColumn[]; status: ConnectorStatus; target: string | null;
+  last_sync: { at: string; from: string | null; to: string | null; days: number; ok: boolean } | null;
+  error: ApiErrorBody | null; warnings: Text[]; secret: ConnectorSecret | null;
+}
+export type WaitlistId = "meta_ads" | "google_ads" | "tiktok_ads" | "ikas" | "ticimax" | "search_console" | "gtm";
+export interface WaitlistItem { id: WaitlistId; name: Text; mailto: string }
+export interface ConnStep { id: string; status: "ok" | "failed" | "skipped" | "warning"; detail?: Record<string, string | number>; error?: { code: string; params: Record<string, string | number> } }
+export interface ConnectorTest { test_id: string; connector: ConnectorId; ok: boolean; steps: ConnStep[]; warnings: Text[] }
+export interface OrdersMapping {
+  order_id: string | null; created_at: string; status: string | null; total: string; currency: string | null;
+  channel: string | null; utm_source: string | null; utm_medium: string | null; device: string | null; user_agent: string | null;
+  exclude_statuses: string[];
+}
+export interface OrdersPreview {
+  from: string | null; to: string | null; days: number; orders: number; revenue: number; currency: string;
+  excluded: { status: number; no_date: number; bad_total: number };
+  daily: { date: string; orders: number; revenue: number }[];
+  channels: { key: Channel; orders: number }[]; devices: { key: Device; orders: number }[]; warnings: Text[];
+}
+export interface OrdersUpload {
+  upload_id: string; file_name: string; kind: "csv" | "xlsx"; columns: string[]; mapping: OrdersMapping;
+  statuses: { value: string; count: number }[]; time_zone: string; preview: OrdersPreview;
+}
+
 export interface Actions {
   list_sources: { input: Record<string, never>; result: { id: string; name: Text; detail: string; rows: number | null }[] };
   list_suggestions: { input: Record<string, never>; result: { text: Text; tag: "check" | "chart" | "by_channel" | "comparison" | "exploratory" }[] };
@@ -793,9 +832,8 @@ export interface Actions {
   get_metric: { input: { metric: string }; result: MetricPage };
   decide_metric: { input: { metric: string; accept: boolean }; result: { entry: MetricEntry | null; activity_id: string } };
   list_events: { input: Record<string, never>; result: ChartEvent[] };
-  save_event: { input: { event: Omit<ChartEvent, "id" | "source"> & { id?: string } }; result: { event: ChartEvent; activity_id: string } };
+  save_event: { input: { event: Omit<ChartEvent, "id" | "source" | "data_source"> & { id?: string } }; result: { event: ChartEvent; activity_id: string } };
   delete_event: { input: { id: string }; result: { activity_id: string } };
-  import_gtm_events: { input: Record<string, never>; result: { added: number; activity_id: string } };
   start_tracking_audit: { input: { check: CheckId; url: string; device: string; platforms: AuditPlatform[] }; result: AuditRun };
   get_audit: { input: { id: string }; result: AuditRun };
   explain_metric: { input: { metric: MetricId }; result: MetricExplanation };
@@ -824,7 +862,18 @@ export interface Actions {
   remove_tile: { input: { tile_id: string }; result: { removed: true; activity_id: string } };
   get_settings: { input: Record<string, never>; result: Settings };
   test_bigquery: { input: BigQueryConfig; result: BqTest };
-  save_data_source: { input: { kind: "demo" } | { kind: "bigquery"; test_id: string }; result: Settings };
+  save_data_source: { input: { kind: "demo" } | { kind: "local" } | { kind: "bigquery"; test_id: string }; result: Settings };
+  list_connectors: { input: Record<string, never>; result: ConnectorState[] };
+  test_ga4: { input: { property_id: string; auth: BigQueryConfig["auth"] }; result: ConnectorTest };
+  connect_ga4: { input: { test_id: string; history_days?: number }; result: ConnectorState };
+  test_shopify: { input: { shop: string; token?: string }; result: ConnectorTest };
+  connect_shopify: { input: { test_id: string; history_days?: number }; result: ConnectorState };
+  test_woocommerce: { input: { url: string; key?: string; secret?: string }; result: ConnectorTest };
+  connect_woocommerce: { input: { test_id: string; history_days?: number }; result: ConnectorState };
+  preview_orders_file: { input: { upload_id: string; mapping?: OrdersMapping; time_zone?: string }; result: OrdersUpload };
+  import_orders_file: { input: { upload_id: string; mapping: OrdersMapping; time_zone: string }; result: ConnectorState };
+  sync_sources: { input: { connector?: ConnectorId; history_days?: number }; result: ConnectorState[] };
+  disconnect_source: { input: { connector: ConnectorId }; result: ConnectorState };
   set_bytes_cap: { input: { max_bytes: number }; result: Settings };
   set_currency: { input: { currency: string }; result: Settings };
   rebuild_demo: { input: Record<string, never>; result: { ok: true } };

@@ -11,7 +11,7 @@ import { TooltipProvider } from "../src/components/ui/tooltip";
 import { LanguageProvider } from "../src/i18n";
 import { routes } from "../src/routes";
 
-const PATHS = ["/ask", "/dashboards/db_example", "/dashboards/db_example?edit=1", "/dashboards/db_example?check=ga4_vs_orders", "/dashboards/db_example?check=nope", "/settings/activity", "/settings/events", "/metrics", "/metrics/orders", "/settings/data", "/settings/model", "/settings/chat-apps/claude-desktop", "/settings/language", "/tour", "/nowhere"];
+const PATHS = ["/ask", "/dashboards/db_example", "/dashboards/db_example?edit=1", "/dashboards/db_example?check=ga4_vs_orders", "/dashboards/db_example?check=nope", "/settings/activity", "/settings/events", "/metrics", "/metrics/orders", "/settings/sources", "/settings/data", "/settings/sources?connect=orders", "/settings/sources?connect=ga4", "/settings/sources?connect=shopify", "/settings/model", "/settings/chat-apps/claude-desktop", "/settings/language", "/tour", "/nowhere"];
 
 async function resolveLazy(list: typeof routes): Promise<typeof routes> {
   return Promise.all(
@@ -64,7 +64,12 @@ export async function renderSmoke(check: (name: string, ok: boolean, detail?: un
         const old = text.match(OLD_NAME[lang]);
         check(`render ${lang} ${path}: no old "check" feature name`, !old, old && text.slice(Math.max(0, text.search(OLD_NAME[lang]) - 60), text.search(OLD_NAME[lang]) + 40));
         check(`render ${lang} ${path}`, html.length > 500 && !gaps && !mixed, gaps ?? mixed ?? text.slice(0, 160));
-        if (path === "/settings/data") {
+        if (path === "/settings/sources") {
+          const want = lang === "en" ? ["Connect your shop", "Google Analytics 4", "Orders file", "Shopify or WooCommerce", "On the waitlist", "Join the waitlist", "Meta Ads", "Google Tag Manager"] : ["Mağazayı bağla", "Google Analytics 4", "Sipariş dosyası", "Shopify ya da WooCommerce", "Bekleme listesinde", "Bekleme listesine katıl", "Meta Ads", "Google Tag Manager"];
+          const missing = want.filter((w) => !text.includes(w));
+          check(`render ${lang} Sources: the active source, the three connector cards and the waitlist`, !missing.length && html.includes("mailto:hello@analitikisler.com?subject="), missing);
+        }
+        if (path === "/settings/sources") {
           const title = lang === "en" ? "Tables the agent may read" : "Agent’ın okuyabileceği tablolar";
           const one = lang === "en" ? "Add the demo shop tables" : "Demo mağaza tablolarını ekle";
           check(`render ${lang} data source: the tables the agent may read, the mart always on it, one click to add the shop tables`, text.includes(title) && text.includes("daily_channel_device") && text.includes(one), text.slice(text.indexOf("daily_channel_device") - 80, text.indexOf("daily_channel_device") + 200));
@@ -80,7 +85,7 @@ export async function renderSmoke(check: (name: string, ok: boolean, detail?: un
     }
   }
   // A dead warehouse credential: GET /api/state answers with source.error and no data dates; Ask, the dashboard and
-  // Settings › Data source still render, with the source_unavailable sentence and a link to Settings › Data source.
+  // Settings › Sources still render, with the source_unavailable sentence and a link to Settings › Sources.
   for (const lang of ["en", "tr"] as const) {
     const qc = createQueryClient();
     const base = getState();
@@ -90,8 +95,8 @@ export async function renderSmoke(check: (name: string, ok: boolean, detail?: un
       source: { ...base.source, kind: "bigquery", error: { code: "source_unavailable", message: "", params: { service: "BigQuery", reason: "invalid_grant", status: 401 } } },
     });
     qc.setQueryData(keys.action("get_settings", {}), callAction("get_settings", {}, lang));
-    const sentence = lang === "en" ? "BigQuery could not be reached with the saved connection (invalid_grant). Check it in Settings › Data source." : "BigQuery kayıtlı bağlantıyla erişilemedi (invalid_grant). Ayarlar › Veri kaynağı bölümünden kontrol edilebilir.";
-    for (const path of ["/ask", "/dashboards/db_example", "/settings/data"]) {
+    const sentence = lang === "en" ? "BigQuery could not be reached with the saved connection (invalid_grant). Check it in Settings › Sources." : "BigQuery kayıtlı bağlantıyla erişilemedi (invalid_grant). Ayarlar › Kaynaklar bölümünden kontrol edilebilir.";
+    for (const path of ["/ask", "/dashboards/db_example", "/settings/sources"]) {
       try {
         const router = createMemoryRouter(resolved, { initialEntries: [path] });
         const html = renderToString(
@@ -106,8 +111,8 @@ export async function renderSmoke(check: (name: string, ok: boolean, detail?: un
           </QueryClientProvider>,
         );
         const text = html.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").replace(/&#x27;|’/g, "’");
-        const linked = path === "/settings/data" || html.includes('href="/settings/data"') || html.includes("#/settings/data");
-        check(`render ${lang} ${path} with source.error: the source sentence${path === "/settings/data" ? "" : " and the Settings link"}, no gaps`, text.includes(sentence) && linked && !/\{[a-z_]+\}/.test(html), text.slice(0, 240));
+        const linked = path === "/settings/sources" || html.includes('href="/settings/sources"') || html.includes("#/settings/sources");
+        check(`render ${lang} ${path} with source.error: the source sentence${path === "/settings/sources" ? "" : " and the Settings link"}, no gaps`, text.includes(sentence) && linked && !/\{[a-z_]+\}/.test(html), text.slice(0, 240));
       } catch (err) {
         check(`render ${lang} ${path} with source.error`, false, String(err));
       }

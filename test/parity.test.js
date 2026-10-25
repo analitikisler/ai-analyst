@@ -14,7 +14,8 @@ import { ctxFor, demoWorkspace, normalize } from "./helpers.js";
 
 const MOCK = JSON.parse(readFileSync(new URL("./fixtures/mock-parity.json", import.meta.url), "utf8"));
 // Fields this build adds or fills differently on purpose (CONTRACT.md, "Differences from the prototype").
-const DROP = new Set(["cached", "confirmed", "handoff"]);
+// data_source: the data source an event belongs to, a server field the prototype did not have.
+const DROP = new Set(["cached", "confirmed", "handoff", "data_source"]);
 const n = (v) => normalize(v, DROP);
 /** Mock text that breaks a house rule; this build writes the corrected form. */
 const DEVIATIONS = [["AI Tag Debugger found that meta counts", "AI Tag Debugger found that Meta counts"]];
@@ -50,7 +51,6 @@ before(async () => {
   }
   await act("set_dashboard_period", { dashboard_id: "db_example", period: "last_28", compare: "previous_period" });
   results.start_tracking_audit = await act("start_tracking_audit", { check: "ga4_vs_orders", url: "https://ornekmoda.example/", device: "mobile Safari", platforms: ["ga4", "meta"] });
-  results.import_gtm_events = await act("import_gtm_events");
   results.conversations = [];
   for (const script of MOCK.conversations) {
     let conversationId = "new";
@@ -113,10 +113,9 @@ test("dashboard periods: last complete week and month to date", () => {
   for (const p of Object.keys(MOCK.actions.dashboard_periods)) assert.deepEqual(n(results.dashboard_periods[p]), n(MOCK.actions.dashboard_periods[p]), p);
 });
 
-test("the simulated audit and the simulated GTM import on demo data", () => {
+test("the simulated audit on demo data", () => {
   // The audit carries status (done | handoff), agreed with the lead for the own-data handoff.
   assert.deepEqual(n(results.start_tracking_audit), n({ ...MOCK.actions.start_tracking_audit, status: "done" }));
-  assert.deepEqual(n(results.import_gtm_events), n(MOCK.actions.import_gtm_events));
 });
 
 MOCK.conversations.forEach((script, ci) => {

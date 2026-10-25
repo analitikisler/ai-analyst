@@ -5,6 +5,8 @@
 import { existsSync, readFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { shopDomain } from "./connectors/shopify.js";
+import { shopUrl } from "./connectors/woocommerce.js";
 import { loadExploreConfig } from "./explore/allow.js";
 
 export const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
@@ -47,6 +49,39 @@ function readProtection(packDir) {
   return out;
 }
 
+/**
+ * The connectors' settings: non-secret ones from the config file, tokens and keys from secrets.json; env vars win
+ * and lock (AI_ANALYST_GA4_PROPERTY, AI_ANALYST_SHOPIFY_SHOP, AI_ANALYST_SHOPIFY_TOKEN, AI_ANALYST_WOOCOMMERCE_URL,
+ * AI_ANALYST_WOOCOMMERCE_KEY, AI_ANALYST_WOOCOMMERCE_SECRET).
+ */
+function connectorsConfig(env, fromFile, secrets) {
+  const has = (n) => env[n] !== undefined && env[n] !== "";
+  const cf = fromFile.connectors && typeof fromFile.connectors === "object" ? fromFile.connectors : {};
+  const cs = secrets.connectors ?? {};
+  const pick = (name, fileValue) => (has(name) ? { value: env[name], locked: true, env: name, source: "env" } : fileValue ? { value: fileValue, locked: false, source: "saved" } : { value: null, locked: false, source: null });
+  // The shop addresses are checked as on the Test path, wherever they come from: a *.myshopify.com shop, and an
+  // https address on port 443 that is not an IP, a local name or a private network.
+  const checked = (v, norm, what) => {
+    if (v.value == null) return v;
+    const n = norm(v.value);
+    if (!n) throw new Error(`${v.env ?? `connectors.${what} in the config file`} is not a valid address: "${String(v.value).slice(0, 80)}". ${what === "shopify.shop" ? "Use yourshop.myshopify.com." : "Use https://yourshop.com (https, the standard port, the shop's own domain)."}`);
+    return { ...v, value: n };
+  };
+  const shop = checked(pick("AI_ANALYST_SHOPIFY_SHOP", cf.shopify?.shop), shopDomain, "shopify.shop");
+  const wooUrl = checked(pick("AI_ANALYST_WOOCOMMERCE_URL", cf.woocommerce?.url), (v) => (/^http:\/\//i.test(String(v).trim()) ? null : shopUrl(v)), "woocommerce.url");
+  return {
+    ga4: { property: pick("AI_ANALYST_GA4_PROPERTY", cf.ga4?.propertyId), auth: cf.ga4?.auth ?? { kind: "adc", path: null, impersonate: null }, connected: Boolean(has("AI_ANALYST_GA4_PROPERTY") || cf.ga4?.propertyId) },
+    shopify: { shop, token: pick("AI_ANALYST_SHOPIFY_TOKEN", cs.shopify?.token), connected: Boolean(cf.shopify?.shop || has("AI_ANALYST_SHOPIFY_SHOP")) },
+    woocommerce: {
+      url: wooUrl,
+      key: pick("AI_ANALYST_WOOCOMMERCE_KEY", cs.woocommerce?.key),
+      secret: pick("AI_ANALYST_WOOCOMMERCE_SECRET", cs.woocommerce?.secret),
+      connected: Boolean(cf.woocommerce?.url || has("AI_ANALYST_WOOCOMMERCE_URL")),
+    },
+    ordersFile: { timeZone: cf.ordersFile?.timeZone || "Europe/Istanbul" },
+  };
+}
+
 export const secretsFile = (dataDir) => path.join(dataDir, "secrets.json");
 
 /**
@@ -68,8 +103,9 @@ export function loadConfig({ env = process.env, cwd = process.cwd(), file } = {}
   // Data source. The file's "warehouse" is duckdb (the demo) or bigquery.
   const bq = fromFile.bigquery ?? {};
   const wh = setting("AI_ANALYST_WAREHOUSE", fromFile.warehouse, "duckdb");
-  if (!["duckdb", "bigquery", "demo"].includes(wh.value)) throw new Error(`AI_ANALYST_WAREHOUSE must be duckdb or bigquery, not "${wh.value}".`);
-  const warehouse = wh.value === "bigquery" ? "bigquery" : "duckdb";
+  if (!["duckdb", "bigquery", "demo", "local"].includes(wh.value)) throw new Error(`AI_ANALYST_WAREHOUSE must be duckdb, bigquery or local, not "${wh.value}".`);
+  // duckdb: the demo; local: warehouse.duckdb fed by the connectors; bigquery: the person's own mart.
+  const warehouse = wh.value === "bigquery" ? "bigquery" : wh.value === "local" ? "local" : "duckdb";
   const ceiling = Number(pick("BIGQUERY_MAX_BYTES", null, BYTES_CEILING_DEFAULT));
   if (!(ceiling > 0)) throw new Error("BIGQUERY_MAX_BYTES must be a positive number of bytes.");
   // The file may lower the cap below the ceiling, never raise it.
@@ -135,7 +171,7 @@ export function loadConfig({ env = process.env, cwd = process.cwd(), file } = {}
     // The default list of optional protected-column groups (protection.yaml in the pack): the owner's call.
     protection: readProtection(path.resolve(cwd, pick("AI_ANALYST_PACK_DIR", fromFile.packDir, ROOT))),
     warehouse,
-    warehouseSetting: { ...wh, value: warehouse === "bigquery" ? "bigquery" : "demo" },
+    warehouseSetting: { ...wh, value: warehouse === "duckdb" ? "demo" : warehouse },
     bigquery: {
       project: dataProject,
       jobProject: pick("BIGQUERY_JOB_PROJECT", bq.jobProject, null) || dataProject,
@@ -151,6 +187,7 @@ export function loadConfig({ env = process.env, cwd = process.cwd(), file } = {}
     // The tables exploratory answers may read (Settings › Data source; AI_ANALYST_EXPLORE_ALLOW locks the list).
     explore: loadExploreConfig(env, fromFile),
     providers,
+    connectors: connectorsConfig(env, fromFile, secrets),
     provider,
     model: has("AI_ANALYST_MODEL") ? env.AI_ANALYST_MODEL : active ? active.model || MODEL_DEFAULT[active.id] : DEFAULT_MODEL,
     // Kept for the Anthropic path and older callers.
@@ -171,6 +208,7 @@ export const DEMO_WORKSPACE = "Örnek Moda";
 export function workspaceName(config, warehouse) {
   if (config.workspace) return config.workspace;
   if (!warehouse || warehouse.demo !== false) return DEMO_WORKSPACE;
+  if (warehouse.local) return "Your shop";
   const bq = config.bigquery ?? {};
   return bq.dataset || bq.project || "BigQuery";
 }

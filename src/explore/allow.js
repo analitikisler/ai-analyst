@@ -97,6 +97,21 @@ export function martKey(config, demo) {
 export function policyFor(config, warehouse) {
   const demo = warehouse.demo !== false;
   const ex = config.explore ?? { allow: [], demoAllow: [] };
+  // On the local source (the connectors' warehouse.duckdb) exploratory answers read the mart only.
+  if (warehouse.local) {
+    return {
+      demo: false,
+      local: true,
+      mart: MART.model,
+      entries: [],
+      allowed: [MART.model],
+      match(parts) {
+        const p = parts.map((x) => x.toLowerCase());
+        const name = p.length === 1 ? p[0] : p.length === 2 && p[0] === "main" ? p[1] : null;
+        return name === MART.model ? name : null;
+      },
+    };
+  }
   const mart = martKey(config, demo);
   if (demo) {
     const tables = new Set([MART.model]);

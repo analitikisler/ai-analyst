@@ -21,7 +21,7 @@ export function MakeItYoursCard({ onNavigate }: { onNavigate?: () => void }) {
     notify(t.miy.hidden_toast, { actions: [{ label: t.common.undo, onClick: () => void call("set_preference", { key: "make_it_yours", value: "shown" }) }] });
   };
   const steps = [
-    { to: "/settings/data?connect=bigquery", label: t.miy.step_data, hint: t.miy.step_data_hint, icon: DatabaseIcon, done: dataDone },
+    { to: "/settings/sources", label: t.miy.step_data, hint: t.miy.step_data_hint, icon: DatabaseIcon, done: dataDone },
     { to: "/settings/model", label: t.miy.step_model, hint: t.miy.step_model_hint, icon: KeyRoundIcon, done: modelDone },
   ];
   return (

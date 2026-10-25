@@ -4,6 +4,12 @@ import { AppShell } from "@/components/layout/AppShell";
 import { ErrorState } from "@/components/kit";
 
 /** Every page is its own chunk. */
+/** A redirect that keeps the query (?connect=bigquery) and the hash. */
+function RedirectKeepingSearch({ to }: { to: string }) {
+  const { search, hash } = useLocation();
+  return <Navigate to={`${to}${search}${hash}`} replace />;
+}
+
 const page = (load: () => Promise<{ default: React.ComponentType }>) => async () => ({ Component: (await load()).default });
 
 function RouteError() {
@@ -40,7 +46,9 @@ export const routes: RouteObject[] = [
           { path: "checks", element: <Navigate to="/dashboards" replace /> },
           { path: "checks/:checkId", element: <CheckRedirect /> },
           { path: "activity", element: <Navigate to="/settings/activity" replace /> },
-          { path: "settings", element: <Navigate to="/settings/data" replace /> },
+          { path: "settings", element: <Navigate to="/settings/sources" replace /> },
+          // Data source became Sources (connectors round); old links keep working, ?connect= included.
+          { path: "settings/data", element: <RedirectKeepingSearch to="/settings/sources" /> },
           { path: "settings/chat-apps", element: <Navigate to="/settings/chat-apps/claude-desktop" replace /> },
           { path: "settings/chat-apps/:client", lazy: page(() => import("@/pages/SettingsPage")) },
           { path: "settings/:section", lazy: page(() => import("@/pages/SettingsPage")) },

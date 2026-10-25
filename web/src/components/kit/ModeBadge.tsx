@@ -13,7 +13,7 @@ export function DataSourceBadge({ source, className }: { source: AppState["sourc
   return (
     <span className={cn(chip, className)}>
       <Icon size={12} strokeWidth={1.75} aria-hidden />
-      {source.kind === "demo" ? t.shell.status.demo : fmt(t.shell.status.bigquery, { project: source.project ?? "" })}
+      {source.kind === "demo" ? t.shell.status.demo : source.kind === "local" ? t.shell.status.local : fmt(t.shell.status.bigquery, { project: source.project ?? "" })}
     </span>
   );
 }

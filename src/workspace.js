@@ -50,6 +50,14 @@ export async function openWorkspace(config, opts = {}) {
       const { runAllChecks } = await import("./actions/data.js");
       await runAllChecks({ store: app.store, warehouse: app.warehouse, pack: app.pack }, 14, "system").catch((err) => console.error("[ai-analyst] checks after the switch:", err.message));
     },
+    /** Reopens the warehouse from its file (the local source after a sync), then runs the checks on it. */
+    async reloadWarehouse() {
+      const old = app.warehouse;
+      app.warehouse = (await openWarehouse(app.config, {})).warehouse;
+      old.close();
+      const { runAllChecks } = await import("./actions/data.js");
+      await runAllChecks({ store: app.store, warehouse: app.warehouse, pack: app.pack }, 14, "system").catch((err) => console.error("[ai-analyst] checks after the sync:", err.message));
+    },
     /** Rebuilds the demo mart; on demo data also empties the workspace (preferences stay) and seeds it again. */
     async rebuildDemo() {
       const isDemo = app.warehouse.demo;

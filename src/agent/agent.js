@@ -11,6 +11,7 @@ import { AppError } from "../errors.js";
 import { workspaceName } from "../config.js";
 import { addDays, fmtMoney, getCurrency, iso } from "../format.js";
 import { listEvents } from "../actions/events.js";
+import { availableColumns, checkAnswerable, metricAnswerable } from "../connectors/index.js";
 import { MART } from "../metrics/load.js";
 import { entryKey, policyFor } from "../explore/allow.js";
 import { newId } from "../store/store.js";
@@ -184,6 +185,15 @@ function conversationFor(store, id, question, questionText) {
  * Follow-ups: at most 3, never a question already asked in this conversation, never one that would repeat this
  * answer or an earlier one, never a refusal, never a watch already in place. The answer's own come first.
  */
+/** Whether the active source can answer what a routed question needs (on your shop's data: no ad checks, no ROAS). */
+function answerable(app, r) {
+  const cols = availableColumns(app);
+  if (!cols || !r) return true;
+  if (r.check && !checkAnswerable(app, r.check, cols)) return false;
+  if (r.metric && !metricAnswerable(app, r.metric, cols)) return false;
+  return true;
+}
+
 async function freshFollowups(ctx, answer, turns, pc, candidates) {
   const asked = new Set(turns.flatMap((t) => [t.question, t.question_text?.en, t.question_text?.tr].filter(Boolean).map(normQ)));
   const prev = turns.flatMap((t) => (t.answers ?? []).map((id) => (typeof id === "string" ? ctx.store.getAnswer(id) : id))).filter(Boolean);
@@ -196,6 +206,7 @@ async function freshFollowups(ctx, answer, turns, pc, candidates) {
     if (out.length === 3) break;
     if (asked.has(normQ(q.en)) || asked.has(normQ(q.tr)) || seen.has(q.en)) continue;
     const r = route(q.en, pcNext);
+    if (!answerable(ctx.app, r)) continue;
     const sig = await signature(ctx, r, pcNext);
     if (!sig || done.has(sig) || seen.has(sig)) continue;
     if (r.kind === "propose_watch" && watched.has(r.check)) continue;
@@ -264,7 +275,7 @@ export async function runTurn(o) {
       pack: app.pack,
       data: range,
       demo: app.warehouse.demo,
-      events: listEvents(store),
+      events: listEvents(store, app.config),
       context: o.context ?? null,
       lastAnswer: prevAnswers.at(-1) ?? null,
       lastCheck: [...prevAnswers].reverse().find((a) => a.check)?.check ?? null,
@@ -402,10 +413,17 @@ async function modelTurn({ o, ctx, turn, pc, emit, allTurns, range, mode, stoppe
   ctx.onAnswer = (a) => ctx.pending.push(["answer", { answer: a }]);
   ctx.onProposal = (p) => ctx.pending.push(["approval", { proposal: p }]);
   const followupCandidates = [];
+  const routeQuiet = (q) => {
+    try {
+      return route(q, pc);
+    } catch {
+      return null;
+    }
+  };
   ctx.freshFollowups = (own) => {
     const asked = new Set(allTurns.flatMap((t) => [t.question, t.question_text?.en, t.question_text?.tr].filter(Boolean).map(normQ)));
     const out = [];
-    for (const q of own) if (!asked.has(normQ(q.en)) && !asked.has(normQ(q.tr)) && out.length < 3) out.push(q);
+    for (const q of own) if (!asked.has(normQ(q.en)) && !asked.has(normQ(q.tr)) && out.length < 3 && answerable(ctx.app, routeQuiet(q.en))) out.push(q);
     followupCandidates.push(...out);
     return out;
   };

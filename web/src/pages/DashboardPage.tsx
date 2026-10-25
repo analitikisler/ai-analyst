@@ -2,7 +2,7 @@
 // a 12-column grid with rows of at least 180 px; view mode has no controls; edit mode adds the drag handle and the tile menu,
 // and every change is one undoable action (toast with Undo, ⌘Z, Activity).
 import { useEffect, useRef, useState, type DragEvent, type KeyboardEvent } from "react";
-import { Navigate, useLocation, useNavigate, useParams, useSearchParams } from "react-router";
+import { Link, Navigate, useLocation, useNavigate, useParams, useSearchParams } from "react-router";
 import { ChevronDownIcon, LayoutDashboardIcon, MessageSquareTextIcon, PencilIcon } from "lucide-react";
 import { isApiError } from "@/api";
 import { useAppState, useCall, useDashboard } from "@/api/queries";
@@ -47,7 +47,16 @@ export function DashboardsIndex() {
     return (
       <Page className="max-w-[880px]">
         <TopBarContent />
-        <EmptyState bordered icon={LayoutDashboardIcon} title={t.dash.none.title} body={t.dash.none.body} action={<Button onClick={() => setCreating(true)}>{t.dash.none.create}</Button>} />
+        <EmptyState bordered icon={LayoutDashboardIcon} title={t.dash.none.title} body={t.dash.none.body} action={
+            <div className="flex flex-wrap justify-center gap-2">
+              <Button onClick={() => setCreating(true)}>{t.dash.none.create}</Button>
+              {!data.connectors.some((c) => c.status !== "not_connected") && (
+                <Button variant="outline" render={<Link to="/settings/sources" />} nativeButton={false}>
+                  {t.dash.none.connect}
+                </Button>
+              )}
+            </div>
+          } />
         <NewDashboardDialog answerId={creating ? "" : null} onClose={() => setCreating(false)} onCreated={(id) => navigate(`/dashboards/${id}`)} />
       </Page>
     );

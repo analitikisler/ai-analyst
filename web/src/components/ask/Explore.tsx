@@ -77,7 +77,7 @@ export function ExploreWorking({ x, title }: { x: ExploreResult; title: string }
   const f = useFormat();
   const lang = useLang();
   const { data } = useAppState();
-  const demo = data?.source.kind !== "bigquery";
+  const demo = data?.source.kind === "demo";
   const href = demo
     ? `https://github.com/analitikisler/ai-analyst/issues/new?title=${encodeURIComponent(`Metric request: ${title}`)}`
     : `mailto:hello@analitikisler.com?subject=${encodeURIComponent(t.help.subject_metric)}`;

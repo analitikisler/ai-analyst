@@ -1,10 +1,35 @@
 // A demo workspace in a temporary folder, built the way `ai-analyst serve` builds it.
-import { mkdtemp } from "node:fs/promises";
+import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import "../src/actions/index.js";
 import { loadConfig } from "../src/config.js";
 import { openWorkspace } from "../src/workspace.js";
+
+// Every temporary folder a test makes comes from tempDir: it is removed when the process exits, whether the tests
+// passed or failed (node --test runs each file in its own process; bun test runs them all in one).
+const TEMP = new Set();
+const cleanTemp = () => {
+  for (const d of TEMP) {
+    try {
+      rmSync(d, { recursive: true, force: true });
+    } catch {}
+  }
+  TEMP.clear();
+};
+process.once("exit", cleanTemp);
+for (const sig of ["SIGINT", "SIGTERM"]) process.once(sig, () => (cleanTemp(), process.exit(130)));
+
+/** A new empty folder under the system temp dir, removed at exit (or earlier with removeTemp). */
+export function tempDir(prefix = "ai-analyst-") {
+  const d = mkdtempSync(path.join(tmpdir(), prefix));
+  TEMP.add(d);
+  return d;
+}
+export function removeTemp(d) {
+  rmSync(d, { recursive: true, force: true });
+  TEMP.delete(d);
+}
 
 /** Model keys and settings from the caller's shell must never reach a test: only these variables are seen. */
 export const testEnv = (extra = {}) => ({ ...extra });
@@ -14,7 +39,7 @@ export const testEnv = (extra = {}) => ({ ...extra });
  *   events). The rest go to openWorkspace (modelClient, fetch, bigQueryTester, anthropicFactory stubs).
  */
 export async function demoWorkspace({ seed = true, env = {}, ...opts } = {}) {
-  const dir = await mkdtemp(path.join(tmpdir(), "ai-analyst-"));
+  const dir = tempDir("ai-analyst-");
   const config = loadConfig({ env: testEnv({ AI_ANALYST_DATA_DIR: dir, ...env }), cwd: dir });
   const ws = await openWorkspace(config, { seed: true, workspace: seed, ...opts });
   ws.dir = dir;

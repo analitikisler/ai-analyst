@@ -244,7 +244,7 @@ test("B7: missing (NULL) data is never zero: SUM keeps NULL, a check side with n
   assert.equal(c.expected.value, 240);
   assert.equal(c.delta, null);
   assert.equal(c.delta_pct, null);
-  assert.match(c.reason.en, /No data for ga4 purchases/i);
+  assert.match(c.reason.en, /No data for GA4 purchases/);
   assert.ok(c.breakdown.every((b) => b.verdict === "insufficient_data" && b.measured === null && b.reason));
   assert.ok(c.series.every((p) => p.measured === null));
   const store = ws.store;

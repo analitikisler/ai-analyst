@@ -6,6 +6,7 @@ import { preferences } from "../settings.js";
 import { newId } from "../store/store.js";
 import { ACT } from "../text.js";
 import { addWatch } from "./data.js";
+import { sourceKindOf } from "./events.js";
 import { defineAction } from "./registry.js";
 
 export const conversationSummary = (store, c) => ({ id: c.id, title: c.title ?? "", title_text: c.title_text ?? null, created_at: c.created_at, updated_at: c.updated_at, turns: store.listTurns(c.id).length });
@@ -64,7 +65,7 @@ defineAction({
       if (p.kind === "watch" && p.payload.check) addWatch(ctx, p.payload.check, "agent");
       if (p.kind === "pin" && p.payload.answer_id) pinAnswer(ctx, p.payload.answer_id, p.payload.dashboard_id, "person");
       if (p.kind === "event" && p.payload.event) {
-        const ev = ctx.store.put("events", { ...p.payload.event, id: newId("ev"), source: "agent" });
+        const ev = ctx.store.put("events", { ...p.payload.event, id: newId("ev"), source: "agent", data_source: sourceKindOf(ctx.app.config) });
         ctx.log(ACT.event_added(ev.title), { kind: "event_add", event_id: ev.id }, { action: "save_event" });
       }
     }

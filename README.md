@@ -53,7 +53,10 @@ node src/cli.js seed-demo        # rebuilds the demo and starts a fresh workspac
   by the agent to explain gaps and spikes.
 - **Tracking audit**: a failing GA4 check offers "Test the purchase journey", which hands the journey, device and
   site to AI Tag Debugger and links its finding back to the check.
-- **Settings**: data source, model, chat apps, events, language and theme, help, activity.
+- **Sources**: connect GA4, an orders file (CSV or Excel), or Shopify or WooCommerce, and the app builds its
+  data from them on this machine. BigQuery and the demo stay available. Other connectors are on the Analitik
+  İşler Cloud waitlist.
+- **Settings**: sources, model, chat apps, events, language and theme, help, activity.
 
 ## Models
 
@@ -77,7 +80,7 @@ for each). The chat app's model does the thinking; AI Analyst supplies the metri
 ## Exploratory answers
 
 With a model, questions the metric pack does not cover get an exploratory answer: the model writes one read-only
-query against the tables it may read. By default that is the mart alone. In Settings › Data source › "Tables the
+query against the tables it may read. By default that is the mart alone. In Settings › Sources › "Tables the
 agent may read" you can add datasets (every table in them, also ones added later) or single tables, in the mart's
 location; `AI_ANALYST_EXPLORE_ALLOW` sets the list on the server and locks it. On the demo, one click adds the demo
 shop's own tables (orders, order lines, products, returns), generated from the same seed as the mart so their
@@ -98,7 +101,8 @@ Settings › Model turns exploratory answers off.
 AI Analyst is free and open source under the MIT licence. **Analitik İşler Cloud** runs it for teams that would
 rather not run it themselves, and adds what is hard to do alone:
 
-- managed connectors for Google Ads, Meta, TikTok, ikas and Ticimax, and Google Tag Manager event import
+- managed connectors, on the waitlist: Meta Ads, Google Ads, TikTok Ads, ikas, Ticimax, Search Console and
+  Google Tag Manager (Settings › Sources has a "Join the waitlist" button for each)
 - curated metric packs per store platform, with each client's expected gap learned from its own history, and
   curated table descriptions for exploratory answers on ikas, Ticimax and Shopify data
 - scheduled tracking checks with alert emails
@@ -115,7 +119,8 @@ With early-access credentials, set `AI_ANALYST_CLOUD_URL` and `AI_ANALYST_CLOUD_
 ## Privacy
 
 A self-hosted copy sends no usage data, telemetry or update checks to anyone. The only outbound calls are to the
-warehouse you configure and the model provider you choose (Anthropic, OpenAI, Google, or the base URL you set;
+warehouse or the sources you connect (BigQuery, the GA4 Data API, your Shopify or WooCommerce shop), the model
+provider you choose (Anthropic, OpenAI, Google, or the base URL you set;
 `ANTHROPIC_BASE_URL` is honoured), and to Analitik İşler Cloud only if you set its credentials. Links the person
 clicks, such as the help email or "request this metric" on GitHub, open in their own mail app or browser with the
 question filled in. Fonts are served by the app itself.
@@ -126,24 +131,31 @@ that means aggregated figures by day, channel and device, never order-level or p
 order or customer tables, the model can see rows from them (at most 200 per query); prefer aggregates, and keep
 contact data in protected columns.
 
-Protected column values never leave the warehouse. A query may use a protected column in two places only: as a
-join key compared with a column of an allowed table (`a.email = b.email`, both qualified, or `USING (email)`),
-also inside a parenthesised join, or alone inside `COUNT(DISTINCT …)`. Anywhere else it is refused before the query runs: selected, read through `*`, an alias, a
-CTE or a subquery, grouped or ordered by, used in `WHERE`, `HAVING`, `QUALIFY` or a join condition against a value,
-inside `CASE`, `LIKE`, `IN`, `COUNTIF` or any function. So what can leave about a protected column is the number
-of its distinct values in a group. A self-join, or a join to any column of an allowed table, is allowed; it tells whether values are equal, never what they are. A query that uses a protected column cannot contain a CTE or a subquery. When you add a table, the server proposes protected columns by name, compound
-names included (`customer_email`, `contact_phone`, `client_ip`, Turkish `eposta`, `telefon`, `ad`, `soyad`,
-`adres`, `dogum_tarihi`): email, phone, names, addresses, postcodes, IP addresses, birth dates, national ids,
-IBAN and card numbers, and precise location. You confirm the list in Settings › Data source. Protection is by
+Protected column values never leave the warehouse. A query may use a protected column in two places only: as a join
+key compared with a column of an allowed table (`a.email = b.email`, both qualified, or `USING (email)`), also
+inside a parenthesised join, or alone inside `COUNT(DISTINCT …)`. Anywhere else it is refused before the query
+runs: selected, read through `*`, an alias, a CTE or a subquery, grouped or ordered by, used in `WHERE`, `HAVING`,
+`QUALIFY` or a join condition against a value, inside `CASE`, `LIKE`, `IN`, `COUNTIF` or any function. So what can
+leave about a protected column is the number of its distinct values in a group. A self-join, or a join to any
+column of an allowed table, is allowed; it tells whether values are equal, never what they are. A query that uses a
+protected column cannot contain a CTE or a subquery. When you add a table, the server proposes protected columns by
+name, compound names included (`customer_email`, `contact_phone`, `client_ip`, Turkish `eposta`, `telefon`, `ad`,
+`soyad`, `adres`, `dogum_tarihi`): email, phone, names, addresses, postcodes, IP addresses, birth dates, national
+ids, IBAN and card numbers, and precise location. You confirm the list in Settings › Sources. Protection is by
 column name, so a column with an unusual name, or a view that renames one, is not protected until you add it; a
 view is readable only when you add it by name. There is no masking yet.
 
-By default customer and user ids, city, age and gender stay readable. Per-customer rows without contact data
-(such as an order history by customer id) can therefore reach the model provider, at most 200 rows per query, and
-are stored on this machine, at most 1,000 rows per query. A query's result is deleted after 30 days (checked at
-start and once a day), but an answer published from it keeps its rows in the app database (`app.db` in the data
-folder) until that file is deleted. Protect those columns in Settings › Data source if they should not leave. Column descriptions in the warehouse reach the model as data;
-whoever can edit them can write text the model reads.
+By default customer and user ids, city, age and gender stay readable. Per-customer rows without contact data (such
+as an order history by customer id) can therefore reach the model provider, at most 200 rows per query, and are
+stored on this machine, at most 1,000 rows per query. A query's result is deleted after 30 days (checked at start
+and once a day), but an answer published from it keeps its rows in the app database (`app.db` in the data folder)
+until that file is deleted. Protect those columns in Settings › Sources if they should not leave. Column
+descriptions in the warehouse reach the model as data; whoever can edit them can write text the model reads.
+
+Connected sources store daily totals only: orders, revenue, sessions, GA4 purchases and GA4 revenue by day, channel
+and device. No order rows, names, emails, addresses or phone numbers are stored. An uploaded orders file is deleted
+once its totals are written; WooCommerce sends each order's custom fields, which the app drops on arrival. For a
+shop with very few orders, one day's total for a channel and device can be a single order.
 
 `AI_ANALYST_NO_CLOUD=1` (or `serve --no-cloud`) blocks every outbound call; tests and `bun run dev` set it by
 default.
@@ -171,14 +183,19 @@ than the list. Details in `docs/CONTRACT.md`. To report a security problem, see 
 
 ## Real data
 
-`docs/connecting-bigquery.md` covers connecting a client's GA4 export, Google Ads transfer, back-office orders
-and ad costs in BigQuery, with the SQL in `models/` that builds the mart every metric reads. Connect it in
-Settings › Data source, or set `AI_ANALYST_WAREHOUSE=bigquery`, `BIGQUERY_PROJECT`, `BIGQUERY_DATASET` and, for
-jobs billed to another project, `BIGQUERY_JOB_PROJECT`. A service account scoped to the mart's dataset (and any dataset
-you allow for exploratory answers) is the safest credential. Every BigQuery job runs a dry run first and carries a bytes-billed cap (`BIGQUERY_MAX_BYTES`,
-2 GB by default).
+**Your shop, without a warehouse.** `docs/connecting-your-shop.md` covers giving the app read access to GA4,
+exporting orders from ikas, Ticimax, Shopify or WooCommerce, and creating a read-only Shopify token or WooCommerce
+key. Connect them in Settings › Sources. With GA4 and orders connected, the GA4 tracking check runs on your own
+data; ROAS and the ad-platform checks need ad data, which comes with BigQuery or the Cloud connectors.
 
-Money is written in Turkish lira (TL) by default. For data in another currency, pick it in Settings › Data source ›
+**BigQuery.** `docs/connecting-bigquery.md` covers connecting a client's GA4 export, Google Ads transfer,
+back-office orders and ad costs in BigQuery, with the SQL in `models/` that builds the mart every metric reads.
+Connect it in Settings › Sources, or set `AI_ANALYST_WAREHOUSE=bigquery`, `BIGQUERY_PROJECT`, `BIGQUERY_DATASET`
+and, for jobs billed to another project, `BIGQUERY_JOB_PROJECT`. A service account scoped to the mart's dataset
+(and any dataset you allow for exploratory answers) is the safest credential. Every BigQuery job runs a dry run
+first and carries a bytes-billed cap (`BIGQUERY_MAX_BYTES`, 2 GB by default).
+
+Money is written in Turkish lira (TL) by default. For data in another currency, pick it in Settings › Sources ›
 Currency (TRY, USD, EUR, GBP or any ISO 4217 code) or set `AI_ANALYST_CURRENCY=USD`, which locks it. Answers,
 cards, charts and the model's prompt all follow it.
 
@@ -207,11 +224,14 @@ cards, charts and the model's prompt all follow it.
 - An `fbclid` alone is counted as Meta Ads, though organic Meta clicks carry one too.
 - ROAS by last non-direct click needs the store to keep UTMs on each order.
 - The GA4 revenue check closes only if GA4 `value` includes VAT and excludes shipping.
-- The model providers and the BigQuery connection test are tested against stubbed clients; they have not run
-  against the real services yet.
-- On demo data the GTM import and the tracking audit are simulated. On own data the audit is handed to AI Tag
-  Debugger through a chat app, and GTM import is not available yet.
-- Not built yet: Meta, TikTok and Search Console connectors, scheduled alert delivery, multi-workspace hosting.
+- The GA4, Shopify and WooCommerce connectors, the OpenAI, Gemini and OpenAI-compatible models and the BigQuery
+  connection test are tested against stubbed services only; they have not run against the real ones yet. The
+  ikas, Ticimax and WooCommerce export steps in the guide are marked where they are unverified.
+- The orders file and the shop connectors give no ad spend, so ROAS, CPA and the ad-platform checks say no data
+  on a shop connected that way.
+- On demo data the tracking audit is simulated. On own data it is handed to AI Tag Debugger through a chat app.
+- Not built in the open-source app: Meta, Google Ads, TikTok, ikas, Ticimax, Search Console and Google Tag
+  Manager connectors (on the Cloud waitlist), scheduled alert delivery, multi-workspace hosting.
 
 ## Licence and trademarks
 

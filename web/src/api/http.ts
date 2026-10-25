@@ -1,8 +1,8 @@
 // The ai-analyst server (src/server.js), same origin, per docs/CONTRACT.md 0.2. In dev, Vite proxies /api to API_URL
 // (http://127.0.0.1:8788). A server that is not running surfaces as ApiError "network", one that answers with HTML or
 // nothing as "http_error" with its status, so every screen can say which it is.
-import { ApiError, type Api, type AskHandle } from "./client";
-import type { ActionResponse, AppState, AskEvent, AskRequest } from "./types";
+import { ApiError, ORDERS_FILE_TYPES, ordersKindOf, type Api, type AskHandle } from "./client";
+import type { ActionResponse, AppState, AskEvent, AskRequest, OrdersUpload } from "./types";
 
 const JSON_HEADERS = { "Content-Type": "application/json" };
 
@@ -68,6 +68,21 @@ export function createHttpApi(base = ""): Api {
       });
       const body = (await res.json().catch(() => null)) as ActionResponse<never> | null;
       if (!body) throw new ApiError("http_error", `The server answered ${res.status}.`, res.status);
+      if (!body.ok) throw new ApiError(body.error.code, body.error.message ?? body.error.code, res.status, body.error.params);
+      return body.result;
+    },
+
+    async uploadOrders(file, lang) {
+      const kind = ordersKindOf(file.name);
+      if (!kind) throw new ApiError("upload_kind", "Choose a CSV or XLSX file.", 415);
+      // The raw file as the body (not JSON), so a 25 MB export never meets the JSON size limit.
+      const res = await request(`${base}/api/uploads/orders`, {
+        method: "POST",
+        headers: { "Content-Type": ORDERS_FILE_TYPES[kind], "X-File-Name": encodeURIComponent(file.name), "Accept-Language": lang },
+        body: file,
+      });
+      const body = (await res.json().catch(() => null)) as ActionResponse<OrdersUpload> | null;
+      if (!body) throw new ApiError(res.status === 413 ? "upload_too_large" : "http_error", `The server answered ${res.status}.`, res.status);
       if (!body.ok) throw new ApiError(body.error.code, body.error.message ?? body.error.code, res.status, body.error.params);
       return body.result;
     },

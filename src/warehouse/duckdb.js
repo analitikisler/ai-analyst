@@ -59,8 +59,8 @@ function normalizeAny(row) {
  * @param {string} file path to the .duckdb file
  * @returns {Promise<import("./index.js").Warehouse>}
  */
-export async function openDuckDB(file) {
-  if (!existsSync(file)) throw new Error(`No demo warehouse at ${file}. Run: ai-analyst seed-demo`);
+export async function openDuckDB(file, { local = false } = {}) {
+  if (!existsSync(file)) throw new Error(local ? `No synced data at ${file} yet. Connect a source in Settings › Sources.` : `No demo warehouse at ${file}. Run: ai-analyst seed-demo`);
   const { DuckDBInstance } = await import("@duckdb/node-api");
   // Read-only, so a second process (the MCP server next to the web server) can open it too.
   const instance = await DuckDBInstance.create(file, { access_mode: "READ_ONLY", enable_external_access: "false", lock_configuration: "true" });
@@ -117,7 +117,9 @@ export async function openDuckDB(file) {
   return {
     dialect: "duckdb",
     table: MART.model,
-    demo: true,
+    // local: the person's own shop, fed by the connectors (warehouse.duckdb); else the demo.
+    demo: !local,
+    local,
     query,
     /** The tables the demo file holds. */
     tables: () => [...present],

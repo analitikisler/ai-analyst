@@ -3,18 +3,17 @@ import "./setup.js";
 import { test, before, after } from "node:test";
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
-import { mkdtemp, mkdir, writeFile } from "node:fs/promises";
+import { mkdir, writeFile } from "node:fs/promises";
 import { request } from "node:http";
-import { tmpdir } from "node:os";
 import path from "node:path";
 import { startServer } from "../src/server.js";
-import { demoWorkspace } from "./helpers.js";
+import { demoWorkspace, tempDir } from "./helpers.js";
 
 const THEME = "\n(function () { document.documentElement.dataset.t = 'x'; })();\n";
 let ws, server, base, port, webDir;
 before(async () => {
   ws = await demoWorkspace({ seed: true });
-  webDir = await mkdtemp(path.join(tmpdir(), "web-"));
+  webDir = tempDir("web-");
   await mkdir(path.join(webDir, "assets"));
   await writeFile(path.join(webDir, "index.html"), `<!doctype html><title>AI Analyst</title><script>${THEME}</script><script type="module" src="/assets/index-AbCdEf12.js"></script>`);
   await writeFile(path.join(webDir, "assets", "index-AbCdEf12.js"), "export {};");
@@ -60,7 +59,9 @@ test("GET /api/state: the AppState of the contract", async () => {
   const res = await raw("GET", "/api/state");
   assert.equal(res.status, 200);
   const s = res.json;
-  assert.deepEqual(Object.keys(s).sort(), ["activity", "agent", "audit_fixed", "audits", "badges", "check_run", "checks", "conversations", "currency", "dashboards", "events", "host_is_loopback", "metric_proposals", "offer", "pins", "preferences", "proposals", "source", "watches", "workspace"]);
+  assert.deepEqual(Object.keys(s).sort(), ["activity", "agent", "audit_fixed", "audits", "badges", "check_run", "checks", "connectors", "conversations", "currency", "dashboards", "events", "host_is_loopback", "metric_proposals", "offer", "pins", "preferences", "proposals", "source", "waitlist", "watches", "workspace"]);
+  assert.deepEqual(s.connectors.map((c) => [c.id, c.status]), [["ga4", "not_connected"], ["orders_file", "not_connected"], ["shopify", "not_connected"], ["woocommerce", "not_connected"]]);
+  assert.deepEqual(s.waitlist.map((w) => w.id), ["meta_ads", "google_ads", "tiktok_ads", "ikas", "ticimax", "search_console", "gtm"]);
   assert.deepEqual(s.workspace, { name: "Örnek Moda", demo: true, data_from: "2026-07-25", data_to: "2026-10-22", refreshed_at: s.workspace.refreshed_at, rows: 1080 });
   assert.deepEqual(s.source, { kind: "demo", label: { en: "Demo data", tr: "Demo veri" }, project: null, table: null, error: null });
   assert.equal(s.agent.mode, "planner");
@@ -162,7 +163,7 @@ test("static files: hashed assets cached for a year, app routes get index.html, 
 });
 
 test("without a built web app the page says how to build it", async () => {
-  const empty = await mkdtemp(path.join(tmpdir(), "web-empty-"));
+  const empty = tempDir("web-empty-");
   const s = await startServer({ ...ws, config: { ...ws.config, port: 0 } }, { webDir: empty });
   const res = await raw("GET", "/", { srv: s.address().port, headers: { Host: `127.0.0.1:${s.address().port}` } });
   s.close();

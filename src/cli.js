@@ -8,6 +8,8 @@ import { loadConfig, workspaceName } from "./config.js";
 import { fmtPct } from "./format.js";
 import { startMcp } from "./mcp.js";
 import { startServer } from "./server.js";
+import { startDailySync } from "./connectors/index.js";
+import { pruneUploads } from "./connectors/uploads.js";
 import { openWorkspace, resetDemo } from "./workspace.js";
 
 const HELP = `ai-analyst · analytics you can ask, with every number checked · Analitik İşler
@@ -82,7 +84,13 @@ async function main(argv) {
     const prune = setInterval(() => ws.store.pruneExplore(30), 24 * HOUR);
     prune.unref();
     timer.unref();
+    // Connected sources (GA4, Shopify, WooCommerce) sync once a day while the server runs; uploads go after an hour.
+    const daily = startDailySync(ws);
+    pruneUploads(ws);
+    const uploads = setInterval(() => pruneUploads(ws), HOUR);
+    uploads.unref();
     const stop = () => {
+      daily.stop();
       clearInterval(timer);
       clearInterval(prune);
       server.close();

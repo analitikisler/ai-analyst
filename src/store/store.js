@@ -27,8 +27,13 @@ const TABLES = {
   audits: [],
   chat_calls: [],
   bq_tests: [],
+  // Connectors: daily aggregates only (id: table|source|date|channel|device), connection tests, uploads.
+  landing: ["source TEXT"],
+  connector_tests: [],
+  uploads: [],
 };
 const COLLECTIONS = new Set(Object.keys(TABLES));
+const KEEP_ON_RESET = new Set(["landing"]);
 
 export class Store {
   /** @param {string} file a path, or ":memory:" */
@@ -49,11 +54,16 @@ export class Store {
     this.db.close();
   }
 
-  /** Empties everything a workspace holds; keeps preferences (meta) when asked. */
+  /**
+   * Empties everything a workspace holds; keeps preferences (meta) when asked. The connectors' data (landing rows,
+   * the days they covered, connector states) is the person's own and is never emptied by a demo reset.
+   */
   reset({ keepMeta = [] } = {}) {
     const kept = keepMeta.map((k) => [k, this.getMeta(k)]);
-    for (const name of Object.keys(TABLES)) this.db.exec(`DELETE FROM ${name}`);
+    const own = this.db.prepare("SELECT id, created_at, body FROM meta WHERE id LIKE 'landing_days:%' OR id LIKE 'connector:%'").all();
+    for (const name of Object.keys(TABLES)) if (!KEEP_ON_RESET.has(name)) this.db.exec(`DELETE FROM ${name}`);
     for (const [k, v] of kept) if (v != null) this.setMeta(k, v);
+    for (const r of own) this.db.prepare("INSERT OR REPLACE INTO meta (id, created_at, body) VALUES (?, ?, ?)").run(r.id, r.created_at, r.body);
   }
 
   // --- generic -----------------------------------------------------------------

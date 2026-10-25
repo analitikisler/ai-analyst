@@ -2,7 +2,7 @@
 // "Import from GTM", scripted in the prototype. `?edit=<id>` (the chart popover's Edit) opens that event.
 import { useEffect, useState } from "react";
 import { useSearchParams } from "react-router";
-import { PencilIcon, PlusIcon, Trash2Icon, UploadIcon } from "lucide-react";
+import { PencilIcon, PlusIcon, Trash2Icon } from "lucide-react";
 import { useAppState, useCall } from "@/api/queries";
 import type { ChartEvent, EventType } from "@/api/types";
 import { EVENT_ICON } from "@/components/charts/events";
@@ -10,7 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { NativeSelect, NativeSelectOption } from "@/components/ui/native-select";
-import { plural, useBilingual, useLang, useT } from "@/i18n";
+import { useBilingual, useT } from "@/i18n";
 import { useFormat } from "@/lib/format";
 import { notify } from "@/lib/notify";
 
@@ -19,15 +19,12 @@ const TYPES: EventType[] = ["release", "campaign", "tag_change", "price_change",
 export function EventsList() {
   const t = useT();
   const f = useFormat();
-  const lang = useLang();
   const pick = useBilingual();
   const call = useCall();
   const { data } = useAppState();
   const [params, setParams] = useSearchParams();
   const [editing, setEditing] = useState<ChartEvent | "new" | null>(null);
   const events = [...(data?.events ?? [])].sort((a, b) => b.date.localeCompare(a.date));
-  // The GTM import is simulated on demo data; on own data it needs the Google Tag Manager API (Cloud).
-  const ownData = data?.source.kind === "bigquery";
   const editParam = params.get("edit");
   useEffect(() => {
     if (!editParam || !data) return;
@@ -55,10 +52,6 @@ export function EventsList() {
     const r = await call("delete_event", { id: ev.id });
     undoable(t.events.deleted, r.activity_id);
   };
-  const importGtm = async () => {
-    const r = await call("import_gtm_events", {});
-    undoable(plural(lang, 3, t.events.imported, { n: 3 }), r.activity_id);
-  };
   return (
     <div className="flex flex-col gap-3 px-4 py-3">
       <div className="flex flex-wrap items-center gap-2">
@@ -66,11 +59,6 @@ export function EventsList() {
           <PlusIcon strokeWidth={1.75} data-icon="inline-start" />
           {t.events.add}
         </Button>
-        <Button variant="outline" size="sm" disabled={ownData} onClick={() => void importGtm()}>
-          <UploadIcon strokeWidth={1.75} data-icon="inline-start" />
-          {t.events.import}
-        </Button>
-        <span className="text-2xs text-text-muted">{ownData ? t.events.import_unavailable : t.events.import_note}</span>
       </div>
       {events.length ? (
         <ul className="divide-y divide-border rounded-md border border-border">

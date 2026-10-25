@@ -6,6 +6,7 @@ import path from "node:path";
 import { buildDemoWarehouse } from "../demo/seed.js";
 import { openBigQuery } from "./bigquery.js";
 import { openDuckDB } from "./duckdb.js";
+import { buildLocalWarehouse, localFile } from "../connectors/local.js";
 
 /**
  * @typedef {object} Warehouse
@@ -48,6 +49,11 @@ export function withCache(wh, { ttlMs = 5 * 60 * 1000, max = 500 } = {}) {
 /** @returns {Promise<{ warehouse: Warehouse, seeded: boolean }>} seeded: the demo mart was built just now. */
 export async function openWarehouse(config, { seedIfMissing = false, bigQueryClient } = {}) {
   if (config.warehouse === "bigquery") return { warehouse: withCache(await openBigQuery(config.bigquery, { client: bigQueryClient })), seeded: false };
+  if (config.warehouse === "local") {
+    // The file is rebuilt from the app database on every sync; when it is missing, an empty mart until the next one.
+    if (!existsSync(localFile(config))) await buildLocalWarehouse(config, null);
+    return { warehouse: withCache(await openDuckDB(localFile(config), { local: true })), seeded: false };
+  }
   const file = demoFile(config);
   let seeded = false;
   if (!existsSync(file) && seedIfMissing) {

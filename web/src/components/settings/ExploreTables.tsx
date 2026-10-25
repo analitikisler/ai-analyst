@@ -1,4 +1,4 @@
-// Settings › Data source › Tables the agent may read (docs/design/multi-table-queries.md). The mart is always on the
+// Settings › Sources › Tables the agent may read (docs/design/multi-table-queries.md). The mart is always on the
 // list; the person adds datasets (every table in them, also later ones) or single tables, in the mart's location,
 // removes them, confirms each table's protected columns and writes a one-line description the agent sees. Every
 // change is a settings change (this machine only) and lands in Activity. AI_ANALYST_EXPLORE_ALLOW locks the list.
@@ -61,6 +61,14 @@ export function ExploreTables({ s }: { s: Settings }) {
     return plural(lang, m.tables, c.meta, { n: f.int(m.tables), rows: f.int(m.rows), bytes: m.bytes == null ? "–" : f.bytes(m.bytes), date: m.modified ? f.date(m.modified.slice(0, 10), true) : "–", location: m.location ?? "–" });
   };
 
+  // On the shop's data (connectors) exploratory answers read the mart only: there are no other tables to allow.
+  if (s.data_source.kind.value === "local")
+    return (
+      <div className="flex flex-col gap-2">
+        <p className="font-mono text-[13px] text-text">daily_channel_device</p>
+        <p className="text-[13px] text-text-muted">{c.local_only}</p>
+      </div>
+    );
   return (
     <div className="flex flex-col gap-3">
       {locked && (

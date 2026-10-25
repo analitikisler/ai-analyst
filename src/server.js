@@ -18,11 +18,16 @@ import { runTurn } from "./agent/agent.js";
 import { ROOT } from "./config.js";
 import { AppError } from "./errors.js";
 import { buildState } from "./state.js";
+import { createUpload, receiveUpload } from "./connectors/uploads.js";
 
 export const MAX_BODY_BYTES = 1024 * 1024;
 const LOOPBACK_HOSTS = new Set(["127.0.0.1", "localhost", "::1", "[::1]"]);
 const LOOPBACK_ADDR = new Set(["127.0.0.1", "::1", "::ffff:127.0.0.1"]);
 const COOKIE = "ai_analyst_token";
+// application/vnd.ms-excel: what browsers on Windows send for a .csv when Excel is installed. It is read as CSV; a
+// real .xls (binary) file is refused by fileKind as upload_kind.
+const UPLOAD_TYPES = new Set(["text/csv", "application/vnd.ms-excel", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", "application/octet-stream"]);
+const CSV_TYPES = new Set(["text/csv", "application/vnd.ms-excel"]);
 
 const TYPES = {
   ".html": "text/html; charset=utf-8",
@@ -47,7 +52,7 @@ const TYPES = {
 };
 
 const BASE_HEADERS = { "X-Content-Type-Options": "nosniff", "Referrer-Policy": "no-referrer", "X-Frame-Options": "DENY", "Cross-Origin-Opener-Policy": "same-origin", "Cross-Origin-Resource-Policy": "same-origin" };
-const STATUS = { not_found: 404, unknown_action: 404, forbidden: 403, loopback_only: 403, unauthorized: 401, too_large: 413, bad_request: 400, invalid_input: 400, unsupported_media: 415, locked: 409, not_pending: 409, already_undone: 409, undo_gone: 409, only_one: 409, test_required: 409, no_cloud: 503, over_ceiling: 409, no_data: 409, unavailable: 409, source_unavailable: 503, not_undoable: 409, bytes_cap: 422, sql_location_mismatch: 409, sql_table_not_allowed: 409 };
+const STATUS = { not_found: 404, unknown_action: 404, forbidden: 403, loopback_only: 403, unauthorized: 401, too_large: 413, bad_request: 400, invalid_input: 400, unsupported_media: 415, locked: 409, not_pending: 409, already_undone: 409, undo_gone: 409, only_one: 409, test_required: 409, no_cloud: 503, over_ceiling: 409, no_data: 409, unavailable: 409, source_unavailable: 503, not_undoable: 409, bytes_cap: 422, sql_location_mismatch: 409, sql_table_not_allowed: 409, upload_too_large: 413, upload_kind: 415, file_unreadable: 422, upload_not_found: 404, mapping_invalid: 422, currency_mismatch: 422, connector_not_connected: 409, sync_running: 409, scope_write: 422, scope_extra: 422, scope_unchecked: 422, property_not_found: 422, host_not_allowed: 422, shop_unreachable: 502, key_rejected: 422, rate_limited: 429 };
 
 const json = (res, status, body, extra = {}) => {
   res.writeHead(status, { ...BASE_HEADERS, "Content-Type": "application/json; charset=utf-8", "Cache-Control": "no-store", ...extra });
@@ -282,6 +287,21 @@ export function createHandler(app, opts = {}) {
     const loopback = LOOPBACK_ADDR.has(req.socket.remoteAddress) && !proxied;
     try {
       if (!guard(req, res, url)) return;
+      // An orders file: the raw CSV or XLSX as the body, streamed to <data_dir>/uploads/ (25 MB at most). Content
+      // types a cross-site form cannot send (text/csv and the XLSX type need a preflight, never answered here).
+      if (pathname === "/api/uploads/orders" && req.method === "POST") {
+        if (!loopback) return fail(res, 403, "loopback_only", "Files can only be uploaded from this machine.");
+        const ct = String(req.headers["content-type"] ?? "").toLowerCase().split(";")[0].trim();
+        if (!UPLOAD_TYPES.has(ct)) return fail(res, 415, "unsupported_media", "Send the file as CSV (text/csv) or as an XLSX file.");
+        let name = "";
+        try {
+          name = decodeURIComponent(String(req.headers["x-file-name"] ?? "")).replace(/[\u0000-\u001f/\\]/g, "").slice(0, 200);
+        } catch {}
+        const ext = CSV_TYPES.has(ct) ? "csv" : "xlsx";
+        const { file, size } = await receiveUpload(app, req, ext);
+        return json(res, 200, { ok: true, result: await createUpload(app, { file, size, fileName: name || `orders.${ext}` }) });
+      }
+
       if (req.method === "POST") {
         const ct = String(req.headers["content-type"] ?? "").toLowerCase();
         const hasBody = Number(req.headers["content-length"] ?? 0) > 0 || req.headers["transfer-encoding"];
@@ -295,7 +315,7 @@ export function createHandler(app, opts = {}) {
 
       if (pathname === "/api/state" && req.method === "GET") return json(res, 200, await buildState(app, { loopback }));
 
-      const action = pathname.match(/^\/api\/actions\/([a-z_]{1,64})$/);
+      const action = pathname.match(/^\/api\/actions\/([a-z][a-z0-9_]{0,63})$/);
       if (action && req.method === "POST") {
         const body = await readJson(req);
         if (!registry.has(action[1])) return fail(res, 404, "unknown_action", `Unknown action "${action[1]}".`);

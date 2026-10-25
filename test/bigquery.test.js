@@ -78,7 +78,7 @@ test("config: env first, then the config file, with the CONTRACT defaults", () =
   assert.equal(c.anthropicApiKey, null);
   const e = loadConfig({ env: { AI_ANALYST_WAREHOUSE: "bigquery", BIGQUERY_PROJECT: "p-12345", AI_ANALYST_MODEL: "claude-sonnet-5-5", PORT: "9000" }, cwd: "/nonexistent" });
   assert.deepEqual([e.warehouse, e.bigquery.project, e.model, e.port], ["bigquery", "p-12345", "claude-sonnet-5-5", 9000]);
-  assert.throws(() => loadConfig({ env: { AI_ANALYST_WAREHOUSE: "snowflake" }, cwd: "/nonexistent" }), /duckdb or bigquery/);
+  assert.throws(() => loadConfig({ env: { AI_ANALYST_WAREHOUSE: "snowflake" }, cwd: "/nonexistent" }), /duckdb, bigquery or local/);
 });
 
 test("config: the help email is on by default, can be redirected or turned off; Cloud needs env only", () => {

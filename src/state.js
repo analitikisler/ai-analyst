@@ -8,6 +8,7 @@ import { listOverlay } from "./metrics/overlay.js";
 import { preferences } from "./settings.js";
 import { SOURCE_LABEL } from "./text.js";
 import { workspaceName } from "./config.js";
+import { connectorStates, remoteStates, waitlist } from "./connectors/index.js";
 
 /** A finding confirmed by a failing audit of its check says so, even on a run stored before the audit. */
 function withAudit(store, c) {
@@ -34,13 +35,15 @@ export async function buildState(app, { loopback = true } = {}) {
   const proposals = store.list("proposals", { order: "ASC" });
   const dashboards = listDashboards(store);
   const bq = config.bigquery;
-  const bigquery = !app.warehouse.demo;
+  const local = Boolean(app.warehouse.local);
+  const bigquery = !app.warehouse.demo && !local;
+  const own = bigquery || local;
   const overlayIds = new Set(listOverlay(config.dataDir).map((m) => m.id));
   return {
     workspace: ws,
     source: {
-      kind: bigquery ? "bigquery" : "demo",
-      label: bigquery ? SOURCE_LABEL.bigquery(bq.project) : SOURCE_LABEL.demo,
+      kind: local ? "local" : bigquery ? "bigquery" : "demo",
+      label: local ? SOURCE_LABEL.local : bigquery ? SOURCE_LABEL.bigquery(bq.project) : SOURCE_LABEL.demo,
       project: bigquery ? bq.project : null,
       table: bigquery ? `${bq.project}.${bq.dataset}` : null,
       error: sourceError,
@@ -49,7 +52,7 @@ export async function buildState(app, { loopback = true } = {}) {
     currency: config.currency,
     agent: agentMode(app),
     // The "find the cause" email is offered on own data only; the demo's gap is planted.
-    offer: { help_email: bigquery && config.help ? config.help.email : null, cloud_email: "hello@analitikisler.com" },
+    offer: { help_email: own && config.help ? config.help.email : null, cloud_email: "hello@analitikisler.com" },
     preferences: preferences(store),
     badges: { checks_changed: watches.filter((w) => w.changed).length, waiting: proposals.filter((p) => p.status === "pending").length },
     dashboards: dashboards.map((d) => ({ id: d.id, name: d.name, example: d.example, tiles: d.tiles.length })),
@@ -61,10 +64,14 @@ export async function buildState(app, { loopback = true } = {}) {
     proposals,
     conversations: store.listConversations().map((c) => conversationSummary(store, c)),
     host_is_loopback: loopback,
-    events: listEvents(store),
+    events: listEvents(store, app.config),
     audits: store.list("audits", { limit: 10 }),
     // The prototype's "Simulate the tracking fix" does not exist here.
     audit_fixed: false,
+    // The sources that feed the local source, and the connectors planned for Analitik İşler Cloud.
+    // From another machine: no shop domain, property or file name (security review 3, L7).
+    connectors: loopback ? connectorStates(app) : remoteStates(app),
+    waitlist: waitlist(),
     metric_proposals: store.list("metric_proposals").filter((m) => m.status === "proposed" && !overlayIds.has(m.id)).length,
   };
 }

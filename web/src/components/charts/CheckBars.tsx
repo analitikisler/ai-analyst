@@ -7,8 +7,15 @@ import { useBilingual, useT } from "@/i18n";
 import { useFormat } from "@/lib/format";
 import { ChartLegend } from "./common";
 
+/** A source with no device split (all unknown): the check ran on totals, so there is no device table to show. */
+export function NoDeviceSplit({ className }: { className?: string }) {
+  const t = useT();
+  return <p className={className ?? "text-[13px] text-text-muted"}>{t.check.no_split}</p>;
+}
+
 export function CheckBars({ result: c, className, compact }: { result: CheckResult; className?: string; compact?: boolean }) {
   const t = useT();
+  if (c.breakdown_available === false) return <NoDeviceSplit className={className} />;
   const f = useFormat();
   const pick = useBilingual();
   const max = Math.max(...c.breakdown.flatMap((b) => [b.expected ?? 0, b.measured ?? 0]), 1);

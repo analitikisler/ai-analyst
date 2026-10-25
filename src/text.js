@@ -206,7 +206,6 @@ export const ACT = {
   event_added: (title) => ({ en: `Added the event “${title.en}”`, tr: `“${title.tr}” olayı eklendi` }),
   event_edited: (title) => ({ en: `Edited the event “${title.en}”`, tr: `“${title.tr}” olayı düzenlendi` }),
   event_deleted: (title) => ({ en: `Deleted the event “${title.en}”`, tr: `“${title.tr}” olayı silindi` }),
-  gtm_import: (n) => ({ en: `Imported ${n} GTM versions as events (simulated)`, tr: `${n} GTM sürümü olay olarak içe aktarıldı (canlandırma)` }),
   metric_proposed: (label) => ({ en: `Proposed the metric “${label.en}” from an exploratory answer`, tr: `Bir keşif cevabından “${label.tr}” metriği önerildi` }),
   metric_accepted: (label) => ({ en: `Accepted the metric “${label.en}” from an exploratory answer`, tr: `Bir keşif cevabından gelen “${label.tr}” metriği kabul edildi` }),
   explore_added: (name, dataset) => (dataset ? { en: `Allowed the agent to read the dataset ${name}`, tr: `Agent’ın ${name} veri kümesini okumasına izin verildi` } : { en: `Allowed the agent to read the table ${name}`, tr: `Agent’ın ${name} tablosunu okumasına izin verildi` }),
@@ -289,6 +288,7 @@ export const COMPARE_NAMES = {
 export const SOURCE_LABEL = {
   demo: T("Demo data", "Demo veri"),
   bigquery: (project) => ({ en: `BigQuery · ${project}`, tr: `BigQuery · ${project}` }),
+  local: T("Your shop’s data", "Mağazanın kendi verisi"),
 };
 
 export const NAMES = {
@@ -299,8 +299,10 @@ export const NAMES = {
     meta_ads: T("Meta Ads", "Meta Ads"),
     tiktok_ads: T("TikTok Ads", "TikTok Ads"),
     email: T("Email", "E-posta"),
+    other: T("Other channels", "Diğer kanallar"),
+    unknown: T("Unknown", "Bilinmiyor"),
   },
-  device: { mobile: T("Mobile", "Mobil"), desktop: T("Desktop", "Masaüstü") },
+  device: { mobile: T("Mobile", "Mobil"), desktop: T("Desktop", "Masaüstü"), unknown: T("Unknown", "Bilinmiyor") },
   weekday: {
     mon: T("Monday", "Pazartesi"), tue: T("Tuesday", "Salı"), wed: T("Wednesday", "Çarşamba"), thu: T("Thursday", "Perşembe"),
     fri: T("Friday", "Cuma"), sat: T("Saturday", "Cumartesi"), sun: T("Sunday", "Pazar"),

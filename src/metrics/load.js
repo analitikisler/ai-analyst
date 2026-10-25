@@ -11,8 +11,9 @@ export const MART = {
   model: "daily_channel_device",
   measures: ["sessions", "orders", "revenue", "ga4_purchases", "ga4_revenue", "platform_conversions", "ad_spend"],
   dimensions: {
-    channel: ["organic", "direct", "google_ads", "meta_ads", "tiktok_ads", "email"],
-    device: ["mobile", "desktop"],
+    // "other": a source's channel with no mart channel; "unknown": the source cannot attribute (connectors).
+    channel: ["organic", "direct", "google_ads", "meta_ads", "tiktok_ads", "email", "other", "unknown"],
+    device: ["mobile", "desktop", "unknown"],
   },
   groupBy: ["none", "day", "week", "month", "channel", "device"],
 };
@@ -26,8 +27,10 @@ export const NAMES = {
     meta_ads: { en: "Meta Ads", tr: "Meta Ads" },
     tiktok_ads: { en: "TikTok Ads", tr: "TikTok Ads" },
     email: { en: "Email", tr: "E-posta" },
+    other: { en: "Other channels", tr: "Diğer kanallar" },
+    unknown: { en: "Unknown", tr: "Bilinmiyor" },
   },
-  device: { mobile: { en: "Mobile", tr: "Mobil" }, desktop: { en: "Desktop", tr: "Masaüstü" } },
+  device: { mobile: { en: "Mobile", tr: "Mobil" }, desktop: { en: "Desktop", tr: "Masaüstü" }, unknown: { en: "Unknown", tr: "Bilinmiyor" } },
   source: {
     backoffice: { en: "Back office (ikas)", tr: "Sipariş paneli (ikas)" },
     ga4: { en: "GA4 BigQuery export", tr: "GA4 BigQuery dışa aktarımı" },

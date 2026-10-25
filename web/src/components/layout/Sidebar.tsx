@@ -36,7 +36,7 @@ function WorkspaceRow({ onNavigate }: { onNavigate?: () => void }) {
   const { data } = useAppState();
   if (!data) return <Skeleton className="h-12 w-full" />;
   return (
-    <Link to="/settings/data" onClick={onNavigate} className="flex items-center gap-2.5 rounded-md border border-border bg-surface px-2 py-1.5 transition-colors hover:bg-surface-2">
+    <Link to="/settings/sources" onClick={onNavigate} className="flex items-center gap-2.5 rounded-md border border-border bg-surface px-2 py-1.5 transition-colors hover:bg-surface-2">
       <span aria-hidden className="flex size-7 shrink-0 items-center justify-center rounded-md bg-primary-soft font-display text-sm font-semibold text-accent-ink">
         {data.workspace.name.slice(0, 1).toLocaleUpperCase("tr")}
       </span>

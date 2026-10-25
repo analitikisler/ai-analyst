@@ -7,5 +7,6 @@ import "./dashboards.js";
 import "./events.js";
 import "./settings.js";
 import "./explore.js";
+import "./connectors.js";
 
 export { actionsFor, callAction, contextFor, inputJsonSchema, registry, toolDefinitions } from "./registry.js";

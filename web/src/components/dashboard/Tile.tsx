@@ -6,7 +6,7 @@ import { cn } from "cn";
 import { Clock3Icon, GripVerticalIcon } from "lucide-react";
 import type { Compare, Tile, TileResult } from "@/api/types";
 import { CHECK_PLATFORM } from "@/ask/labels";
-import { CheckBars, CheckChart, DataTable, Sparkline, SplitBars, TrendChart } from "@/components/charts";
+import { CheckBars, CheckChart, DataTable, NoDeviceSplit, Sparkline, SplitBars, TrendChart } from "@/components/charts";
 import { DeltaBadge, DeltaFigure, ErrorState, Marked, Status } from "@/components/kit";
 import { Tally, TallyCompact } from "@/components/tally/Tally";
 import { ExploreBadge, ExploreChart } from "@/components/ask/Explore";
@@ -128,6 +128,7 @@ function TileBody({ tile, result: r, compare, marked }: TileProps) {
     const prevLine = compare !== "off" && prev ? fmt(t.dash.tile.prev_check, { delta: f.pct(prev.delta_pct, 1, true), verdict: t.ask.verdict[prev.verdict] }) : null;
     if (tile.chart === "both_lines") return <CheckChart result={c} height={tall ? 230 : 70} />;
     if (tile.chart === "split_bar") return <CheckBars result={c} compact={!tall} />;
+    if (tile.chart === "table" && c.breakdown_available === false) return <NoDeviceSplit />;
     if (tile.chart === "table")
       return (
         <DataTable

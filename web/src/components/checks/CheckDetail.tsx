@@ -11,7 +11,7 @@ import { useAppState, useCall, useCheck } from "@/api/queries";
 import type { CheckId } from "@/api/types";
 import { useOpenMetric, useWatchToggle } from "@/ask/hooks";
 import { CHECK_LABELS } from "@/ask/labels";
-import { CheckEvidenceChart, DataTable } from "@/components/charts";
+import { CheckEvidenceChart, DataTable, NoDeviceSplit } from "@/components/charts";
 import { CodeBlock, Disclosure, Panel, PanelHeader, Status } from "@/components/kit";
 import { Tally } from "@/components/tally/Tally";
 import { Button } from "@/components/ui/button";
@@ -133,6 +133,9 @@ export function CheckDetail({ check, period, onAsk }: { check: CheckId; period?:
           </div>
         </div>
         <div className="mt-6 border-t border-border pt-4">
+          {c.breakdown_available === false ? (
+            <NoDeviceSplit />
+          ) : (
             <DataTable
               label={t.ask.by_device}
               dense
@@ -145,6 +148,7 @@ export function CheckDetail({ check, period, onAsk }: { check: CheckId; period?:
                 { key: "v", label: t.checks.col.verdict, render: (b) => <Status verdict={b.verdict} /> },
               ]}
             />
+          )}
         </div>
       </Panel>
       {c.findings.map((fd) => (

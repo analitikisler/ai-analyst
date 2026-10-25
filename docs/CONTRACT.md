@@ -238,7 +238,7 @@ Removed from 0.1, replaced by the prototype's actions: `pin_answer` (frozen answ
 Only with a model and `preferences.exploratory` not `"off"`. `run_sql { sql, measure, dims, dim_labels?, from, to,
 unit, label? }`. The model may read the mart and the tables the person allowed (`src/explore/allow.js`):
 
-- **The allowlist.** Settings › Data source › "Tables the agent may read": datasets (every table in them, also ones
+- **The allowlist.** Settings › Sources › "Tables the agent may read": datasets (every table in them, also ones
   added later) or single tables; the mart is always on it; empty (the default) means the mart alone. BigQuery
   entries must be in the mart's location. Stored as `explore.allow` (BigQuery) and `explore.demoAllow` (the demo,
   whose one dataset is `demo`: `orders`, `order_items`, `products`, `returns`). `AI_ANALYST_EXPLORE_ALLOW`
@@ -257,7 +257,7 @@ unit, label? }`. The model may read the mart and the tables the person allowed (
   `config.protection`, used by `proposeProtected` in `src/explore/allow.js`). So per-customer rows without contact
   data can reach the model provider (at most 200 rows per query) and are stored on this machine (at most 1,000
   rows per query; a query's result is pruned after 30 days, at start and daily, while a published answer keeps its
-  rows in app.db until that file is deleted); Settings › Data source can protect them. Protection is by column name: a column
+  rows in app.db until that file is deleted); Settings › Sources can protect them. Protection is by column name: a column
   with an unusual name, or a view that renames one, is not protected until the person adds it, and a view is
   readable only when added by name (not through its dataset). The proposal is enforced until confirmed; a table
   whose schema cannot be read is refused. No masking.
@@ -337,6 +337,174 @@ mart's orders and revenue for every day, channel and device, and order lines sum
 contact data. On the demo, Ask offers one cross-table chip with a model: "Which product categories are returned
 most often?".
 
+## Connectors and the local source (CONNECTORS.md, 25 Oct)
+
+**Sources.** The active source is one of `demo`, `bigquery` and `local` (`AI_ANALYST_WAREHOUSE` or the config
+file's `warehouse`: `duckdb` for the demo, `bigquery`, `local`). `local` is `<data_dir>/warehouse.duckdb`, a DuckDB
+file the connectors feed. The mart reads only from the active source. A connect or an import switches to `local`
+only when the app is on the demo and `AI_ANALYST_WAREHOUSE` does not fix the source. From BigQuery, or from a source
+the environment fixes, the data lands in `warehouse.duckdb` but the app keeps reading what it read: the person
+switches by hand (`save_data_source { kind: "local" }` in Settings › Sources, or `AI_ANALYST_WAREHOUSE=local`
+and a restart), and the connect or import result's `warnings` carries one line that says so (the line is in the
+result only, not in the stored state). `save_data_source { kind: "demo" }` switches back, keeping the local data.
+Resetting the demo (`rebuild_demo`) empties the demo workspace but keeps the connectors' data: their state, landing
+rows and covered days.
+Disconnecting the last connected source while on `local` switches back to the demo (the `disconnect_source` result's
+`warnings` says so); when `AI_ANALYST_WAREHOUSE` fixes the source, it stays, and the warning says that instead.
+On `local`, `list_suggestions` and the follow-ups offer only questions and checks the connected sources can answer
+(no Meta or Google Ads check and no ROAS, CPA or ad spend without ad data; no GA4 check without GA4 and an orders
+source); replacements come from revenue by channel, conversion rate, orders and AOV by device, revenue by day.
+Events belong to a data source (`data_source`: `demo`, `bigquery` or `local`, set when an event is added or
+proposed): the demo's events stay with the demo, and each source lists only its own (events saved before this field
+existed show on every source, except the demo's own four). An insufficient-data reason names the metric by its
+pack label ("No data for GA4 purchases…").
+
+**Privacy.** Only daily aggregates are kept. For a shop with few orders a day, one aggregate (a day, channel and
+device) can be a single order, so its amount and time of day can be told apart even though no order row is stored.
+`AppState.connectors` seen from another machine (a token holder) carries no shop domain, GA4 property or file name,
+and errors by code only.
+
+**Landing tables and the mart.** Connectors store **daily aggregates only**, in `landing_ga4` (date, channel,
+device, sessions, ga4_purchases, ga4_revenue) and `landing_orders` (source: `orders_file` | `shopify` |
+`woocommerce`; date, channel, device, orders, revenue). After every sync or import the server writes a fresh
+`warehouse.duckdb` (landing tables plus `daily_channel_device` built from them with DuckDB SQL, a full outer join on
+date, channel and device) and swaps it in atomically, so readers such as the MCP server never see a half-written file.
+A sync replaces exactly the days (and source) it fetched. Columns a connector does not fill stay NULL: on `local`
+`platform_conversions` and `ad_spend` are always NULL, so ROAS, CPA, ad spend and the Meta and Google Ads checks say
+"no data". When both an orders connector and the file cover a day, each source keeps its own rows and the mart sums
+orders per date, channel and device across them (the person should use one orders source; the Sources screen says so).
+
+**Dimensions.** Channel gains `other` (a GA4 group with no mart channel) and `unknown` (the source cannot
+attribute); device gains `unknown`. Breakdowns list only the segments present in the data, so the demo's
+breakdowns stay mobile and desktop. When a check side has no device split (all `unknown`), the check runs on totals
+with `breakdown: []` and `breakdown_available: false`.
+
+**GA4 (Analytics Data API v1beta `runReport`, REST through google-auth-library, scope `analytics.readonly`).**
+Dimensions `date`, `sessionDefaultChannelGroup`, `deviceCategory`; metrics `sessions`, `transactions` (purchase
+events with a transaction id, the closest match to the mart's distinct-`transaction_id` GA4 purchases),
+`purchaseRevenue`. Channel groups: Organic Search → organic, Direct → direct, Paid Search → google_ads, Paid Social →
+meta_ads, Email → email, Unassigned and (not set) → unknown, every other group → other. Devices: mobile and tablet →
+mobile, desktop → desktop, anything else → unknown. Auth as BigQuery: application default credentials, a key file,
+or impersonating a service account. Test steps: credentials, property, report (one day), range (first and last day
+with data), flags (thresholding, sampling, `(other)` row: a warning, not a failure), quota (tokens left per day).
+Only `analyticsdata.googleapis.com` is called. When impersonating, the source credential is scoped
+`cloud-platform` (IAM `generateAccessToken` needs it) and the minted token `analytics.readonly`.
+
+**Orders file (CSV or XLSX, at most 25 MB).** `POST /api/uploads/orders` with the raw file as the body (loopback
+only; Host, Origin and Sec-Fetch-Site checks as for actions; streamed to `<data_dir>/uploads/` mode 0600). XLSX is
+read without a new dependency (the zip directory and `node:zlib`, the first sheet, shared strings, serial dates).
+An XLSX may unpack to 50 times its size, at most 200 MB, else `file_unreadable`; a damaged character reference is
+`file_unreadable` too.
+The server returns the header, a guessed mapping, the status values with counts, and a preview of the **daily
+aggregates** only. `import_orders_file` writes the aggregates and deletes the file; uploads older than an hour are
+deleted. Times: an ISO time with an offset is converted to the chosen time zone (default `Europe/Istanbul`); a time
+without one is read as local time there; Excel serial dates as local times. Currency: a mapped currency column must
+match the workspace currency on every counted row, else `currency_mismatch`; no column means the workspace currency.
+Excluded: the statuses in `exclude_statuses` (the guess pre-selects test orders only; cancelled orders are counted,
+as in Orders v3, since GA4 records the purchase before any cancellation, and the preview says so in one line), rows
+without a date and rows without a readable total. Channel from a channel column or UTM
+source/medium; device from a device column or a user agent; else `unknown`.
+
+**Shopify (Admin GraphQL API, a custom app's Admin API access token with `read_orders`; shop `*.myshopify.com`).**
+Orders by created time; per order only the creation time, test and cancelled flags, total and currency, and the last
+visit's source and UTM source/medium (`customerJourneySummary`); device is `unknown` (the GraphQL API has no user
+agent). Test orders are left out; cancelled orders are counted, as in Orders v3. Scopes are read from `currentAppInstallation.accessScopes`; a
+`write_*` scope is refused (`scope_write`), and so is any scope beyond `read_orders`, `read_all_orders` and the
+short read-only allowlist `read_products`, `read_analytics`, `read_reports`, `read_locations` (`scope_extra`, with
+the reason; `read_customers` and the other scopes that read people's data are named as such). Pagination by cursor; THROTTLED or 429 stops the sync with `rate_limited`
+and stores nothing for that run.
+
+**WooCommerce (REST API v3, a consumer key and secret with Read permission, HTTPS only).** `GET /wp-json/wc/v3/orders`
+with `_fields=id,status,date_created_gmt,total,shipping_total,currency,meta_data` (no names, emails or addresses are requested), by
+page. The REST API cannot pick meta entries by key, so it **sends every meta entry of each order** (plugins may keep
+personal data there: a tax id, a phone number, the visitor's user agent). The app reduces each order on arrival to
+those fields and four attribution values (`_wc_order_attribution_utm_source`, `_utm_medium`, `_source_type`,
+`_device_type`) and discards the rest of the meta there: it is never stored, logged or passed on. Channel and device
+come from those four values. Statuses `failed`, `trash` and `checkout-draft` are left
+out (never placed); `cancelled` and `refunded` are counted, as in Orders v3 (refunds are not deducted). The scope check posts an empty batch (`POST /orders/batch {}`, a write-method call that changes nothing): only
+WordPress's own refusal (401 or 403 with a `woocommerce_rest_*` or `rest_*` error code) counts as read only; a key
+that is accepted is refused as `scope_write`; any other answer (a firewall page, 400, 500) is `scope_unchecked`.
+The key must be created with Read permission whatever the check shows.
+
+**Outbound rules.** Every connector call goes through the `AI_ANALYST_NO_CLOUD` guard. Hosts are fixed per connector:
+analyticsdata.googleapis.com (and Google's token endpoints through google-auth-library), the shop domain the person
+entered over HTTPS on port 443 only (no other port), never an IP literal, a private, loopback, link-local or
+special-purpose address (checked with `net.BlockList`; IPv4-mapped, IPv4-compatible, NAT64 and 6to4 IPv6 forms are
+reduced to the IPv4 address they carry; Teredo, site-local and the other special IPv6 ranges are refused); redirects
+are refused. The name is resolved once, every address it returns must pass, and the request connects to that
+checked address (pinned), with SNI, the certificate check and the Host header on the name, so DNS rebinding cannot
+reach the local network. The same address checks apply to `AI_ANALYST_SHOPIFY_SHOP`, `AI_ANALYST_WOOCOMMERCE_URL`
+and the config file's shop addresses at start (an invalid one stops the start with a message). Values from
+sources (channel names, statuses) are data, never instructions.
+
+**Secrets.** The Shopify token and the WooCommerce key and secret go to `secrets.json` (0600) under `connectors`,
+never returned (hints only). Env vars win and lock: `AI_ANALYST_GA4_PROPERTY`, `AI_ANALYST_SHOPIFY_SHOP`,
+`AI_ANALYST_SHOPIFY_TOKEN`, `AI_ANALYST_WOOCOMMERCE_URL`, `AI_ANALYST_WOOCOMMERCE_KEY`, `AI_ANALYST_WOOCOMMERCE_SECRET`.
+
+**Sync.** After connecting, on demand (`sync_sources`), and once a day while `serve` runs. Default history 90 days;
+`history_days` up to 400 (13 months). One sync at a time (`sync_running`).
+
+**Waitlist (Analitik İşler Cloud).** `AppState.waitlist`: Meta Ads, Google Ads, TikTok Ads, ikas, Ticimax, Search
+Console, Google Tag Manager, each a `mailto:hello@analitikisler.com` with the subject "Analitik İşler Cloud waitlist:
+<name>". No network call. The simulated GTM import is removed; events stay (by hand or proposed by the agent).
+
+**Types** (web/src/api/types.ts):
+
+```ts
+export type SourceKind = "demo" | "bigquery" | "local";
+export type Channel = "organic" | "direct" | "google_ads" | "meta_ads" | "tiktok_ads" | "email" | "other" | "unknown";
+export type Device = "mobile" | "desktop" | "unknown";
+export type ConnectorId = "ga4" | "orders_file" | "shopify" | "woocommerce";
+export type ConnectorStatus = "not_connected" | "connected" | "syncing" | "error";
+export type MartColumn = "sessions" | "ga4_purchases" | "ga4_revenue" | "orders" | "revenue";
+export interface ConnectorSecret { set: boolean; source: "env" | "saved" | null; locked: boolean; env?: string; hint?: string }
+export interface ConnectorState {
+  id: ConnectorId; name: Text; fills: MartColumn[]; status: ConnectorStatus; target: string | null;
+  last_sync: { at: string; from: string | null; to: string | null; days: number; ok: boolean } | null;
+  error: ApiErrorBody | null; warnings: Text[]; secret: ConnectorSecret | null;
+}
+export type WaitlistId = "meta_ads" | "google_ads" | "tiktok_ads" | "ikas" | "ticimax" | "search_console" | "gtm";
+export interface WaitlistItem { id: WaitlistId; name: Text; mailto: string }
+export interface ConnStep { id: string; status: "ok" | "failed" | "skipped" | "warning"; detail?: Record<string, string | number>; error?: { code: string; params: Record<string, string | number> } }
+export interface ConnectorTest { test_id: string; connector: ConnectorId; ok: boolean; steps: ConnStep[]; warnings: Text[] }
+export interface OrdersMapping {
+  order_id: string | null; created_at: string; status: string | null; total: string; currency: string | null;
+  channel: string | null; utm_source: string | null; utm_medium: string | null; device: string | null; user_agent: string | null;
+  exclude_statuses: string[];
+}
+export interface OrdersPreview {
+  from: string | null; to: string | null; days: number; orders: number; revenue: number; currency: string;
+  excluded: { status: number; no_date: number; bad_total: number };
+  daily: { date: string; orders: number; revenue: number }[];
+  channels: { key: Channel; orders: number }[]; devices: { key: Device; orders: number }[]; warnings: Text[];
+}
+export interface OrdersUpload {
+  upload_id: string; file_name: string; kind: "csv" | "xlsx"; columns: string[]; mapping: OrdersMapping;
+  statuses: { value: string; count: number }[]; time_zone: string; preview: OrdersPreview;
+}
+// AppState: source.kind: SourceKind; connectors: ConnectorState[]; waitlist: WaitlistItem[]
+// Settings.data_source.kind: SettingValue<SourceKind>
+// CheckResult: breakdown_available?: boolean
+```
+
+Actions: `list_connectors`, `test_ga4 { property_id, auth }`, `connect_ga4 { test_id, history_days? }`,
+`test_shopify { shop, token? }`, `connect_shopify { test_id, history_days? }`, `test_woocommerce { url, key?,
+secret? }`, `connect_woocommerce { test_id, history_days? }`, `preview_orders_file { upload_id, mapping?,
+time_zone? }`, `import_orders_file { upload_id, mapping, time_zone }`, `sync_sources { connector?, history_days? }`,
+`disconnect_source { connector }` (removes its settings, secrets and landing rows); `save_data_source` accepts
+`{ kind: "local" }`; `import_gtm_events` is removed. All of them are person-only and settings (loopback only).
+Results: `list_connectors` and `sync_sources` return `ConnectorState[]`; `test_*` return `ConnectorTest`;
+`connect_*`, `import_orders_file` and `disconnect_source` return the one `ConnectorState` of that connector (after a
+disconnect it reads `not_connected`; `list_connectors` gives all four); `preview_orders_file` returns `OrdersUpload`
+(the columns, mapping, statuses and time zone with the `preview: OrdersPreview` under them), as does
+`POST /api/uploads/orders`. Upload content types: `text/csv`, `application/vnd.ms-excel` (what browsers on Windows
+send for a .csv when Excel is installed; read as CSV, a real .xls file is refused as `upload_kind`), the XLSX type
+and `application/octet-stream` (kind from the name and the first bytes).
+Action names are lower case with digits and underscores (`/^[a-z][a-z0-9_]*$/`: `test_ga4`, `connect_ga4`).
+New error codes: `upload_too_large` (413), `upload_kind`, `file_unreadable`, `upload_not_found`, `mapping_invalid`,
+`currency_mismatch`, `connector_not_connected`, `sync_running`, `scope_write`, `scope_extra`, `scope_unchecked`, `property_not_found`,
+`host_not_allowed`, `shop_unreachable`; reused: `key_rejected`, `rate_limited`, `no_cloud`, `source_unavailable`.
+
 ## Settings, secrets and configuration
 
 Order: environment, then `ai-analyst.config.json` (non-secret, safe to commit; unknown keys kept on write), then
@@ -351,11 +519,11 @@ as a four-character hint.
 | `AI_ANALYST_CONFIG` | the config file (default `./ai-analyst.config.json`) |
 | `AI_ANALYST_TOKEN` | required for any host but loopback; at least 24 characters |
 | `AI_ANALYST_ALLOWED_HOSTS` | extra Host names, comma separated (also `allowedHosts` in the file) |
-| `AI_ANALYST_WAREHOUSE` | `duckdb` (the demo) or `bigquery` |
+| `AI_ANALYST_WAREHOUSE` | `duckdb` (the demo), `bigquery` or `local` (your shop's data from the connectors); set, it fixes the source, and a connect or import does not switch it |
 | `BIGQUERY_PROJECT`, `BIGQUERY_JOB_PROJECT`, `BIGQUERY_DATASET`, `BIGQUERY_LOCATION` (EU) | the mart and where jobs run |
 | `BIGQUERY_MAX_BYTES` (2 GB) | the ceiling of the bytes cap; Settings can only lower the cap below it |
 | `BIGQUERY_JOB_TIMEOUT_MS` (60000) | job timeout |
-| `AI_ANALYST_CURRENCY` (TRY) | the ISO 4217 code money is written in; locks Settings › Data source › Currency (also `currency` in the file) |
+| `AI_ANALYST_CURRENCY` (TRY) | the ISO 4217 code money is written in; locks Settings › Sources › Currency (also `currency` in the file) |
 | `AI_ANALYST_EXPLORE_ALLOW` | the tables exploratory answers may read besides the mart, comma separated: `project.dataset`, `project.dataset.table`, `demo`, `demo.orders`; locks the list in Settings |
 | `GOOGLE_APPLICATION_CREDENTIALS` | a key file path; otherwise gcloud application default credentials. Never stored |
 | `AI_ANALYST_PROVIDER` | `planner`, `anthropic`, `openai`, `gemini`, `openai_compatible` |

@@ -81,6 +81,7 @@ defineAction({
     const c = ctx.config;
     const demo = ctx.warehouse.demo !== false;
     let next = c;
+    if (input.allow && ctx.warehouse.local) throw new AppError("invalid_input", "On your shop's own data, exploratory answers read the mart only; there are no other tables to allow.");
     if (input.allow) {
       assertUnlocked(c.explore.locked, "AI_ANALYST_EXPLORE_ALLOW");
       const before = demo ? c.explore.demoAllow : c.explore.allow;

@@ -64,20 +64,13 @@ export function historyOf(id: MetricId): MetricHistoryRow[] {
 /** The seeded events (owner round 5): the release, the sale that explains the 10–13 Oct spike, a GTM publish, a price change. */
 export function seedEvents(): ChartEvent[] {
   return [
-    { id: "ev_v412", date: "2026-10-09", title: T("v4.12 release", "v4.12 sürümü"), type: "release", note: T("New checkout and thank-you page.", "Yeni ödeme ve teşekkür sayfası."), source: "manual" },
-    { id: "ev_sale", date: "2026-10-10", title: T("Autumn sale starts", "Sonbahar indirimi başlıyor"), type: "campaign", note: T("20% off outerwear until 13 Oct.", "13 Ekim’e kadar dış giyimde %20 indirim."), source: "manual" },
-    { id: "ev_gtm58", date: "2026-10-02", title: T("GTM version 58 published", "GTM sürüm 58 yayımlandı"), type: "tag_change", note: T("Consent Mode update.", "Consent Mode güncellemesi."), source: "gtm" },
-    { id: "ev_ship", date: "2026-09-15", title: T("Free shipping threshold to 750 TL", "Ücretsiz kargo sınırı 750 TL"), type: "price_change", note: null, source: "manual" },
+    { id: "ev_v412", date: "2026-10-09", title: T("v4.12 release", "v4.12 sürümü"), type: "release", note: T("New checkout and thank-you page.", "Yeni ödeme ve teşekkür sayfası."), source: "manual", data_source: "demo" },
+    { id: "ev_sale", date: "2026-10-10", title: T("Autumn sale starts", "Sonbahar indirimi başlıyor"), type: "campaign", note: T("20% off outerwear until 13 Oct.", "13 Ekim’e kadar dış giyimde %20 indirim."), source: "manual", data_source: "demo" },
+    { id: "ev_gtm58", date: "2026-10-02", title: T("GTM version 58 published", "GTM sürüm 58 yayımlandı"), type: "tag_change", note: T("Consent Mode update.", "Consent Mode güncellemesi."), source: "gtm", data_source: "demo" },
+    { id: "ev_ship", date: "2026-09-15", title: T("Free shipping threshold to 750 TL", "Ücretsiz kargo sınırı 750 TL"), type: "price_change", note: null, source: "manual", data_source: "demo" },
   ];
 }
 
 /** The scripted "Import from GTM": three published versions. */
-export function gtmImport(): ChartEvent[] {
-  return [
-    { id: "ev_gtm56", date: "2026-08-21", title: T("GTM version 56 published", "GTM sürüm 56 yayımlandı"), type: "tag_change", note: T("Meta Pixel moved to the server container.", "Meta Pixel sunucu konteynerine taşındı."), source: "gtm" },
-    { id: "ev_gtm57", date: "2026-09-11", title: T("GTM version 57 published", "GTM sürüm 57 yayımlandı"), type: "tag_change", note: T("TikTok Pixel added.", "TikTok Pixel eklendi."), source: "gtm" },
-    { id: "ev_gtm58", date: "2026-10-02", title: T("GTM version 58 published", "GTM sürüm 58 yayımlandı"), type: "tag_change", note: T("Consent Mode update.", "Consent Mode güncellemesi."), source: "gtm" },
-  ];
-}
 
 export { METRICS };

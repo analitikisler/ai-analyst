@@ -2,12 +2,12 @@
 import "./setup.js";
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { mkdtemp, mkdir, writeFile, cp } from "node:fs/promises";
-import { tmpdir } from "node:os";
+import { mkdir, writeFile, cp } from "node:fs/promises";
 import path from "node:path";
 import { ROOT } from "../src/config.js";
 import { compileAggregate, compileQuery, mergeWhere, normalizeFilters, resolveQuery } from "../src/metrics/compile.js";
 import { loadPack } from "../src/metrics/load.js";
+import { tempDir } from "./helpers.js";
 
 const pack = loadPack(ROOT);
 const range = { from: "2026-07-25", to: "2026-10-22" };
@@ -20,7 +20,7 @@ test("the pack in the repo loads: 11 metrics, 4 checks", () => {
 });
 
 async function packWith(file, text) {
-  const dir = await mkdtemp(path.join(tmpdir(), "pack-"));
+  const dir = tempDir("pack-");
   await cp(path.join(ROOT, "metrics"), path.join(dir, "metrics"), { recursive: true });
   await cp(path.join(ROOT, "checks"), path.join(dir, "checks"), { recursive: true });
   await mkdir(path.dirname(path.join(dir, file)), { recursive: true });

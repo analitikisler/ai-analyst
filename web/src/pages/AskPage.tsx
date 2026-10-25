@@ -212,6 +212,8 @@ function EmptyAsk({ onAsk, running, onStop, composerRef, workspace }: { onAsk: (
   const t = useT();
   const pick = useBilingual();
   const { data: suggestions, isLoading, isError, refetch } = useSuggestions();
+  // "Finds the planted problem" is about the demo's planted gap; own data has none planted.
+  const demo = !!useAppState().data?.workspace.demo;
   return (
     <div className="mx-auto flex w-full max-w-[760px] flex-1 flex-col justify-center overflow-y-auto px-4 py-8 md:px-6">
       <h1 className="text-center font-display text-2xl leading-8 font-heading tracking-[-0.012em] text-text-strong sm:text-[28px] sm:leading-[34px]">{fmt(t.ask.empty.heading, { workspace })}</h1>
@@ -233,7 +235,7 @@ function EmptyAsk({ onAsk, running, onStop, composerRef, workspace }: { onAsk: (
         ) : (
           <Suggestions wrap className="justify-center">
             {suggestions.map((s, i) => (
-              <Suggestion key={s.text.en} suggestion={pick(s.text)} onClick={onAsk} disabled={running} hint={i === 0 ? t.ask.empty.first_hint : s.tag === "exploratory" ? t.ask.explore.badge : undefined} className={i === 0 ? "border-border-strong" : undefined} />
+              <Suggestion key={s.text.en} suggestion={pick(s.text)} onClick={onAsk} disabled={running} hint={i === 0 && demo ? t.ask.empty.first_hint : s.tag === "exploratory" ? t.ask.explore.badge : undefined} className={i === 0 ? "border-border-strong" : undefined} />
             ))}
           </Suggestions>
         )}

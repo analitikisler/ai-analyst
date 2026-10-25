@@ -152,7 +152,7 @@ export function RefusalMessage({ refusal: r, onAsk }: { refusal: Refusal; onAsk:
             <ArrowRightIcon strokeWidth={1.75} data-icon="inline-end" />
             <span className="sr-only">{t.common.opens_tab}</span>
           </Button>
-          {data?.source.kind === "bigquery" && (
+          {data?.source.kind !== "demo" && (
             <Button variant="link" size="sm" render={<a href={`mailto:hello@analitikisler.com?subject=${encodeURIComponent(t.help.subject_metric)}`} />} nativeButton={false}>
               {t.ask.refusal.email}
               <span className="sr-only">{t.common.opens_email}</span>
