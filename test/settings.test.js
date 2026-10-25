@@ -138,12 +138,12 @@ const keyFile = (dir) => {
 };
 const testerOk = { identity: async () => "reader@ornek-data.iam.gserviceaccount.com", canRunJobs: async () => {}, dataset: async () => ({ location: "EU" }), table: async () => ({ columns: ["date", "channel", "device", "sessions", "orders", "revenue", "ga4_purchases", "ga4_revenue", "platform_conversions", "ad_spend"], modified: "2026-10-23T03:00:00.000Z" }), read: async () => ({ from: "2026-01-01", to: "2026-10-22", rows: 3540 }), cost: async () => 4.1 * 1024 ** 2 };
 
-test("test_bigquery: six steps against stubbed BigQuery; a failing step skips the rest; then the source switches", async () => {
+test("test_bigquery: seven steps against stubbed BigQuery; a failing step skips the rest; then the source switches", async () => {
   const values = { data_project: "ornek-data", job_project: "ornek-jobs", dataset: "ai_analyst", location: null, auth: { kind: "key_file", path: keyFile(ws.dir) }, max_bytes: 512 * 1024 ** 2 };
   const notKey = path.join(ws.dir, "x.json");
   writeFileSync(notKey, "{}");
   const t0 = await act("test_bigquery", { ...values, auth: { kind: "key_file", path: notKey } });
-  assert.deepEqual(t0.steps.map((s) => [s.id, s.status]), [["credentials", "failed"], ["jobs", "skipped"], ["dataset", "skipped"], ["table", "skipped"], ["read", "skipped"], ["cost", "skipped"]]);
+  assert.deepEqual(t0.steps.map((s) => [s.id, s.status]), [["credentials", "failed"], ["jobs", "skipped"], ["dataset", "skipped"], ["table", "skipped"], ["read", "skipped"], ["allowed", "skipped"], ["cost", "skipped"]]);
   assert.equal(t0.steps[0].error.code, "keyfile_type");
   ws.bigQueryTester = async () => ({ ...testerOk, canRunJobs: async () => { throw new Error("403 Access Denied"); } });
   const t1 = await act("test_bigquery", values);
@@ -153,7 +153,9 @@ test("test_bigquery: six steps against stubbed BigQuery; a failing step skips th
   const t2 = await act("test_bigquery", values);
   assert.equal(t2.ok, true);
   assert.deepEqual(t2.detected, { location: "EU" });
-  assert.deepEqual(t2.steps.map((s) => s.status), ["ok", "ok", "ok", "ok", "ok", "ok"]);
+  assert.deepEqual(t2.steps.map((s) => s.status), ["ok", "ok", "ok", "ok", "ok", "ok", "ok"]);
+  assert.deepEqual(t2.steps[5].detail, { n: 0 }, "no tables beyond the mart: nothing more to read");
+  assert.deepEqual(t2.warnings, []);
   const s = await act("save_data_source", { kind: "bigquery", test_id: t2.test_id });
   assert.deepEqual([s.data_source.kind.value, s.data_source.bigquery.data_project, s.data_source.bigquery.location], ["bigquery", "ornek-data", "EU"]);
   const file = JSON.parse(readFileSync(ws.config.configFile, "utf8"));
@@ -167,7 +169,7 @@ test("test_bigquery: six steps against stubbed BigQuery; a failing step skips th
 });
 
 test("settings changes are refused unless the request comes from this machine", async () => {
-  for (const [name, input] of [["save_model_key", { provider: "anthropic", key: KEY, model: "m" }], ["set_bytes_cap", { max_bytes: 1 }], ["save_data_source", { kind: "demo" }], ["rebuild_demo", {}], ["test_bigquery", { data_project: "a", job_project: null, dataset: "d", location: null, auth: { kind: "adc" }, max_bytes: 1 }], ["test_model_key", { provider: "openai", model: "x" }]]) {
+  for (const [name, input] of [["save_model_key", { provider: "anthropic", key: KEY, model: "m" }], ["set_bytes_cap", { max_bytes: 1 }], ["set_currency", { currency: "USD" }], ["save_data_source", { kind: "demo" }], ["rebuild_demo", {}], ["test_bigquery", { data_project: "a", job_project: null, dataset: "d", location: null, auth: { kind: "adc" }, max_bytes: 1 }], ["test_model_key", { provider: "openai", model: "x" }]]) {
     await assert.rejects(callAction(name, input, ctxFor(ws, "person", { loopback: false })), (e) => e.code === "loopback_only", name);
   }
 });
@@ -180,4 +182,43 @@ test("rebuild_demo rebuilds the mart and the workspace, keeping preferences", as
   assert.equal((await buildState(ws)).preferences.make_it_yours, "hidden");
   assert.ok(existsSync(path.join(ws.config.dataDir, "demo.duckdb")));
   assert.equal((await act("run_query", { metric: "orders", from: "2026-10-09", to: "2026-10-22" })).total, 2753);
+});
+
+test("money follows the workspace currency in both languages; TRY keeps TL after the number", async () => {
+  const { fmtMoney, fmtVal } = await import("../src/format.js");
+  const cases = [
+    ["TRY", 1240, "1,240 TL", "1.240 TL"], ["TRY", 1840000, "1.84M TL", "1,84 mn TL"],
+    ["USD", 1240, "$1,240", "1.240 $"], ["USD", 1840000, "$1.84M", "1,84 mn $"], ["USD", -89, "−$89", "−89 $"],
+    ["EUR", 1240, "€1,240", "1.240 €"], ["GBP", 1240, "£1,240", "1.240 £"], ["CHF", 1240, "1,240 CHF", "1.240 CHF"],
+  ];
+  for (const [c, n, en, tr] of cases) assert.deepEqual([fmtMoney(n, "en", c), fmtMoney(n, "tr", c)], [en, tr], `${c} ${n}`);
+  assert.equal(fmtVal(1240, "try", "en"), "1,240 TL", "the demo stays TRY");
+});
+
+test("set_currency: written to the config, in /api/state and the prompt, logged; AI_ANALYST_CURRENCY locks it; loopback only", async () => {
+  const { systemPrompt } = await import("../src/agent/agent.js");
+  const { fmtVal } = await import("../src/format.js");
+  assert.equal((await act("get_settings")).data_source.currency.value, "TRY");
+  await assert.rejects(act("set_currency", { currency: "XYZ" }), (e) => e.code === "invalid_input");
+  await assert.rejects(act("set_currency", { currency: "dollars" }), (e) => e.code === "invalid_input");
+  const s = await act("set_currency", { currency: "usd" });
+  assert.deepEqual([s.data_source.currency.value, s.data_source.currency.source, s.data_source.currency.locked], ["USD", "file", false]);
+  assert.equal(JSON.parse(readFileSync(ws.config.configFile, "utf8")).currency, "USD");
+  assert.deepEqual(ws.store.listActivity(1)[0].detail, { en: "Set the currency to USD", tr: "Para birimi USD olarak ayarlandı" });
+  assert.equal((await buildState(ws)).currency, "USD");
+  assert.equal(fmtVal(88.78, "try", "en"), "$89");
+  const args = { pack: ws.pack, range: { from: "2026-01-01", to: "2026-01-31" }, workspace: "w", demo: false, lang: "en", today: "2026-02-01", currency: "USD" };
+  const p = systemPrompt(args);
+  assert.ok(p.includes("$22.07M") && p.includes("22,07 mn $") && p.includes("Currency USD.") && !p.includes(" TL"));
+  assert.equal(systemPrompt(args), p, "the prompt is byte-stable for one currency");
+  await assert.rejects(callAction("set_currency", { currency: "EUR" }, ctxFor(ws, "person", { loopback: false })), (e) => e.code === "loopback_only");
+  await act("set_currency", { currency: "TRY" });
+  assert.equal(fmtVal(1240, "try", "en"), "1,240 TL");
+  const app = await demoWorkspace({ seed: false, env: { AI_ANALYST_CURRENCY: "GBP" } });
+  created.push(app);
+  const g = await act("get_settings", {}, app);
+  assert.deepEqual([g.data_source.currency.value, g.data_source.currency.locked, g.data_source.currency.env], ["GBP", true, "AI_ANALYST_CURRENCY"]);
+  await assert.rejects(act("set_currency", { currency: "USD" }, app), (e) => e.code === "locked");
+  await act("set_currency", { currency: "TRY" }).catch(() => {});
+  (await import("../src/format.js")).setCurrency(ws.config.currency);
 });

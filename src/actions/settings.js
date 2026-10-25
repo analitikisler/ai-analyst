@@ -9,7 +9,17 @@ import { z } from "zod";
 import { BASE_URL, KEY_ENV, MODEL_DEFAULT, PROVIDER_LABEL, PROVIDERS } from "../config.js";
 import { assertCloudAllowed, cloudFetch } from "../cloud.js";
 import { AppError } from "../errors.js";
-import { f } from "../format.js";
+import { f, isCurrency } from "../format.js";
+
+/** A code Intl knows as a currency (supportedValuesOf when there, else a format that names it). */
+function validCode(code) {
+  try {
+    if (typeof Intl.supportedValuesOf === "function") return Intl.supportedValuesOf("currency").includes(code);
+    return Boolean(new Intl.NumberFormat("en", { style: "currency", currency: code }).format(1));
+  } catch {
+    return false;
+  }
+}
 import { assertUnlocked, settingsView, updateConfigFile, writeSecret } from "../settings.js";
 import { newId } from "../store/store.js";
 import { isDataset, isProject } from "../warehouse/bigquery.js";
@@ -107,7 +117,7 @@ const bqConfig = z
   })
   .strict();
 
-const STEP_IDS = ["credentials", "jobs", "dataset", "table", "read", "cost"];
+const STEP_IDS = ["credentials", "jobs", "dataset", "table", "read", "allowed", "cost"];
 
 /** The real BigQuery checks behind test_bigquery. Tests pass app.bigQueryTester instead. */
 export async function realBigQueryTester(values) {
@@ -135,6 +145,25 @@ export async function realBigQueryTester(values) {
       const [rows] = await client.query({ query: `SELECT CAST(MIN(date) AS STRING) AS f, CAST(MAX(date) AS STRING) AS t, COUNT(*) AS n FROM ${table}`, useLegacySql: false, maximumBytesBilled: String(values.max_bytes) });
       return { from: rows[0]?.f ?? null, to: rows[0]?.t ?? null, rows: Number(rows[0]?.n ?? 0) };
     },
+    /** Every dataset and table on the allowlist can be read, in the mart's location. */
+    async allowed(entries, location) {
+      for (const e of entries) {
+        try {
+          const ds = client.dataset(e.dataset, { projectId: e.project });
+          const [meta] = await ds.getMetadata();
+          if (location && meta.location && String(meta.location).toLowerCase() !== String(location).toLowerCase()) throw Object.assign(new Error("location"), { location_mismatch: true, location: meta.location });
+          if (e.table) await ds.table(e.table).getMetadata();
+        } catch (err) {
+          throw Object.assign(err, { entry: e });
+        }
+      }
+    },
+    /** The datasets this credential can see in the job project, in the mart's location (INFORMATION_SCHEMA.SCHEMATA). */
+    async visibleDatasets(location) {
+      const project = values.job_project || values.data_project;
+      const [rows] = await client.query({ query: `SELECT schema_name FROM \`${project}\`.\`region-${String(location || "EU").toLowerCase()}\`.INFORMATION_SCHEMA.SCHEMATA`, location: location || undefined, useLegacySql: false, maximumBytesBilled: String(values.max_bytes) });
+      return rows.map((r) => `${project}.${r.schema_name}`);
+    },
     async cost(table) {
       const [job] = await client.createQueryJob({ query: `SELECT date, device, SUM(orders) AS o, SUM(ga4_purchases) AS g FROM ${table} WHERE date >= DATE_SUB(CURRENT_DATE(), INTERVAL 90 DAY) GROUP BY date, device`, dryRun: true, useLegacySql: false });
       return Number(job?.metadata?.statistics?.totalBytesProcessed ?? 0);
@@ -156,12 +185,13 @@ defineAction({
   async run(ctx, v) {
     const steps = [];
     const values = { ...v, job_project: v.job_project || null };
+    const warnings = [];
     const finish = (location) => {
       for (const id of STEP_IDS.slice(steps.length)) steps.push({ id, status: "skipped" });
       const ok = steps.every((s) => s.status === "ok");
       const test_id = newId("t");
       ctx.store.put("bq_tests", { id: test_id, ok, values: { ...values, location: location ?? values.location }, created_at: new Date().toISOString() });
-      return { test_id, ok, steps, detected: { location }, values };
+      return { test_id, ok, steps, detected: { location }, values, warnings };
     };
     const jobProject = values.job_project || values.data_project;
     if (!isProject(values.data_project) || !isProject(jobProject) || !isDataset(values.dataset)) {
@@ -235,6 +265,23 @@ defineAction({
       steps.push({ id: "read", status: "failed", error: { code: "read_denied", params: { id: identity, p: values.data_project, d: values.dataset, table: "daily_channel_device", ...g(safeGoogleMessage(err)) } } });
       return finish(location);
     }
+    // The tables the agent may read: each can be read, in the mart's location. Then: can the credential see more?
+    const entries = (ctx.config.explore?.allow ?? []).filter((e) => e.project);
+    try {
+      if (entries.length) await tester.allowed(entries, location ?? values.location);
+      steps.push({ id: "allowed", status: "ok", detail: { n: entries.length } });
+    } catch (err) {
+      const e = err.entry ?? entries[0];
+      const name = [e.project, e.dataset, e.table].filter(Boolean).join(".");
+      steps.push({ id: "allowed", status: "failed", error: err.location_mismatch ? { code: "allowed_location", params: { table: name, loc: err.location ?? "–", mart: location ?? values.location ?? "–" } } : { code: "allowed_denied", params: { table: name, id: identity, ...g(safeGoogleMessage(err)) } } });
+      return finish(location);
+    }
+    if (tester.visibleDatasets) {
+      const allowedDatasets = new Set([`${values.data_project}.${values.dataset}`, ...entries.map((e) => `${e.project}.${e.dataset}`)]);
+      const visible = await tester.visibleDatasets(location ?? values.location).catch(() => null);
+      const extra = (visible ?? []).filter((d) => !allowedDatasets.has(d));
+      if (extra.length) warnings.push({ code: "credential_broader", params: { n: extra.length, datasets: extra.slice(0, 5).join(", ") } });
+    }
     try {
       const bytes = await tester.cost(table);
       if (bytes > values.max_bytes) {
@@ -293,6 +340,24 @@ defineAction({
     const next = updateConfigFile(c, (file) => (file.bigquery = { ...(file.bigquery ?? {}), maxBytes: max_bytes }));
     await ctx.app.applyConfig(next);
     ctx.log({ en: `Lowered the bytes cap to ${f.en.bytes(max_bytes)}`, tr: `Bayt sınırı ${f.tr.bytes(max_bytes)} olarak düşürüldü` });
+    return settingsView({ ...ctx.app, credentials: localCredentials(c.env) });
+  },
+});
+
+defineAction({
+  name: "set_currency",
+  description: "Sets the currency money is written in (an ISO 4217 code). AI_ANALYST_CURRENCY locks it.",
+  kind: "write",
+  settings: true,
+  input: z.object({ currency: z.string().min(1).max(8) }).strict(),
+  async run(ctx, { currency }) {
+    const c = ctx.config;
+    assertUnlocked(c.currencySetting.locked, "AI_ANALYST_CURRENCY");
+    const code = currency.trim().toUpperCase();
+    if (!isCurrency(code) || !validCode(code)) throw new AppError("invalid_input", "The currency must be an ISO 4217 code such as TRY, USD or EUR.");
+    const next = updateConfigFile(c, (file) => (file.currency = code));
+    await ctx.app.applyConfig(next);
+    ctx.log({ en: `Set the currency to ${code}`, tr: `Para birimi ${code} olarak ayarlandı` });
     return settingsView({ ...ctx.app, credentials: localCredentials(c.env) });
   },
 });

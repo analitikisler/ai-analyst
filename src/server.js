@@ -47,7 +47,7 @@ const TYPES = {
 };
 
 const BASE_HEADERS = { "X-Content-Type-Options": "nosniff", "Referrer-Policy": "no-referrer", "X-Frame-Options": "DENY", "Cross-Origin-Opener-Policy": "same-origin", "Cross-Origin-Resource-Policy": "same-origin" };
-const STATUS = { not_found: 404, unknown_action: 404, forbidden: 403, loopback_only: 403, unauthorized: 401, too_large: 413, bad_request: 400, invalid_input: 400, unsupported_media: 415, locked: 409, not_pending: 409, already_undone: 409, undo_gone: 409, only_one: 409, test_required: 409, no_cloud: 503, over_ceiling: 409, no_data: 409, unavailable: 409, not_undoable: 409, bytes_cap: 422 };
+const STATUS = { not_found: 404, unknown_action: 404, forbidden: 403, loopback_only: 403, unauthorized: 401, too_large: 413, bad_request: 400, invalid_input: 400, unsupported_media: 415, locked: 409, not_pending: 409, already_undone: 409, undo_gone: 409, only_one: 409, test_required: 409, no_cloud: 503, over_ceiling: 409, no_data: 409, unavailable: 409, not_undoable: 409, bytes_cap: 422, sql_location_mismatch: 409, sql_table_not_allowed: 409 };
 
 const json = (res, status, body, extra = {}) => {
   res.writeHead(status, { ...BASE_HEADERS, "Content-Type": "application/json; charset=utf-8", "Cache-Control": "no-store", ...extra });

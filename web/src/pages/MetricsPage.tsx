@@ -51,6 +51,7 @@ function Badge({ children, tone = "neutral" }: { children: React.ReactNode; tone
 
 function MetricList() {
   const t = useT();
+  const f = useFormat();
   const pick = useBilingual();
   const lang = useLang();
   const sourceName = useSourceName();
@@ -103,7 +104,7 @@ function MetricList() {
                   </span>
                   <span className="line-clamp-2 text-[13px] leading-[18px] text-text-muted">{pick(e.description)}</span>
                   <span className="flex flex-wrap items-center gap-x-3 gap-y-1 text-2xs text-text-muted">
-                    <span>{t.metric.units[e.unit]}</span>
+                    <span>{t.metric.units[e.unit]}{e.unit === "try" ? ` (${f.currency})` : ""}</span>
                     <span>{sourceName(e.source)}</span>
                     <span className="flex flex-wrap items-center gap-1.5">
                       {e.checks.length ? e.checks.map((c) => <Badge key={c}>{checkName(c)}</Badge>) : <Badge tone="warn">{t.metrics.not_checked}</Badge>}
@@ -201,7 +202,7 @@ function MetricDetail({ id }: { id: string }) {
             </Panel>
           )}
           <Panel>
-            <PanelHeader title={t.metrics.working} subtitle={`${t.metric.unit}: ${t.metric.units[e.unit]} · ${t.metric.source}: ${sourceName(e.source)}`} />
+            <PanelHeader title={t.metrics.working} subtitle={`${t.metric.unit}: ${t.metric.units[e.unit]}${e.unit === "try" ? ` (${f.currency})` : ""} · ${t.metric.source}: ${sourceName(e.source)}`} />
             <dl className="grid grid-cols-[minmax(7rem,10rem)_minmax(0,1fr)] gap-x-4 gap-y-2 p-4 text-[13px] leading-[18px]">
               {data.definition.map((row) => (
                 <div key={row.label.en} className="contents">

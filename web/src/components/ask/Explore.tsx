@@ -1,4 +1,5 @@
-// Exploratory answers and tiles (owner round 4): a query the model wrote against the mart, outside the metric set.
+// Exploratory answers and tiles (owner round 4): a query the model wrote against the mart and the tables the person
+// allowed, outside the metric set. The tables it read are listed under the SQL.
 // Always labelled with a neutral badge "Exploratory · not checked" and its tooltip; never a verdict, never the orange
 // mark. The result is drawn by its shape with the same chart rules as metrics.
 import { CompassIcon } from "lucide-react";
@@ -8,7 +9,7 @@ import type { ExploreResult, QueryResult } from "@/api/types";
 import { DataTable, SplitBars, TrendChart } from "@/components/charts";
 import { CodeBlock, Disclosure } from "@/components/kit";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import { plural, useBilingual, useLang, useT } from "@/i18n";
+import { fmt, plural, useBilingual, useLang, useT } from "@/i18n";
 import { useFormat } from "@/lib/format";
 
 export function ExploreBadge({ className }: { className?: string }) {
@@ -38,6 +39,7 @@ export function useExploreKey() {
   return (dim: string, key: string | number | null) => {
     const k = String(key);
     if (dim === "week") return f.date(k);
+    if (dim === "other") return k;
     const maps = { channel: t.dimensions.channel, device: t.dimensions.device, weekday: t.dimensions.weekday } as Record<string, Record<string, string>>;
     return maps[dim]?.[k] ?? k;
   };
@@ -83,6 +85,7 @@ export function ExploreWorking({ x, title }: { x: ExploreResult; title: string }
     <div className="flex min-w-0 flex-col gap-2">
       <Disclosure label={t.ask.explore.sql_label} meta={plural(lang, x.rows.length, t.ask.explore.rows, { n: f.int(x.rows.length), bytes: f.bytes(x.bytes) })} defaultOpen>
         <CodeBlock code={x.sql} language="sql" title="1 / 1" maxHeight={260} />
+        {(x.tables ?? []).length > 0 && <p className="mt-1.5 font-mono text-2xs break-all text-text-muted">{fmt(t.ask.explore.tables, { tables: x.tables.join(", ") })}</p>}
       </Disclosure>
       <p className="text-[13px] leading-[18px] text-text-muted">
         {t.ask.explore.not_metric}{" "}

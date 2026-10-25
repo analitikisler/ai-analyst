@@ -26,18 +26,20 @@ export const DIM_LABEL: Record<ExploreSpec["dims"][number], Text> = {
   channel: T("Channel", "Kanal"),
   device: T("Device", "Cihaz"),
   week: T("Week", "Hafta"),
+  other: T("Group", "Grup"),
 };
 const DIM_SQL: Record<ExploreSpec["dims"][number], string> = {
   weekday: "strftime(date, '%a') AS weekday",
   channel: "channel",
   device: "device",
   week: "date_trunc('week', date) AS week",
+  other: "",
 };
 
 /** The mart's columns, for the card when no query can be written. */
 export const MART_COLUMNS = ["date", "channel", "device", "sessions", "orders", "revenue", "ga4_purchases", "ga4_revenue", "platform_conversions", "ad_spend"];
 
-const keyOf = (r: Row, d: ExploreSpec["dims"][number]) => (d === "weekday" ? weekday(r.date) : d === "week" ? weekStart(r.date) : d === "channel" ? r.channel : r.device);
+const keyOf = (r: Row, d: ExploreSpec["dims"][number]) => (d === "weekday" ? weekday(r.date) : d === "week" ? weekStart(r.date) : d === "channel" ? r.channel : d === "device" ? r.device : "");
 const within = (from: string, to: string) => MART.filter((r) => r.date >= from && r.date <= to);
 
 function measureOf(rows: Row[], m: ExploreSpec["measure"]): number | null {
@@ -119,6 +121,7 @@ export function runExplore(spec: ExploreSpec): ExploreResult {
     rows: out.slice(0, 1000),
     sql: sqlOf(spec),
     bytes: rows.length * (2 + spec.dims.length) * 8 + 4096,
+    tables: [TABLE],
   };
 }
 

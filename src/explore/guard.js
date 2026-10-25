@@ -1,7 +1,7 @@
-// The guard for exploratory SQL: a model may write one read-only query against the mart, and this decides, in
-// code, whether it runs. It does not trust the prompt. It is the first of three fences: the warehouse checks
-// again (BigQuery: the dry run's referenced tables must be exactly the mart; DuckDB: the query runs in a database
-// that holds nothing but a copy of the mart), so a gap here does not expose another table.
+// The guard for exploratory SQL: a model may write one read-only query against the tables the person allowed, and
+// this decides, in code, whether it runs. It does not trust the prompt. It is the first of three fences: the
+// warehouse checks again (BigQuery: every table the dry run reports must be on the list; DuckDB: the query runs in
+// a database that holds nothing but copies of the allowed tables), so a gap here does not expose another table.
 //
 // The checks:
 //   the query is read the way the warehouse reads it; anything whose reading could differ is refused: block
@@ -10,9 +10,11 @@
 //   no keyword that writes, loads, changes settings or names another statement form (TABLE, PIVOT) anywhere;
 //   every function called is on an allowlist of aggregate, window, math, date, string and conditional functions
 //   (so no file, URL, system, AI, identity or cost function, in either dialect);
-//   every table after FROM, JOIN, a comma in a FROM list, or an opening parenthesis of a FROM item is the mart,
-//   or a CTE defined in the top-level WITH;
-//   no string literal used as a table (DuckDB reads files that way), no LATERAL or UNNEST.
+//   every table after FROM, JOIN, a comma in a FROM list, or an opening parenthesis of a FROM item is on the
+//   allowlist (BigQuery: written in full, project.dataset.table), or a CTE defined in the top-level WITH;
+//   no string literal used as a table (DuckDB reads files that way), no LATERAL or UNNEST;
+//   protected columns (contact data, person ids) never reach the output: not selected, not through *, an alias, a
+//   CTE, a subquery or an expression, not grouped or ordered by; a join, a filter or COUNT(DISTINCT …) may use them.
 // The statement runs wrapped in an outer LIMIT 1000.
 import { AppError } from "../errors.js";
 
@@ -68,12 +70,15 @@ export const GUARD_MESSAGES = {
   sql_not_select: "Only a read-only query can run: it must start with SELECT or WITH.",
   sql_forbidden_keyword: "The query uses a word that writes, loads, changes settings or reads another statement form, so it does not run.",
   sql_forbidden_function: "The query calls a function that exploratory queries may not use (only aggregate, window, math, date, string and conditional functions), so it does not run.",
-  sql_table_not_allowed: "Only the mart table, daily_channel_device, can be read.",
+  sql_table_not_allowed: "The query reads a table that is not on the list of tables the agent may read (Settings › Data source). On BigQuery every table is written in full, project.dataset.table.",
+  sql_protected_column: "The query returns, groups or orders by a protected column, or reads one through *, so it does not run. A protected column can be used in a join, a filter or COUNT(DISTINCT …) only.",
+  sql_location_mismatch: "The query reads a dataset in another location than the mart. A BigQuery query runs in one location.",
   sql_unsupported_syntax: "The query uses a form the guard does not read the same way as the warehouse (block comments, backslashes, prefixed or dollar-quoted strings, @ variables), so it does not run.",
 };
-const refuse = (code, detail) => {
-  throw new AppError(code, detail ? `${GUARD_MESSAGES[code]} (${detail})` : GUARD_MESSAGES[code], { params: detail ? { detail } : {} });
+const refuse = (code, detail, extra = {}) => {
+  throw new AppError(code, detail ? `${GUARD_MESSAGES[code]} (${detail})` : GUARD_MESSAGES[code], { params: { ...(detail ? { detail } : {}), ...extra } });
 };
+const refuseTable = (name) => refuse("sql_table_not_allowed", name, { table: name });
 
 /**
  * Splits SQL into tokens, dropping line comments. Strings and quoted identifiers stay whole. The guard must read a
@@ -155,13 +160,39 @@ function readName(tokens, k) {
   return { parts, next: j };
 }
 
+/** The mart alone, as the warehouse writes it: the policy when the caller passes none. */
+function martPolicy(warehouse) {
+  const full = warehouse.table.replace(/`/g, "");
+  if (warehouse.dialect === "bigquery") {
+    const [project, dataset, table] = full.split(".");
+    const key = `${project.toLowerCase()}.${dataset}.${table}`;
+    return { match: (p) => (p.length === 3 && `${p[0].toLowerCase()}.${p[1]}.${p[2]}` === key ? key : null) };
+  }
+  const name = full.toLowerCase();
+  return { match: (p) => (p.map((x) => x.toLowerCase()).join(".") === name || p.map((x) => x.toLowerCase()).join(".") === `main.${name}` ? name : null) };
+}
+
+/** Words after a table name that are not its alias. */
+const NOT_ALIAS = new Set([...CLAUSE_END, "join", "inner", "left", "right", "full", "outer", "cross", "natural", "positional", "asof", "anti", "semi", "for", "as", "union", "except", "intersect", "lateral", "unnest", "window"]);
+/** Clause words that set where a token stands inside one SELECT. */
+const CLAUSES = new Set(["select", "from", "join", "where", "group", "having", "order", "qualify", "window", "on", "using", "limit", "offset", "fetch", "union", "except", "intersect"]);
+/** Clauses whose content becomes output (or splits it): a protected column may not appear there. */
+const LEAKING = new Set(["select", "group", "order", "window"]);
+/** Clauses that only filter: a subquery inside one only feeds the condition. */
+const FILTERING = new Set(["where", "having", "qualify", "on"]);
+/** Words before "*" that make it a star (every column), not a multiplication. */
+const STAR_BEFORE = new Set(["select", "distinct", "all", "struct", "value"]);
+
 /**
  * Checks one exploratory query and returns it ready to run, wrapped in the outer LIMIT.
  * @param {string} sql
  * @param {{ table: string, dialect: "duckdb"|"bigquery" }} warehouse table: the mart as the warehouse writes it.
- * @returns {{ sql: string, wrapped: string, tables: string[] }}
+ * @param {{ policy?: { match: (parts: string[]) => string|null }, protectedCols?: (key: string) => Set<string>|null }} [opts]
+ *   policy: which tables may be read (src/explore/allow.js policyFor); default: the mart alone.
+ *   protectedCols: the protected columns of one allowed table, lower case.
+ * @returns {{ sql: string, wrapped: string, tables: string[] }} tables: the allowed tables read, by canonical key.
  */
-export function guardSql(sql, warehouse) {
+export function guardSql(sql, warehouse, opts = {}) {
   if (typeof sql !== "string" || !sql.trim()) refuse("sql_empty");
   if (sql.length > MAX_SQL_CHARS) refuse("sql_too_long");
   const tokens = tokenize(sql, warehouse.dialect);
@@ -171,11 +202,7 @@ export function guardSql(sql, warehouse) {
   if (tokens.some((t) => t.type === "punct" && t.value === ";")) refuse("sql_multiple_statements");
   const first = tokens[0];
   if (first.type !== "word" || !["select", "with"].includes(first.value.toLowerCase())) refuse("sql_not_select");
-
-  // The allowed table names: the mart's last part, and its full name as the warehouse writes it.
-  const full = warehouse.table.replace(/`/g, "").toLowerCase();
-  const allowed = new Set([full, full.split(".").at(-1)]);
-  if (warehouse.dialect === "duckdb") allowed.add(`main.${full}`);
+  const policy = opts.policy ?? martPolicy(warehouse);
 
   // CTE names count only when defined in the top-level WITH (depth 0), so a CTE inside a subquery cannot make a
   // real table's name look allowed elsewhere.
@@ -201,7 +228,7 @@ export function guardSql(sql, warehouse) {
     const t = tokens[k];
     const lower = t.type === "word" ? t.value.toLowerCase() : null;
     if (lower && FORBIDDEN_KEYWORDS.has(lower)) refuse("sql_forbidden_keyword", t.value.toUpperCase());
-    if (t.type === "quoted" && /information_schema|__tables__/i.test(t.value)) refuse("sql_table_not_allowed", t.value);
+    if (t.type === "quoted" && /information_schema|__tables__/i.test(t.value)) refuseTable(t.value);
     // A function call: a name followed by "(". Only allowlisted names, and only BigQuery's SAFE. prefix.
     if ((t.type === "word" || t.type === "quoted") && tokens[k + 1]?.value === "(") {
       const name = t.value.toLowerCase();
@@ -217,6 +244,9 @@ export function guardSql(sql, warehouse) {
   let depth = 0;
   let fromParen = false; // the next "(" opens a FROM item: its first token is a table or a subquery
   const tables = [];
+  let reads = 0; // tables and CTEs read
+  /** Alias (and the table's own names) → canonical key, for qualified column references. */
+  const aliases = new Map();
   const checkTableAt = (k) => {
     const t = tokens[k];
     if (!t) return k;
@@ -224,14 +254,25 @@ export function guardSql(sql, warehouse) {
       fromParen = true;
       return k - 1; // the main loop opens the parenthesis
     }
-    if (t.type === "string") refuse("sql_table_not_allowed", `'${t.value}'`);
+    if (t.type === "string") refuseTable(`'${t.value}'`);
     if (t.type === "word" && ["lateral", "unnest"].includes(t.value.toLowerCase())) refuse("sql_table_not_allowed", t.value.toUpperCase());
-    if (t.type !== "word" && t.type !== "quoted") refuse("sql_table_not_allowed", t.value);
+    if (t.type !== "word" && t.type !== "quoted") refuseTable(t.value);
     const { parts, next } = readName(tokens, k);
-    const name = parts.join(".").toLowerCase();
+    const name = parts.join(".");
     if (tokens[next]?.value === "(") refuse("sql_forbidden_function", name);
-    if (!allowed.has(name) && !(parts.length === 1 && ctes.has(name))) refuse("sql_table_not_allowed", parts.join("."));
-    tables.push(name);
+    const cte = parts.length === 1 && ctes.has(name.toLowerCase());
+    const key = cte ? null : policy.match(parts);
+    if (!cte && !key) refuseTable(name);
+    reads++;
+    if (key) {
+      tables.push(key);
+      aliases.set(parts.at(-1).toLowerCase(), key);
+      // The alias: AS x, or a bare word that is not a keyword.
+      let a = next;
+      if (tokens[a]?.type === "word" && tokens[a].value.toLowerCase() === "as") a++;
+      const at = tokens[a];
+      if (at && (at.type === "quoted" || (at.type === "word" && !NOT_ALIAS.has(at.value.toLowerCase())))) aliases.set(at.value.toLowerCase(), key);
+    }
     return next - 1;
   };
   for (let k = 0; k < tokens.length; k++) {
@@ -270,9 +311,71 @@ export function guardSql(sql, warehouse) {
       continue;
     }
   }
-  if (!tables.length) refuse("sql_table_not_allowed", "no table");
+  if (!reads) refuseTable("no table");
+
+  if (opts.protectedCols) checkProtected(tokens, [...new Set(tables)], aliases, opts.protectedCols);
 
   const body = sql.trim().replace(/;\s*$/, "");
   const wrapped = `SELECT * FROM (\n${body}\n) AS q\nLIMIT ${ROW_LIMIT}`;
-  return { sql: body, wrapped, tables };
+  return { sql: body, wrapped, tables: [...new Set(tables)] };
+}
+
+/**
+ * Protected columns never reach the output. Read per SELECT (each subquery has its own clauses): in the select list,
+ * GROUP BY, ORDER BY and WINDOW, a protected column, a * or a whole row (a table alias alone, which both warehouses
+ * return as a struct) is refused; inside COUNT(…) it is allowed (only a count leaves), and so is anything in a
+ * join, a filter, or a subquery that sits in a filter (it only decides which rows count). Unqualified names are
+ * protected when any table read has a protected column of that name; qualified ones by their own table.
+ */
+function checkProtected(tokens, tables, aliases, protectedCols) {
+  const byTable = new Map(tables.map((k) => [k, protectedCols(k) ?? new Set()]));
+  const any = new Set([...byTable.values()].flatMap((s) => [...s]));
+  if (!any.size) return;
+  const rowAliases = new Set([...aliases].filter(([, key]) => byTable.get(key)?.size).map(([a]) => a));
+  const frames = [{ sub: true, clause: null, filter: false, count: false }];
+  const deny = (what) => refuse("sql_protected_column", what, { column: what });
+  for (let k = 0; k < tokens.length; k++) {
+    const t = tokens[k];
+    const lower = t.type === "word" ? t.value.toLowerCase() : null;
+    const top = frames.at(-1);
+    if (t.type === "punct" && t.value === "(") {
+      const next = tokens[k + 1];
+      const prev = tokens[k - 1];
+      const sub = next?.type === "word" && SUBQUERY_START.has(next.value.toLowerCase());
+      const filter = top.filter || FILTERING.has(top.clause);
+      if (sub) frames.push({ sub: true, clause: null, filter, count: false });
+      else frames.push({ sub: false, clause: top.clause, filter, count: top.count || (prev?.type === "word" && ["count", "countif", "count_if"].includes(prev.value.toLowerCase())) });
+      continue;
+    }
+    if (t.type === "punct" && t.value === ")") {
+      if (frames.length > 1) frames.pop();
+      continue;
+    }
+    if (lower && CLAUSES.has(lower) && top.sub) {
+      top.clause = lower === "join" || lower === "using" ? "from" : ["union", "except", "intersect"].includes(lower) ? null : lower;
+      continue;
+    }
+    if (top.filter || top.count || !LEAKING.has(top.clause)) continue;
+    const prev = tokens[k - 1];
+    if (t.type === "punct" && t.value === "*" && top.clause === "select") {
+      if ((prev?.type === "word" && STAR_BEFORE.has(prev.value.toLowerCase())) || (prev?.type === "punct" && [",", "."].includes(prev.value))) deny("*");
+      continue;
+    }
+    if (t.type !== "word" && t.type !== "quoted") continue;
+    if (tokens[k + 1]?.value === "(") continue; // a function name, checked by the allowlist
+    if (prev?.type === "word" && prev.value.toLowerCase() === "as") continue; // an output name or a type, not data
+    const parts = t.type === "quoted" ? t.value.split(".") : [t.value];
+    const name = parts.at(-1).toLowerCase();
+    const qualifier = parts.length > 1 ? parts.at(-2).toLowerCase() : prev?.value === "." && tokens[k - 2] ? String(tokens[k - 2].value).toLowerCase() : null;
+    if (qualifier !== null) {
+      const key = aliases.get(qualifier);
+      if (key ? byTable.get(key)?.has(name) : any.has(name)) deny(parts.join("."));
+      // A table written in full in the select list is its whole row.
+      if (parts.length > 1 && rowAliases.has(name) && tokens[k + 1]?.value !== ".") deny(parts.join("."));
+      continue;
+    }
+    if (any.has(name)) deny(t.value);
+    // A table alias alone returns the whole row.
+    if (rowAliases.has(name) && tokens[k + 1]?.value !== ".") deny(t.value);
+  }
 }

@@ -1,0 +1,328 @@
+{
+ "note": "Recorded from the real demo (src/demo/seed.js) by the server's own describe_tables, list_tables and run_sql paths.",
+ "listing": {
+  "location": null,
+  "datasets": [
+   {
+    "project": null,
+    "dataset": "demo",
+    "location": null,
+    "same_location": true,
+    "tables": [
+     {
+      "table": "order_items",
+      "rows": 23059,
+      "bytes": null,
+      "modified": "2026-10-25T10:36:13.071Z"
+     },
+     {
+      "table": "orders",
+      "rows": 14440,
+      "bytes": null,
+      "modified": "2026-10-25T10:36:13.071Z"
+     },
+     {
+      "table": "products",
+      "rows": 120,
+      "bytes": null,
+      "modified": "2026-10-25T10:36:13.071Z"
+     },
+     {
+      "table": "returns",
+      "rows": 2347,
+      "bytes": null,
+      "modified": "2026-10-25T10:36:13.071Z"
+     }
+    ]
+   }
+  ]
+ },
+ "describe": {
+  "dialect": "duckdb",
+  "tables": [
+   {
+    "table": "daily_channel_device",
+    "mart": true,
+    "type": "table",
+    "description": "The mart: one row per day, channel and device, with sessions, orders, revenue, GA4 and ad platform figures. The checked layer.",
+    "rows": 1080,
+    "bytes": null,
+    "modified": "2026-10-25T10:36:13.071Z",
+    "partitioned_by": null,
+    "columns": [
+     {
+      "name": "date",
+      "type": "DATE"
+     },
+     {
+      "name": "channel",
+      "type": "VARCHAR"
+     },
+     {
+      "name": "device",
+      "type": "VARCHAR"
+     },
+     {
+      "name": "sessions",
+      "type": "INTEGER"
+     },
+     {
+      "name": "orders",
+      "type": "INTEGER"
+     },
+     {
+      "name": "revenue",
+      "type": "DECIMAL(18,2)"
+     },
+     {
+      "name": "ga4_purchases",
+      "type": "INTEGER"
+     },
+     {
+      "name": "ga4_revenue",
+      "type": "DECIMAL(18,2)"
+     },
+     {
+      "name": "platform_conversions",
+      "type": "INTEGER"
+     },
+     {
+      "name": "ad_spend",
+      "type": "DECIMAL(18,2)"
+     }
+    ],
+    "protected_columns": [],
+    "protected_confirmed": false
+   },
+   {
+    "table": "orders",
+    "mart": false,
+    "type": "table",
+    "description": "Orders from the back office, one row per order. order_total in TRY; is_first_order is the customer's first order. Totals match the mart by day, channel and device.",
+    "rows": 14440,
+    "bytes": null,
+    "modified": "2026-10-25T10:36:13.071Z",
+    "partitioned_by": null,
+    "columns": [
+     {
+      "name": "order_id",
+      "type": "VARCHAR"
+     },
+     {
+      "name": "order_date",
+      "type": "DATE"
+     },
+     {
+      "name": "channel",
+      "type": "VARCHAR"
+     },
+     {
+      "name": "device",
+      "type": "VARCHAR"
+     },
+     {
+      "name": "customer_id",
+      "type": "VARCHAR"
+     },
+     {
+      "name": "is_first_order",
+      "type": "BOOLEAN"
+     },
+     {
+      "name": "items",
+      "type": "INTEGER"
+     },
+     {
+      "name": "order_total",
+      "type": "DECIMAL(18,2)"
+     }
+    ],
+    "protected_columns": [
+     "customer_id"
+    ],
+    "protected_confirmed": false
+   },
+   {
+    "table": "order_items",
+    "mart": false,
+    "type": "table",
+    "description": "Order lines, one row per product in an order. line_total sums to the order's order_total. Join to orders on order_id, to products on product_id.",
+    "rows": 23059,
+    "bytes": null,
+    "modified": "2026-10-25T10:36:13.071Z",
+    "partitioned_by": null,
+    "columns": [
+     {
+      "name": "order_id",
+      "type": "VARCHAR"
+     },
+     {
+      "name": "line_no",
+      "type": "INTEGER"
+     },
+     {
+      "name": "product_id",
+      "type": "VARCHAR"
+     },
+     {
+      "name": "quantity",
+      "type": "INTEGER"
+     },
+     {
+      "name": "line_total",
+      "type": "DECIMAL(18,2)"
+     }
+    ],
+    "protected_columns": [],
+    "protected_confirmed": false
+   },
+   {
+    "table": "products",
+    "mart": false,
+    "type": "table",
+    "description": "The product catalogue, one row per product, with category and list price in TRY.",
+    "rows": 120,
+    "bytes": null,
+    "modified": "2026-10-25T10:36:13.071Z",
+    "partitioned_by": null,
+    "columns": [
+     {
+      "name": "product_id",
+      "type": "VARCHAR"
+     },
+     {
+      "name": "name",
+      "type": "VARCHAR"
+     },
+     {
+      "name": "category",
+      "type": "VARCHAR"
+     },
+     {
+      "name": "list_price",
+      "type": "DECIMAL(18,2)"
+     }
+    ],
+    "protected_columns": [],
+    "protected_confirmed": false
+   },
+   {
+    "table": "returns",
+    "mart": false,
+    "type": "table",
+    "description": "Returned order lines, one row per return, with the refund in TRY and a reason. Join to order_items on order_id and line_no.",
+    "rows": 2347,
+    "bytes": null,
+    "modified": "2026-10-25T10:36:13.071Z",
+    "partitioned_by": null,
+    "columns": [
+     {
+      "name": "return_id",
+      "type": "VARCHAR"
+     },
+     {
+      "name": "order_id",
+      "type": "VARCHAR"
+     },
+     {
+      "name": "line_no",
+      "type": "INTEGER"
+     },
+     {
+      "name": "product_id",
+      "type": "VARCHAR"
+     },
+     {
+      "name": "return_date",
+      "type": "DATE"
+     },
+     {
+      "name": "reason",
+      "type": "VARCHAR"
+     },
+     {
+      "name": "refund_amount",
+      "type": "DECIMAL(18,2)"
+     }
+    ],
+    "protected_columns": [],
+    "protected_confirmed": false
+   }
+  ]
+ },
+ "demo_tables": [
+  "daily_channel_device",
+  "order_items",
+  "orders",
+  "products",
+  "returns"
+ ],
+ "returns_by_category": {
+  "spec": {
+   "measure": "other",
+   "dims": [
+    "other"
+   ],
+   "from": "2026-07-25",
+   "to": "2026-10-22"
+  },
+  "shape": "category",
+  "unit": "pct",
+  "label": {
+   "en": "Return rate",
+   "tr": "İade oranı"
+  },
+  "columns": [
+   {
+    "en": "Category",
+    "tr": "Kategori"
+   },
+   {
+    "en": "Return rate",
+    "tr": "İade oranı"
+   }
+  ],
+  "rows": [
+   [
+    "shoes",
+    0.186
+   ],
+   [
+    "dresses",
+    0.1511
+   ],
+   [
+    "trousers",
+    0.1186
+   ],
+   [
+    "outerwear",
+    0.0917
+   ],
+   [
+    "tops",
+    0.0777
+   ],
+   [
+    "knitwear",
+    0.0718
+   ],
+   [
+    "bags",
+    0.0362
+   ],
+   [
+    "accessories",
+    0.0243
+   ]
+  ],
+  "sql": "SELECT * FROM (\nSELECT p.category, COUNT(r.return_id) * 1.0 / COUNT(*) AS return_rate\nFROM order_items i\nJOIN products p ON p.product_id = i.product_id\nLEFT JOIN returns r ON r.order_id = i.order_id AND r.line_no = i.line_no\nWHERE i.order_id IN (SELECT order_id FROM orders WHERE order_date BETWEEN DATE '2026-07-25' AND DATE '2026-10-22')\nGROUP BY p.category\nORDER BY return_rate DESC\n) AS q\nLIMIT 1000",
+  "bytes": 1585152,
+  "tables": [
+   "order_items",
+   "products",
+   "returns",
+   "orders"
+  ]
+ }
+}

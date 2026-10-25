@@ -23,7 +23,11 @@ export const STEP = {
     en: `Dry run on daily_channel_device: ${f.en.bytes(bytes)}, under the bytes cap`,
     tr: `daily_channel_device üzerinde deneme çalıştırması: ${f.tr.bytes(bytes)}, bayt sınırının altında`,
   }),
-  run_sql: (n) => ({ en: `Ran one read-only query: ${n} ${n === 1 ? "row" : "rows"}`, tr: `Salt okunur tek bir sorgu çalıştırıldı: ${n} satır` }),
+  run_sql: (n, tables = []) =>
+    tables.length > 1
+      ? { en: `Ran one read-only query on ${tables.join(", ")}: ${n} ${n === 1 ? "row" : "rows"}`, tr: `${tables.join(", ")} üzerinde salt okunur tek bir sorgu çalıştırıldı: ${n} satır` }
+      : { en: `Ran one read-only query: ${n} ${n === 1 ? "row" : "rows"}`, tr: `Salt okunur tek bir sorgu çalıştırıldı: ${n} satır` },
+  describe_tables: (n) => ({ en: `Read the structure of ${n} ${n === 1 ? "table" : "tables"}`, tr: `${n} tablonun yapısı okundu` }),
   failed: (tool) => ({ en: `${tool} did not run`, tr: `${tool} çalışmadı` }),
 };
 
@@ -49,6 +53,11 @@ export const REFUSAL = {
     body: (cols) => ({
       en: `Exploratory answers read one table, daily_channel_device, with these columns: ${cols}. Products, returns and customers are not in it.`,
       tr: `Keşif cevapları tek bir tabloyu, daily_channel_device, okur; sütunları: ${cols}. Ürün, iade ve müşteri verisi bu tabloda yoktur.`,
+    }),
+    /** When the person allowed more tables than the mart. */
+    body_tables: (tables) => ({
+      en: `Exploratory answers read the tables allowed in Settings › Data source: ${tables}. None of them holds what this question needs.`,
+      tr: `Keşif cevapları Ayarlar › Veri kaynağı bölümünde izin verilen tabloları okur: ${tables}. Bu sorunun gerektirdiği veri bu tabloların hiçbirinde yok.`,
     }),
   },
   metric_howto: {
@@ -88,6 +97,11 @@ export const EXPLORE_Q = {
   channel_device: T("Revenue by channel and device in the last 28 days", "Son 28 günde kanal ve cihaza göre ciro"),
   aov_device_week: T("Average order value by device by week", "Haftalık, cihaza göre sepet ortalaması"),
   spend_growth: T("Which channel’s ad spend grew most this month?", "Bu ay hangi kanalın reklam harcaması en çok arttı?"),
+};
+
+/** A question across the demo shop's tables (orders, order_items, products, returns): offered on the demo only. */
+export const CROSS_Q = {
+  returns_category: T("Which product categories are returned most often?", "En sık iade edilen ürün kategorileri hangileri?"),
 };
 
 export const NEAR = {
@@ -134,7 +148,7 @@ export const TOUR = {
 };
 
 /** Every question the app itself offers, in both languages, so a turn started from one can follow the UI language. */
-export const KNOWN_QUESTIONS = [...Object.values(SUGGEST).map((x) => x.text), ...Object.values(FOLLOW), ...Object.values(NEAR), ...Object.values(TOUR), ...Object.values(EXPLORE_Q)];
+export const KNOWN_QUESTIONS = [...Object.values(SUGGEST).map((x) => x.text), ...Object.values(FOLLOW), ...Object.values(NEAR), ...Object.values(TOUR), ...Object.values(EXPLORE_Q), ...Object.values(CROSS_Q)];
 
 /** What to do next, per check, for a "why" answer. */
 export const WHY_NEXT = {
@@ -195,6 +209,14 @@ export const ACT = {
   gtm_import: (n) => ({ en: `Imported ${n} GTM versions as events (simulated)`, tr: `${n} GTM sürümü olay olarak içe aktarıldı (canlandırma)` }),
   metric_proposed: (label) => ({ en: `Proposed the metric “${label.en}” from an exploratory answer`, tr: `Bir keşif cevabından “${label.tr}” metriği önerildi` }),
   metric_accepted: (label) => ({ en: `Accepted the metric “${label.en}” from an exploratory answer`, tr: `Bir keşif cevabından gelen “${label.tr}” metriği kabul edildi` }),
+  explore_added: (name, dataset) => (dataset ? { en: `Allowed the agent to read the dataset ${name}`, tr: `Agent’ın ${name} veri kümesini okumasına izin verildi` } : { en: `Allowed the agent to read the table ${name}`, tr: `Agent’ın ${name} tablosunu okumasına izin verildi` }),
+  explore_removed: (name, dataset) => (dataset ? { en: `Removed the dataset ${name} from the tables the agent may read`, tr: `${name} veri kümesi agent’ın okuyabileceği tablolardan çıkarıldı` } : { en: `Removed the table ${name} from the tables the agent may read`, tr: `${name} tablosu agent’ın okuyabileceği tablolardan çıkarıldı` }),
+  question_cap: (bytes) => ({ en: `Set the bytes cap per question to ${f.en.bytes(bytes)}`, tr: `Soru başına bayt sınırı ${f.tr.bytes(bytes)} olarak ayarlandı` }),
+  protected_set: (table, cols) =>
+    cols.length
+      ? { en: `Confirmed the protected columns of ${table}: ${cols.join(", ")}`, tr: `${table} tablosunun korunan sütunları onaylandı: ${cols.join(", ")}` }
+      : { en: `Confirmed that ${table} has no protected columns`, tr: `${table} tablosunda korunan sütun olmadığı onaylandı` },
+  description_set: (table, set) => (set ? { en: `Saved the description of ${table}`, tr: `${table} tablosunun açıklaması kaydedildi` } : { en: `Removed the description of ${table}`, tr: `${table} tablosunun açıklaması kaldırıldı` }),
   metric_declined: (label) => ({ en: `Declined the proposed metric “${label.en}”`, tr: `Önerilen “${label.tr}” metriği reddedildi` }),
   audit_done: (title, ok) =>
     ok

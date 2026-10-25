@@ -3,6 +3,7 @@ import "./setup.js";
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { normalizeRow, openBigQuery, queryOptions, tableName } from "../src/warehouse/bigquery.js";
+import { policyFor } from "../src/explore/allow.js";
 import { loadConfig, workspaceName } from "../src/config.js";
 
 const cfg = { project: "ornek-moda", dataset: "marts", location: "EU", maxBytes: 2 * 1024 ** 3 };
@@ -91,12 +92,14 @@ test("config: the help email is on by default, can be redirected or turned off; 
 test("exploratory SQL on BigQuery: dry run first, then the run with the bytes cap, standard SQL and a job timeout", async () => {
   const client = fakeClient({ bytes: 4096, rows: [{ channel: "meta_ads", revenue: { toString: () => "1250.5" } }], refs: [{ projectId: "ornek-moda", datasetId: "marts", tableId: "daily_channel_device" }] });
   const wh = await openBigQuery({ ...cfg, jobTimeoutMs: 60000 }, { client });
-  const out = await wh.explore("SELECT * FROM (SELECT channel, SUM(revenue) AS revenue FROM `ornek-moda.marts.daily_channel_device` GROUP BY channel) AS q LIMIT 1000", { timeoutMs: 20000 });
+  const policy = policyFor({ bigquery: cfg, explore: { allow: [], demoAllow: [] } }, wh);
+  const out = await wh.explore("SELECT * FROM (SELECT channel, SUM(revenue) AS revenue FROM `ornek-moda.marts.daily_channel_device` GROUP BY channel) AS q LIMIT 1000", { timeoutMs: 20000, policy });
   assert.deepEqual(client.calls.map(([k]) => k), ["dry", "run"]);
   assert.deepEqual([client.calls[1][1].maximumBytesBilled, client.calls[1][1].useLegacySql, client.calls[1][1].jobTimeoutMs], ["2147483648", false, 20000]);
-  assert.deepEqual(out, { rows: [{ channel: "meta_ads", revenue: 1250.5 }], columns: ["channel", "revenue"], bytes: 4096 });
+  assert.deepEqual(out, { rows: [{ channel: "meta_ads", revenue: 1250.5 }], columns: ["channel", "revenue"], bytes: 4096, tables: ["ornek-moda.marts.daily_channel_device"] });
   const over = await openBigQuery(cfg, { client: fakeClient({ bytes: 3 * 1024 ** 3, refs: [{ projectId: "ornek-moda", datasetId: "marts", tableId: "daily_channel_device" }] }) });
-  await assert.rejects(over.explore("SELECT 1"), (e) => e.code === "bytes_cap");
+  await assert.rejects(over.explore("SELECT 1", { policy }), (e) => e.code === "bytes_cap" && /partitioned table/.test(e.message));
+  await assert.rejects(over.explore("SELECT 1"), (e) => e.code === "sql_table_not_allowed", "no allowlist, no run");
 });
 
 test("config: a data project and a separate job project; the file can lower the cap, not raise it", () => {

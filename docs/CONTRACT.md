@@ -96,7 +96,19 @@ export interface AuditRun {
   finished_at: string | null;
 }
 // What the value column of a model's query measures; "other" when it is none of the named ones.
-export interface ExploreSpec { measure: "revenue" | "orders" | "sessions" | "ad_spend" | "aov" | "spend_growth" | "other"; /* … */ }
+export interface ExploreSpec { measure: "revenue" | "orders" | "sessions" | "ad_spend" | "aov" | "spend_growth" | "other"; dims: ("weekday" | "channel" | "device" | "week" | "other")[]; /* … */ }
+// Multi-table queries (docs/design/multi-table-queries.md, built 25 Oct 2026):
+export interface ExploreResult { /* … */ tables: string[] }   // the tables the query read (BigQuery: from the dry run)
+export interface AllowEntry { project: string | null; dataset: string; table: string | null; meta?: { tables; rows; bytes; modified; location } }
+// Settings.data_source.explore = { allow: AllowEntry[], allow_setting: { source, locked, env? }, mart: string | null,
+//   protected_columns: Record<table, string[]>, confirmed: string[], descriptions: Record<table, string>,
+//   max_bytes_per_question: number, demo_tables: string[] | null }
+// TableListing, DescribedTable: see types.ts. BqStepId gains "allowed"; BqTest gains warnings.
+// Currency (built 25 Oct 2026): AppState.currency: string (ISO 4217, default "TRY"); Settings.data_source.currency:
+//   SettingValue<string> (AI_ANALYST_CURRENCY locks it). Every money figure (unit "try", the name kept for
+//   compatibility) is written in it: TRY "1,240 TL" / "1.240 TL", "1.84M TL" / "1,84 mn TL"; USD, EUR, GBP
+//   "$1,240", "$1.84M" (en) and "1.240 $", "1,84 mn $" (tr); any other code after the number ("1,240 CHF").
+//   The server text, the *_formatted tool fields, the system prompt's number examples and the web formatters agree.
 // Errors may carry params (already in ApiErrorBody): e.g. { env } for locked, { bytes, cap } for bytes_cap.
 ```
 
@@ -112,7 +124,7 @@ device}`, `ai-tag-debugger browser_action …`, `ai-tag-debugger finish_audit`, 
   params? } }` with 400 (`invalid_input`, `bad_request`), 401 (`unauthorized`), 403 (`forbidden`,
   `loopback_only`), 404 (`not_found`, `unknown_action`), 409 (`locked`, `not_pending`, `already_undone`,
   `undo_gone`, `only_one`, `test_required`, `over_ceiling`, `no_data`, `unavailable`, `not_undoable`), 413
-  (`too_large`), 415 (`unsupported_media`), 422 (`bytes_cap`), 500 (`internal`, a fixed sentence, never a stack or
+  (`too_large`), 415 (`unsupported_media`), 409 (`sql_location_mismatch`, `sql_table_not_allowed` from a settings action), 422 (`bytes_cap`), 500 (`internal`, a fixed sentence, never a stack or
   a path). Actions take the language from `Accept-Language`.
 - `POST /api/ask` `{ question, lang, conversation_id?: string | "new", context? }` → `text/event-stream` of
   `event: <name>\ndata: <json>\n\n`, in this order: `turn { turn_id, conversation_id, question_text }` · `step
@@ -163,14 +175,20 @@ Who: P person (web app), A agent tool, M chat app over MCP, S settings (loopback
 | `get_chat_app_setup` | read | P | the real snippet: this Node, this repo's `src/cli.js`, this config file and data dir |
 | `list_chat_app_calls` | read | P | the last 5 MCP calls (client name from the MCP handshake) |
 | `get_settings` | read | P | `Settings`; keys only as `hint` ("…wxyz"), never the key |
-| `test_bigquery` | read | P S | six steps; one real BigQuery round only when the person presses Test |
+| `test_bigquery` | read | P S | seven steps (credentials, jobs, dataset, table, read, `allowed`: "can read the allowed tables", cost) and `warnings: [{ code: "credential_broader", params: { n, datasets } }]` when the credential sees more datasets in the job project (`INFORMATION_SCHEMA.SCHEMATA`) than the list; one real BigQuery round only when the person presses Test. Errors of the `allowed` step: `allowed_denied`, `allowed_location` |
 | `save_data_source`, `set_bytes_cap`, `rebuild_demo` | write | P S | write `ai-analyst.config.json`; reopen the warehouse |
+| `set_currency` | write | P S | `{ currency }`: an ISO 4217 code Intl knows (case-insensitive), saved as `currency` in `ai-analyst.config.json`; `locked` under `AI_ANALYST_CURRENCY`, `invalid_input` otherwise; Activity row; returns `Settings` |
 | `test_model_key`, `save_model_key`, `remove_model_key`, `set_model_provider` | read (test), write | P S | one small real call only when the person presses Test or Save; keys to `secrets.json` (0600) |
 | `set_preference` | write | P | `make_it_yours`, `not_now`, `exploratory` |
 | `get_workspace` | read | A M | name, demo, data range, rows |
 | `publish_answer` | write | A | `{ sentence: Text, title?: Text, query_id? , check_id?, explore_id?, kind?: "answer"\|"why", segment?: { dimension: "device"\|"channel", key }, lead?: "metric"\|"check", followups?: Text[] }`; the number-grounding validator checks both languages; refused twice, then published with `validation.ok = false`. `kind: "why"` needs a check that does not add up and fills `why`; `segment` makes a `check_split` with the segment's figures and `overall`; `lead: "metric"` (the default when the query has a comparison or is not one of the check's metrics) leads with the metric and keeps the check below. `explore_id` with `check_id` is refused: exploratory answers never carry a verdict |
 | `propose_watch`, `propose_pin`, `propose_event`, `propose_metric` | write | A | a pending `Proposal` (or a proposed metric); nothing changes until a person approves |
-| `run_sql` | read | A | exploratory only (a model is set and the switch is on); see "Exploratory SQL" |
+| `run_sql` | read | A | exploratory only (a model is set and the switch is on); `{ sql, measure, dims, dim_labels?, from, to, unit, label? }`, dims may be `"other"` (a dimension outside the mart, named by `dim_labels`); see "Exploratory SQL" |
+| `describe_tables` | read | A P S | `{ refresh? }` → `{ dialect, tables: DescribedTable[] }`: the mart and the allowed tables with columns, types, column descriptions, row counts, partitioning, the description (the person's, else the demo's built-in one) and the protected columns. Read by the server from `INFORMATION_SCHEMA` and `__TABLES__` (BigQuery) or the demo file's catalogue, cached 10 minutes per warehouse and list; never table data. Offered to the model only with exploratory answers on |
+| `list_tables` | read | P S | `TableListing`: datasets the credential can see in the data and job projects, with location, `same_location`, and their tables (rows, size, last change) in the mart's location; the demo lists its shop tables |
+| `set_explore_tables` | write | P S | `{ allow?: AllowEntry[], max_bytes_per_question? }`: replaces the list for the source in use (BigQuery entries in `explore.allow`, demo entries in `explore.demoAllow` of `ai-analyst.config.json`); a new entry must be in the last `list_tables` (30 minutes) and in the mart's location (`sql_location_mismatch`), and stores its `meta`. `409 locked` under `AI_ANALYST_EXPLORE_ALLOW`. Each added or removed entry is an Activity row |
+| `set_protected_columns` | write | P S | `{ table, columns }`: the person's confirmed list for an allowed table (`explore.protected[table] = { columns, confirmed: true }`); Activity row. Not locked by the env var |
+| `set_table_description` | write | P S | `{ table, description }` (≤ 200 characters, empty removes): the line the agent sees in `describe_tables`; Activity row |
 
 Removed from 0.1, replaced by the prototype's actions: `pin_answer` (frozen answers) → tiles; `unpin` →
 `remove_tile`; `create_alert`, `decide_alert`, `remove_alert` → watches and proposals.
@@ -200,8 +218,29 @@ Removed from 0.1, replaced by the prototype's actions: `pin_answer` (frozen answ
 
 ## Exploratory SQL (src/explore), enforced in code
 
-Only with a model and `preferences.exploratory` not `"off"`. `run_sql { sql, measure, dims, from, to, unit,
-label? }`. Three fences, each enough on its own to keep other tables out (security review H1, 24 Oct):
+Only with a model and `preferences.exploratory` not `"off"`. `run_sql { sql, measure, dims, dim_labels?, from, to,
+unit, label? }`. The model may read the mart and the tables the person allowed (`src/explore/allow.js`):
+
+- **The allowlist.** Settings › Data source › "Tables the agent may read": datasets (every table in them, also ones
+  added later) or single tables; the mart is always on it; empty (the default) means the mart alone. BigQuery
+  entries must be in the mart's location. Stored as `explore.allow` (BigQuery) and `explore.demoAllow` (the demo,
+  whose one dataset is `demo`: `orders`, `order_items`, `products`, `returns`). `AI_ANALYST_EXPLORE_ALLOW`
+  (`project.dataset`, `project.dataset.table`, `demo`, `demo.orders`, comma separated) sets both and locks them.
+  Names: the BigQuery project in lower case, dataset and table exactly (case-sensitive); demo names in lower case.
+- **Protected columns.** Per table: the person's confirmed list (`explore.protected`), else the server's proposal
+  from the schema by name and type (contact data: email, phone, mobile, names, address lines, street, IP, device
+  ids, national ids, card numbers; `name` only on a customer-like table; location detail and birth dates of any
+  type: postal_code, postcode, zip, latitude, longitude, lat, lng, lon, geom and `*_geom` columns, dob,
+  birth_date, birthday). Pseudonymous keys are not proposed: `user_id`, `customer_id`, `*_user_id`,
+  `customer_key`, `user_pseudo_id` and the `id` of a users or customers table may be selected, grouped and
+  returned; the person can still protect one by hand. City, state and country are never proposed. A protected
+  column still works in `JOIN ... ON`, `WHERE` and `COUNT(DISTINCT ...)`. The proposal is enforced until
+  confirmed; a table whose schema cannot be read is refused. No masking.
+- **The per-question cap.** All exploratory queries of one turn share `explore.maxBytesPerQuestion` (5 GB by
+  default; `set_explore_tables`); on BigQuery a query's cap is the lower of `BIGQUERY_MAX_BYTES` and what is left.
+- **describe_tables** gives the model the structure (no data); the model may never query `INFORMATION_SCHEMA`.
+
+Three fences, each enough on its own to keep other tables out (security review H1, 24 Oct):
 
 1. **The guard** (`src/explore/guard.js`, refusal codes with plain words in `GUARD_MESSAGES`):
    - the query is read the way the warehouse reads it; whatever could be read differently is refused
@@ -218,27 +257,44 @@ label? }`. Three fences, each enough on its own to keep other tables out (securi
    - **functions by allowlist** (`ALLOWED_FUNCTIONS`, security review M3): only aggregate, window, math, date,
      string, conditional and cast functions may be called, plus BigQuery's `SAFE.` prefix on one of them; any
      other name before `(`, any other qualified call (`AI.*`, `ML.*`, `OBJ.*`, `KEYS.*`, `AEAD.*`, `NET.*`,
-     `main.getenv`) and any quoted function name is `sql_forbidden_function`. This keeps out file, URL and system
-     functions, AI and other billed calls, and identity functions in both dialects;
+     `main.getenv`) and any quoted function name is `sql_forbidden_function`;
    - every table after `FROM`, `JOIN`, a comma in a `FROM` list, or the opening parenthesis of a `FROM` item or a
-     parenthesised join, is the mart (as the warehouse writes it) or a CTE of the top-level `WITH`; a CTE defined
-     inside a subquery does not count, a string used as a table, `LATERAL`, `UNNEST` and anything else is
-     `sql_table_not_allowed`; a comma at the depth of a `WHERE`, `HAVING`, `QUALIFY` or `ON` condition is refused.
+     parenthesised join, is on the allowlist (BigQuery: written in full, `project.dataset.table`; no wildcard, no
+     `__TABLES__`) or a CTE of the top-level `WITH`; a CTE defined inside a subquery does not count, a string used
+     as a table, `LATERAL`, `UNNEST` and anything else is `sql_table_not_allowed` with `params.table`; a comma at
+     the depth of a `WHERE`, `HAVING`, `QUALIFY` or `ON` condition is refused;
+   - **protected columns** (`sql_protected_column`, `params.column`): read per `SELECT`, a protected column in a
+     select list, `GROUP BY`, `ORDER BY` or `WINDOW` (also inside an expression, an alias, a CTE or a subquery),
+     a `*` or `t.*` when any table read has a protected column, or a table alias alone (a whole row as a struct)
+     is refused; inside `COUNT(…)`/`COUNTIF`, in `ON`, `USING`, `WHERE`, `HAVING`, `QUALIFY`, or in a subquery
+     that sits in one of them, it is allowed. Unqualified names count against every table read; qualified ones
+     against their own table. After the run, a result column named like a protected column is refused too.
 2. **The warehouse checks again.** BigQuery: the dry run is authoritative; the query is refused before it runs
-   unless `statistics.query.referencedTables` is exactly the mart (and not empty) and `statementType` is
-   `SELECT`, then it runs with `maximumBytesBilled` = the cap, `useLegacySql: false` and a job timeout (compiled
-   metric queries get the same check whenever the dry run reports tables). DuckDB: the query runs in a separate
-   database file, `<demo>.explore-mart.duckdb`, rebuilt from the mart whenever the demo file changes and holding
-   nothing else, opened read-only with `enable_external_access=false` and the configuration locked, on its own
-   connection with a 10 s timeout; another table cannot be named at all.
+   unless every entry of `statistics.query.referencedTables` and `referencedViews` is on the allowlist (not empty,
+   fewer than 50) and `statementType` is `SELECT`; a dry run that fails on location is `sql_location_mismatch`,
+   any other failure a fixed sentence. Then it runs with `maximumBytesBilled` = the cap, `useLegacySql: false` and
+   a job timeout; compiled metric queries keep the mart-only check. DuckDB: the query runs in a separate database
+   file, `<demo>.explore-<hash of the list>.duckdb`, holding copies of the allowed tables and nothing else, rebuilt
+   when the demo file or the list changes, opened read-only with `enable_external_access=false` and the
+   configuration locked, on its own connection with a 10 s timeout; another table cannot be named at all.
 3. **The result:** the statement runs wrapped as `SELECT * FROM (<sql>) AS q LIMIT 1000`; the model sees at most
-   200 aggregated rows; the answer is `kind: "explore"`, never a verdict or a definition. Warehouse errors reach
-   the model and the UI without paths (DuckDB) or as a fixed sentence (BigQuery, whose message can name other
-   projects; the detail goes to the server log).
+   200 rows (labelled when cut) and the tables read; the answer is `kind: "explore"`, never a verdict or a
+   definition, and lists `explore.tables` under the SQL. Warehouse errors reach the model and the UI without
+   paths (DuckDB) or as a fixed sentence (BigQuery; the detail goes to the server log).
 
-`test/guard.test.js` holds the attack list: every query of the security review's scripts plus ours, each refused
-by the guard and also run unguarded on the real DuckDB explore path against a demo file that holds a secret table,
-which none of them can read; and the BigQuery referenced-tables check with stubbed dry runs.
+`test/guard.test.js` holds the attack list (`test/attacks.js`) with the mart alone: every query of the security
+review's scripts plus ours, each refused by the guard and also run unguarded on the real DuckDB explore path
+against a demo file that holds a secret table. `test/explore.test.js` runs the same list with two allowed tables
+and a decoy in the same dataset (guard and DuckDB path), cross-table attacks, stubbed BigQuery dry runs
+(referenced tables, views, statement type, location, the per-question cap), protected columns, the settings and
+the env lock, `describe_tables`, the demo shop's totals and a model turn across tables.
+
+The demo shop (`src/demo/seed.js` `generateShop`): `orders` (one row per order: date, channel, device, invented
+`customer_id`, `is_first_order`, `order_total`), `order_items`, `products` (120, eight categories) and `returns`,
+generated from the mart's own rows with the same seed, so `COUNT(*)` and `SUM(order_total)` of `orders` equal the
+mart's orders and revenue for every day, channel and device, and order lines sum to their order. No names or
+contact data. On the demo, Ask offers one cross-table chip with a model: "Which product categories are returned
+most often?".
 
 ## Settings, secrets and configuration
 
@@ -258,6 +314,8 @@ as a four-character hint.
 | `BIGQUERY_PROJECT`, `BIGQUERY_JOB_PROJECT`, `BIGQUERY_DATASET`, `BIGQUERY_LOCATION` (EU) | the mart and where jobs run |
 | `BIGQUERY_MAX_BYTES` (2 GB) | the ceiling of the bytes cap; Settings can only lower the cap below it |
 | `BIGQUERY_JOB_TIMEOUT_MS` (60000) | job timeout |
+| `AI_ANALYST_CURRENCY` (TRY) | the ISO 4217 code money is written in; locks Settings › Data source › Currency (also `currency` in the file) |
+| `AI_ANALYST_EXPLORE_ALLOW` | the tables exploratory answers may read besides the mart, comma separated: `project.dataset`, `project.dataset.table`, `demo`, `demo.orders`; locks the list in Settings |
 | `GOOGLE_APPLICATION_CREDENTIALS` | a key file path; otherwise gcloud application default credentials. Never stored |
 | `AI_ANALYST_PROVIDER` | `planner`, `anthropic`, `openai`, `gemini`, `openai_compatible` |
 | `ANTHROPIC_API_KEY`, `OPENAI_API_KEY`, `GEMINI_API_KEY`, `AI_ANALYST_OPENAI_COMPATIBLE_KEY` | model keys |

@@ -60,7 +60,7 @@ test("GET /api/state: the AppState of the contract", async () => {
   const res = await raw("GET", "/api/state");
   assert.equal(res.status, 200);
   const s = res.json;
-  assert.deepEqual(Object.keys(s).sort(), ["activity", "agent", "audit_fixed", "audits", "badges", "check_run", "checks", "conversations", "dashboards", "events", "host_is_loopback", "metric_proposals", "offer", "pins", "preferences", "proposals", "source", "watches", "workspace"]);
+  assert.deepEqual(Object.keys(s).sort(), ["activity", "agent", "audit_fixed", "audits", "badges", "check_run", "checks", "conversations", "currency", "dashboards", "events", "host_is_loopback", "metric_proposals", "offer", "pins", "preferences", "proposals", "source", "watches", "workspace"]);
   assert.deepEqual(s.workspace, { name: "Örnek Moda", demo: true, data_from: "2026-07-25", data_to: "2026-10-22", refreshed_at: s.workspace.refreshed_at, rows: 1080 });
   assert.deepEqual(s.source, { kind: "demo", label: { en: "Demo data", tr: "Demo veri" }, project: null, table: null });
   assert.equal(s.agent.mode, "planner");

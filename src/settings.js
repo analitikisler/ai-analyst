@@ -6,6 +6,7 @@ import { chmodSync, existsSync, mkdirSync, readFileSync, renameSync, writeFileSy
 import path from "node:path";
 import { AppError } from "./errors.js";
 import { loadConfig, MODEL_DEFAULT, PROVIDERS, secretsFile, VERSION } from "./config.js";
+import { martKey } from "./explore/allow.js";
 
 function writeAtomic(file, text, mode) {
   mkdirSync(path.dirname(file), { recursive: true, ...(mode ? { mode: 0o700 } : {}) });
@@ -78,10 +79,37 @@ export function settingsView(app) {
       checked_at: bq.checkedAt,
       credentials: app.credentials ?? { adc_found: false, identity: null },
       max_bytes: { value: bq.maxBytes, ceiling: bq.ceiling, source: bq.maxBytesSource, locked: bq.maxBytesSource === "env", ...(bq.maxBytesSource === "env" ? { env: "BIGQUERY_MAX_BYTES" } : {}) },
+      currency: { value: c.currency, source: c.currencySetting.source, locked: c.currencySetting.locked, ...(c.currencySetting.env ? { env: c.currencySetting.env } : {}) },
+      explore: exploreView(app),
     },
     model: { provider: { value: c.provider.value, source: c.provider.source, locked: c.provider.locked, ...(c.provider.env ? { env: c.provider.env } : {}) }, providers },
     help: { on: Boolean(c.help), email: c.help?.email ?? "hello@analitikisler.com" },
     preferences: app.store ? preferences(app.store) : { make_it_yours: "shown", not_now: [] },
+  };
+}
+
+/** The tables the agent may read on the source in use (contract: data_source.explore). */
+export function exploreView(app) {
+  const c = app.config;
+  const ex = c.explore;
+  const demo = c.warehouse !== "bigquery";
+  const list = demo ? ex.demoAllow : ex.allow;
+  const protectedCols = {};
+  const confirmed = [];
+  for (const [k, v] of Object.entries(ex.protected ?? {})) {
+    protectedCols[k] = v.columns;
+    if (v.confirmed) confirmed.push(k);
+  }
+  return {
+    allow: list.map(({ project, dataset, table, meta }) => ({ project, dataset, table, ...(meta ? { meta } : {}) })),
+    allow_setting: { source: ex.source, locked: ex.locked, ...(ex.env ? { env: ex.env } : {}) },
+    mart: demo ? martKey(c, true) : c.bigquery.project && c.bigquery.dataset ? martKey(c, false) : null,
+    protected_columns: protectedCols,
+    confirmed,
+    descriptions: ex.descriptions ?? {},
+    max_bytes_per_question: ex.maxBytesPerQuestion,
+    // The demo file's own tables (an older demo file has the mart alone until it is rebuilt).
+    demo_tables: demo && app.warehouse?.tables ? app.warehouse.tables() : null,
   };
 }
 

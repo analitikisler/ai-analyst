@@ -10,6 +10,7 @@ import type { ChatAppCall, ChatClient, ProviderId, ProviderStatus, Settings } fr
 import { CHECK_PLATFORM } from "@/ask/labels";
 import { BigQuerySheet } from "@/components/settings/BigQuerySheet";
 import { KeySheet } from "@/components/settings/KeySheet";
+import { ExploreTables } from "@/components/settings/ExploreTables";
 import { ActivityList } from "@/components/activity/ActivityList";
 import { EventsList } from "@/components/settings/EventsSection";
 import { Switch } from "@/components/ui/switch";
@@ -18,6 +19,7 @@ import { CodeBlock, CopyButton, Disclosure, PageHeader, SegmentedControl } from 
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { NativeSelect, NativeSelectOption } from "@/components/ui/native-select";
+import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Spinner } from "@/components/ui/spinner";
 import { fmt, LANGS, useBilingual, useLang, useT } from "@/i18n";
@@ -267,6 +269,13 @@ function DataSection({ s }: { s: Settings }) {
             </NativeSelectOption>
           ))}
         </NativeSelect>
+      </Row>
+      <Row label={t.set.data.currency} hint={t.set.data.currency_hint}>
+        <EnvLock value={s.data_source.currency} />
+        <CurrencyPicker value={s.data_source.currency.value} locked={s.data_source.currency.locked} />
+      </Row>
+      <Row label={t.set.data.explore.title} hint={t.set.data.explore.hint}>
+        <ExploreTables s={s} />
       </Row>
       <Dialog open={confirm} onOpenChange={setConfirm}>
         <DialogContent>
@@ -696,5 +705,66 @@ function AboutSection({ s }: { s: Settings }) {
         </p>
       </div>
     </Card>
+  );
+}
+
+const CURRENCIES = ["TRY", "USD", "EUR", "GBP"];
+const OTHER = "other";
+
+/** The workspace currency: the four common ones, or any valid ISO 4217 code typed in. */
+function CurrencyPicker({ value, locked }: { value: string; locked: boolean }) {
+  const t = useT();
+  const call = useCall();
+  const [other, setOther] = useState(!CURRENCIES.includes(value));
+  const [code, setCode] = useState(CURRENCIES.includes(value) ? "" : value);
+  const save = async (next: string) => {
+    try {
+      await call("set_currency", { currency: next });
+      notify(t.set.data.currency_saved, { type: "success" });
+    } catch (err) {
+      notify(describeError(t, err), { type: "error" });
+    }
+  };
+  return (
+    <div className="flex flex-wrap items-center gap-2">
+      <NativeSelect
+        size="sm"
+        disabled={locked}
+        value={other ? OTHER : value}
+        onChange={(e) => {
+          if (e.target.value === OTHER) return setOther(true);
+          setOther(false);
+          void save(e.target.value);
+        }}
+        className="w-36"
+        aria-label={t.set.data.currency}
+      >
+        {CURRENCIES.map((c) => (
+          <NativeSelectOption key={c} value={c}>
+            {c}
+          </NativeSelectOption>
+        ))}
+        <NativeSelectOption value={OTHER}>{t.set.data.currency_other}</NativeSelectOption>
+      </NativeSelect>
+      {other && !locked && (
+        <form
+          className="flex items-center gap-2"
+          onSubmit={(e) => {
+            e.preventDefault();
+            const c = code.trim().toUpperCase();
+            if (!/^[A-Z]{3}$/.test(c)) {
+              notify(t.set.data.currency_invalid, { type: "error" });
+              return;
+            }
+            void save(c);
+          }}
+        >
+          <Input value={code} onChange={(e) => setCode(e.target.value)} maxLength={3} placeholder={t.set.data.currency_placeholder} aria-label={t.set.data.currency_code} className="h-8 w-20 uppercase" />
+          <Button type="submit" variant="outline" size="sm">
+            {t.set.data.currency_set}
+          </Button>
+        </form>
+      )}
+    </div>
   );
 }

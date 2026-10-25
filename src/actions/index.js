@@ -6,5 +6,6 @@ import "./workspace.js";
 import "./dashboards.js";
 import "./events.js";
 import "./settings.js";
+import "./explore.js";
 
 export { actionsFor, callAction, contextFor, inputJsonSchema, registry, toolDefinitions } from "./registry.js";

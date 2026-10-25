@@ -211,7 +211,7 @@ check("tr formats", trf.value(2753, "count") === "2.753" && trf.value(1843210, "
   else {
   check("simulated key: a model is set and exploratory is on", (await driver.state()).agent.mode === "model" && (await driver.state()).agent.exploratory === true);
   const sug = (await driver.act("list_suggestions", {}, "en"));
-  check("with a model: four exploratory chips on Ask", sug.filter((x) => x.tag === "exploratory").length === 4);
+  check("with a model: four exploratory chips and one across the demo shop's tables on Ask", sug.filter((x) => x.tag === "exploratory").length === 5 && sug.some((x) => x.text.en === "Which product categories are returned most often?"));
   const qs = ["Which weekday brings the most revenue?", "Revenue by channel and device in the last 28 days", "Average order value by device by week", "Which channel’s ad spend grew most this month?", "Sessions by weekday"];
   const shapes: string[] = [];
   let explore: import("../src/api/types").Answer | undefined;
@@ -241,6 +241,29 @@ check("tr formats", trf.value(2753, "count") === "2.753" && trf.value(1843210, "
     </QueryClientProvider>,
   );
   check("exploratory badge shown, no verdict, SQL written by the model", html.includes("Exploratory · not checked") && html.includes("Written by the model") && !/adds up|does not add up/.test(html), html.slice(0, 200));
+  // Across tables: refused while only the mart is on the list; answered, with the tables it read, once the shop tables are.
+  const cross = "Which product categories are returned most often?";
+  const crossOff = (await ask(cross, "en", "new")).find((e) => e.event === "refusal")?.data as { code: string; body: { en: string } } | undefined;
+  check("cross-table question with only the mart allowed: refused, pointing at Settings › Data source", crossOff?.code === "explore_failed" && /Settings › Data source/.test(crossOff.body.en), crossOff);
+  const allowed = await driver.act("set_explore_tables", { allow: [{ project: null, dataset: "demo", table: null }] }, "en");
+  check("set_explore_tables adds the demo shop tables", allowed.data_source.explore.allow.length === 1 && allowed.data_source.explore.allow[0]!.table === null);
+  const described = await driver.act("describe_tables", {}, "en");
+  check("describe_tables lists the mart and the four shop tables, customer_id proposed as protected", described.tables.length === 5 && described.tables.find((x) => x.table === "orders")?.protected_columns.includes("customer_id") === true);
+  const crossA = answerOf(await ask(cross, "en", "new"))?.answer;
+  check("cross-table answer: exploratory, by category, lists the tables it read", crossA?.kind === "explore" && crossA.explore?.shape === "category" && (crossA.explore?.tables ?? []).includes("returns"), crossA?.explore?.tables);
+  const crossHtml = renderToString(
+    <QueryClientProvider client={qc}>
+      <LanguageProvider lang="en">
+        <TooltipProvider>
+          <MemoryRouter>
+            <AnswerCard answer={crossA!} />
+          </MemoryRouter>
+        </TooltipProvider>
+      </LanguageProvider>
+    </QueryClientProvider>,
+  );
+  check("the answer card names the tables read under the SQL", crossHtml.includes("Tables read: ") && crossHtml.includes("order_items"), crossHtml.slice(0, 200));
+  await driver.act("set_explore_tables", { allow: [] }, "en");
   const trShapes: string[] = [];
   for (const q of ["Hangi hafta günü en çok ciro getiriyor?", "Son 28 günde kanal ve cihaza göre ciro", "Haftalık, cihaza göre sepet ortalaması", "Bu ay hangi kanalın reklam harcaması en çok arttı?"]) {
     const a = answerOf(await ask(q, "tr", "new"))?.answer;

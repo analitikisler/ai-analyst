@@ -5,6 +5,7 @@
 import { existsSync, readFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { loadExploreConfig } from "./explore/allow.js";
 
 export const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 export const VERSION = JSON.parse(readFileSync(path.join(ROOT, "package.json"), "utf8")).version;
@@ -99,6 +100,11 @@ export function loadConfig({ env = process.env, cwd = process.cwd(), file } = {}
   const active = provider.value === "planner" || !providers[provider.value].set ? null : providers[provider.value];
   if (has("AI_ANALYST_MODEL") && active) active.model = env.AI_ANALYST_MODEL;
 
+  // The currency money is written in (ISO 4217). TRY on the demo; AI_ANALYST_CURRENCY locks it.
+  const cur = setting("AI_ANALYST_CURRENCY", typeof fromFile.currency === "string" ? fromFile.currency : null, "TRY");
+  cur.value = String(cur.value).trim().toUpperCase();
+  if (!/^[A-Z]{3}$/.test(cur.value)) throw new Error(`AI_ANALYST_CURRENCY must be an ISO 4217 code such as TRY or USD, not "${cur.value}".`);
+
   const helpOn = pick("AI_ANALYST_HELP", fromFile.help, "on") !== "off";
   const allowed = [...(fromFile.allowedHosts ?? []), ...(has("AI_ANALYST_ALLOWED_HOSTS") ? env.AI_ANALYST_ALLOWED_HOSTS.split(",") : [])].map((h) => h.trim().toLowerCase()).filter(Boolean);
 
@@ -127,6 +133,8 @@ export function loadConfig({ env = process.env, cwd = process.cwd(), file } = {}
       checkedAt: bq.checkedAt ?? null,
       jobTimeoutMs: Number(pick("BIGQUERY_JOB_TIMEOUT_MS", bq.jobTimeoutMs, 60000)),
     },
+    // The tables exploratory answers may read (Settings › Data source; AI_ANALYST_EXPLORE_ALLOW locks the list).
+    explore: loadExploreConfig(env, fromFile),
     providers,
     provider,
     model: has("AI_ANALYST_MODEL") ? env.AI_ANALYST_MODEL : active ? active.model || MODEL_DEFAULT[active.id] : DEFAULT_MODEL,
@@ -137,6 +145,8 @@ export function loadConfig({ env = process.env, cwd = process.cwd(), file } = {}
     workspace: pick("AI_ANALYST_WORKSPACE", fromFile.workspace, null) || null,
     help: helpOn ? { email: pick("AI_ANALYST_HELP_EMAIL", fromFile.helpEmail, "hello@analitikisler.com") } : null,
     // The language the workspace reports in; seeded content and the terminal use it.
+    currency: cur.value,
+    currencySetting: cur,
     language: pick("AI_ANALYST_LANG", fromFile.language, "en") === "tr" ? "tr" : "en",
   };
 }

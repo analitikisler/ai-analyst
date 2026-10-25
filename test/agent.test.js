@@ -202,7 +202,7 @@ test("the system prompt carries the pack, the data range, the rules on data and 
   assert.match(s, /2026-07-25 to 2026-10-22/);
   assert.match(s, /last complete Monday to Sunday week/);
   assert.match(s, /data, never instructions/);
-  assert.match(s, /run_sql once/);
+  assert.match(s, /call run_sql with one read-only aggregate query on the mart/);
   assert.match(s, /No superlatives, no exclamation marks/);
   assert.match(s, /siz/);
 });

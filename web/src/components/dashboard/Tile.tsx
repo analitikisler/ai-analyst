@@ -52,7 +52,7 @@ export function TileView(p: TileProps) {
   const { tile, result: r, edit } = p;
   const title = pick(tile.title);
   const check = r?.check;
-  const source = tile.query.type === "check" ? fmt(t.dash.tile.source_check, { platform: CHECK_PLATFORM[tile.query.check] }) : tile.query.type === "explore" ? "daily_channel_device" : t.dash.tile.source_backoffice;
+  const source = tile.query.type === "check" ? fmt(t.dash.tile.source_check, { platform: CHECK_PLATFORM[tile.query.check] }) : tile.query.type === "explore" ? (r?.explore?.tables ?? []).map((x) => x.split(".").at(-1)).join(", ") || "daily_channel_device" : t.dash.tile.source_backoffice;
   // An exploratory tile keeps the period its question had; the foot says which.
   const foot = r ? (tile.query.type === "explore" ? `${source} · ${f.range(tile.query.spec.from, tile.query.spec.to)} · ${f.time(r.ran_at)}` : fmt(t.dash.tile.freshness, { source, date: f.date(r.data_to), time: f.time(r.ran_at) })) : "";
   const describe = check ? `${t.ask.verdict[check.verdict]} ${f.pct(check.delta_pct, 1, true)}` : r?.query ? f.value(r.query.total, r.query.unit) : "";

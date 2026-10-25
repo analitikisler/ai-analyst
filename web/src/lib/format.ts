@@ -1,9 +1,9 @@
 // Number and date formatting per language, matching what the server writes (ai-analyst src/format.js), so a
 // figure in a chart reads exactly like the same figure in the answer sentence:
-//   en 2,753 · 4.2% · −10.1% · 1.84M TL · 2.66× · 9 Oct 2026 · 9–22 Oct 2026
+//   en 2,753 · 4.2% · −10.1% · 1.84M TL ($1.84M on USD) · 2.66× · 9 Oct 2026 · 9–22 Oct 2026
 //   tr 2.753 · %4,2 · −%10,1 · 1,84 mn TL · 2,66× · 9 Eki 2026 · 9–22 Eki 2026
 // The browser never computes a figure; these only format values the API returned. Missing values read "–".
-import { useMemo } from "react";
+import { useMemo, useSyncExternalStore } from "react";
 import type { Lang, Unit } from "@/api/types";
 import { COPY, fmt, plural, useLang } from "@/i18n";
 
@@ -44,7 +44,23 @@ export function parseISODate(s: string): Date {
   return new Date(Date.UTC(y!, m! - 1, d!));
 }
 
-export function createFormat(lang: Lang) {
+// The workspace currency (ISO 4217, AppState.currency). One per workspace; set when /api/state arrives.
+export const CURRENCY_DEFAULT = "TRY";
+let currentCurrency = CURRENCY_DEFAULT;
+const listeners = new Set<() => void>();
+export function setCurrency(code: string | null | undefined) {
+  const next = typeof code === "string" && /^[A-Z]{3}$/.test(code) ? code : CURRENCY_DEFAULT;
+  if (next === currentCurrency) return;
+  currentCurrency = next;
+  listeners.forEach((l) => l());
+}
+export const getCurrency = () => currentCurrency;
+const subscribe = (l: () => void) => (listeners.add(l), () => void listeners.delete(l));
+const SYMBOL: Record<string, string> = { USD: "$", EUR: "€", GBP: "£" };
+/** The short mark money carries: "TL", "$", "€", "£", else the code. */
+export const currencyMark = (code: string) => SYMBOL[code] ?? (code === "TRY" ? "TL" : code);
+
+export function createFormat(lang: Lang, currency: string = currentCurrency) {
   const t = COPY[lang].format;
   const dash = t.dash;
   const thousands = lang === "tr" ? "." : ",";
@@ -72,12 +88,19 @@ export function createFormat(lang: Lang) {
     return lang === "tr" ? `${sign}%${v}` : `${sign}${v}%`;
   };
 
-  /** Turkish lira: "1.84M TL" / "1,84 mn TL" from a million, "48,210 TL" / "48.210 TL" below. */
+  /**
+   * Money in the workspace currency, as the server writes it. TRY: "1.84M TL" / "1,84 mn TL", "48,210 TL" /
+   * "48.210 TL". USD, EUR, GBP: "$48,210", "$1.84M" (en) / "48.210 $", "1,84 mn $" (tr). Other codes go after.
+   */
+  const mark = currencyMark(currency);
+  const symbolFirst = lang !== "tr" && Boolean(SYMBOL[currency]);
+  const withMark = (body: string) => (symbolFirst ? (body.startsWith(MINUS) ? `${MINUS}${mark}${body.slice(1)}` : `${mark}${body}`) : `${body} ${mark}`);
   const tryMoney = (n: number | null | undefined): string => {
     if (!isNum(n)) return dash;
-    if (Math.abs(n) >= 1e6) return fmt(t.millionTry, { value: dec(n / 1e6, 2) });
-    return fmt(t.try, { value: int(n) });
+    if (Math.abs(n) >= 1e6) return withMark(fmt(t.million, { value: dec(n / 1e6, 2) }));
+    return withMark(int(n));
   };
+  const money = tryMoney;
 
   const ratio = (n: number | null | undefined): string => (isNum(n) ? fmt(t.ratio, { value: dec(n, 2) }) : dash);
 
@@ -99,6 +122,7 @@ export function createFormat(lang: Lang) {
     const sign = v < 0 ? MINUS : "";
     const [div, suffix] = abs >= 1e6 ? [1e6, lang === "tr" ? " mn" : "M"] : abs >= 1e4 ? [1e3, lang === "tr" ? " bin" : "k"] : [1, ""];
     const body = div === 1 ? int(abs) : dec(abs / div, abs / div >= 100 ? 0 : 1).replace(new RegExp(`\\${decimal}0$`), "");
+    if (unit === "try" && symbolFirst) return `${sign}${mark}${body}${suffix}`;
     return `${sign}${body}${suffix}`;
   };
 
@@ -200,19 +224,21 @@ export function createFormat(lang: Lang) {
   /** A since-date inside a sentence: "9 Oct" / "9 Ekim’den" (the Turkish templates add "beri"). */
   const since = (iso: string | null | undefined): string => (!iso ? dash : lang === "tr" ? trFrom(iso) : date(iso));
 
-  return { lang, dash, int, dec, pct, tryMoney, ratio, value, compact, date, range, relativeTime, points, delta, bytes, time, when, whenMid, since, dateLong, localDay };
+  return { lang, currency, currencyMark: mark, dash, int, dec, pct, tryMoney, money, ratio, value, compact, date, range, relativeTime, points, delta, bytes, time, when, whenMid, since, dateLong, localDay };
 }
 
 export type Format = ReturnType<typeof createFormat>;
-const cache = new Map<Lang, Format>();
-export const formatFor = (lang: Lang): Format => {
-  let f = cache.get(lang);
-  if (!f) cache.set(lang, (f = createFormat(lang)));
+const cache = new Map<string, Format>();
+export const formatFor = (lang: Lang, currency: string = currentCurrency): Format => {
+  const k = `${lang}:${currency}`;
+  let f = cache.get(k);
+  if (!f) cache.set(k, (f = createFormat(lang, currency)));
   return f;
 };
 
-/** Formatters bound to the current language. */
+/** Formatters bound to the current language and the workspace currency. */
 export function useFormat(): Format {
   const lang = useLang();
-  return useMemo(() => formatFor(lang), [lang]);
+  const currency = useSyncExternalStore(subscribe, getCurrency, getCurrency);
+  return useMemo(() => formatFor(lang, currency), [lang, currency]);
 }

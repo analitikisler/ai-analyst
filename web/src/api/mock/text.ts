@@ -48,6 +48,11 @@ export const REFUSAL = {
       en: `Exploratory answers read one table, daily_channel_device, with these columns: ${cols}. Products, returns and customers are not in it.`,
       tr: `Keşif cevapları tek bir tabloyu, daily_channel_device, okur; sütunları: ${cols}. Ürün, iade ve müşteri verisi bu tabloda yoktur.`,
     }),
+    /** The demo shop's tables exist but are not on the list in Settings › Data source. */
+    not_allowed: T(
+      "Exploratory answers read the tables allowed in Settings › Data source, and only the mart is on the list. Adding the demo shop tables there (orders, order lines, products, returns) makes this answerable.",
+      "Keşif cevapları Ayarlar › Veri kaynağı bölümünde izin verilen tabloları okur; listede yalnızca mart tablosu var. Demo mağaza tabloları (siparişler, sipariş satırları, ürünler, iadeler) oraya eklenirse bu soru cevaplanabilir.",
+    ),
   },
   metric_howto: {
     heading: T("Metrics are defined in the metric pack", "Metrikler metrik paketinde tanımlanır"),
@@ -86,6 +91,11 @@ export const EXPLORE_Q = {
   channel_device: T("Revenue by channel and device in the last 28 days", "Son 28 günde kanal ve cihaza göre ciro"),
   aov_device_week: T("Average order value by device by week", "Haftalık, cihaza göre sepet ortalaması"),
   spend_growth: T("Which channel’s ad spend grew most this month?", "Bu ay hangi kanalın reklam harcaması en çok arttı?"),
+};
+
+/** A question across the demo shop's tables: offered on the demo only. */
+export const CROSS_Q = {
+  returns_category: T("Which product categories are returned most often?", "En sık iade edilen ürün kategorileri hangileri?"),
 };
 
 export const NEAR = {
@@ -187,6 +197,11 @@ export const APPROVAL = {
 };
 
 export const ACT = {
+  explore_added: (name: string, dataset: boolean): Text => (dataset ? { en: `Allowed the agent to read the dataset ${name}`, tr: `Agent’ın ${name} veri kümesini okumasına izin verildi` } : { en: `Allowed the agent to read the table ${name}`, tr: `Agent’ın ${name} tablosunu okumasına izin verildi` }),
+  explore_removed: (name: string, dataset: boolean): Text => (dataset ? { en: `Removed the dataset ${name} from the tables the agent may read`, tr: `${name} veri kümesi agent’ın okuyabileceği tablolardan çıkarıldı` } : { en: `Removed the table ${name} from the tables the agent may read`, tr: `${name} tablosu agent’ın okuyabileceği tablolardan çıkarıldı` }),
+  protected_set: (table: string, cols: string[]): Text =>
+    cols.length ? { en: `Confirmed the protected columns of ${table}: ${cols.join(", ")}`, tr: `${table} tablosunun korunan sütunları onaylandı: ${cols.join(", ")}` } : { en: `Confirmed that ${table} has no protected columns`, tr: `${table} tablosunda korunan sütun olmadığı onaylandı` },
+  description_set: (table: string, set: boolean): Text => (set ? { en: `Saved the description of ${table}`, tr: `${table} tablosunun açıklaması kaydedildi` } : { en: `Removed the description of ${table}`, tr: `${table} tablosunun açıklaması kaldırıldı` }),
   demo_built: (from: string, to: string): Text => ({
     en: `Built the demo workspace: Örnek Moda, ${f.en.range(from, to)}`,
     tr: `Demo çalışma alanı oluşturuldu: Örnek Moda, ${f.tr.range(from, to)}`,

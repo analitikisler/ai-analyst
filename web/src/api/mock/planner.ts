@@ -11,6 +11,7 @@ import { trLong } from "./text";
 import { both, enShort, EXPLORE_Q, f, FOLLOW, GROUPING, NEAR, READ_AS, REFUSAL, STEP, T, trFrom, WHY_NEXT } from "./text";
 import { exploreQuery, MART_COLUMNS, runExplore } from "./explore";
 import type { ChartEvent, ExploreResult, ExploreSpec } from "../types";
+import shop from "../fixtures/shop.json";
 
 export interface PlanContext {
   /** The last check answered in this conversation, for "Is the gap only on mobile?". */
@@ -24,6 +25,8 @@ export interface PlanContext {
   demo?: boolean;
   /** Events (Settings › Events): an answer names one that falls in its spike or gap. */
   events?: ChartEvent[];
+  /** The demo shop's tables are on the list in Settings › Data source. */
+  shopTables?: boolean;
 }
 
 export type Plan =
@@ -417,6 +420,11 @@ export function plan(question: string, ctx: PlanContext): Plan {
     return { kind: "refusal", refusal: { code: "metric_howto", heading: m.heading, body: ctx.demo === false ? m.own : m.demo, nearest: [] } };
   }
 
+  // Across the demo shop's tables: needs them on the list in Settings › Data source.
+  if (ctx.explore && ctx.model && ctx.demo !== false && has(s, /categor.*return|return.*categor/, /iade edilen ürün kategori|kategori.*iade/)) {
+    return ctx.shopTables ? crossPlan(ctx) : { kind: "refusal", refusal: { code: "explore_failed", heading: REFUSAL.explore_failed.heading, body: REFUSAL.explore_failed.not_allowed, nearest: [EXPLORE_Q.weekday, EXPLORE_Q.channel_device] } };
+  }
+
   // Exploratory: a weekday, a growth, or two dimensions at once are outside the metric set.
   if (ctx.explore && ctx.model && needsExplore(s)) {
     const spec = exploreFor(s);
@@ -611,6 +619,42 @@ function explorePlan(spec: ExploreSpec, ctx: PlanContext): Plan {
       created_by: "agent",
       model_label: ctx.model?.label ?? T("Built-in planner", "Yerleşik planlayıcı"),
       seconds: 3.4,
+      handmade: true,
+      explore: x,
+    },
+  };
+}
+
+/** "Which product categories are returned most often?", recorded from the real demo's run_sql (fixtures/shop.json). */
+function crossPlan(ctx: PlanContext): Plan {
+  const x = shop.returns_by_category as unknown as ExploreResult;
+  const [a, b] = x.rows as [string, number][];
+  const steps: Step[] = [
+    { tool: "describe_tables", summary: T("Read the structure of 5 tables", "5 tablonun yapısı okundu"), ok: true },
+    { tool: "run_sql", summary: both((l) => (l === "en" ? `Ran one read-only query on ${x.tables.join(", ")}: ${x.rows.length} rows` : `${x.tables.join(", ")} üzerinde salt okunur tek bir sorgu çalıştırıldı: ${x.rows.length} satır`)), ok: true },
+    { tool: "publish_answer", summary: STEP.publish, ok: true },
+  ];
+  const r = range(x.spec.from, x.spec.to);
+  return {
+    kind: "answer",
+    steps,
+    answer: {
+      kind: "explore",
+      sentence: {
+        en: `Shoes come back most often: ${f.en.pct(a![1], 1)} of order lines for ${r.en}, then ${b![0]} at ${f.en.pct(b![1], 1)}.`,
+        tr: `${r.tr} döneminde en sık ayakkabılar iade edildi: sipariş satırlarının ${f.tr.pct(a![1], 1)} kadarı; ardından elbiseler, ${f.tr.pct(b![1], 1)}.`,
+      },
+      title: T("Return rate by product category", "Ürün kategorisine göre iade oranı"),
+      followups: [FOLLOW.to_metric, EXPLORE_Q.weekday],
+      interpretation: null,
+      query: exploreQuery(x),
+      check: null,
+      metrics: [],
+      events: [],
+      validation: { ok: true, unmatched: [] },
+      created_by: "agent",
+      model_label: ctx.model?.label ?? T("Built-in planner", "Yerleşik planlayıcı"),
+      seconds: 4.1,
       handmade: true,
       explore: x,
     },

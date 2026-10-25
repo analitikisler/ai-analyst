@@ -166,7 +166,8 @@ export type AnswerKind = "check" | "check_split" | "why" | "explore" | "number" 
 export interface ExploreSpec {
   /** "other" when the model's value column is none of the named ones; the result's label names it. */
   measure: "revenue" | "orders" | "sessions" | "ad_spend" | "aov" | "spend_growth" | "other";
-  dims: ("weekday" | "channel" | "device" | "week")[];
+  /** "other": a dimension outside the mart (a product category, a return reason); its key is shown as written. */
+  dims: ("weekday" | "channel" | "device" | "week" | "other")[];
   from: string;
   to: string;
 }
@@ -184,6 +185,8 @@ export interface ExploreResult {
   rows: (string | number | null)[][];
   sql: string;
   bytes: number;
+  /** The tables the query read (BigQuery: project.dataset.table, from the dry run; the demo: bare names). */
+  tables: string[];
 }
 
 /** A "why" answer explains a gap instead of repeating the tally: when it started, where it is, what the tag audit
@@ -536,6 +539,52 @@ export interface BigQueryConfig {
   max_bytes: number;
 }
 
+/** One entry of the tables the agent may read: a dataset (table null: every table in it) or one table. */
+export interface AllowEntry {
+  /** null on the demo, whose one dataset is "demo". */
+  project: string | null;
+  dataset: string;
+  table: string | null;
+  /** Size, table count, last change and location, as listed when the entry was added. */
+  meta?: { tables: number; rows: number; bytes: number | null; modified: string | null; location: string | null };
+}
+
+export interface ExploreSettings {
+  allow: AllowEntry[];
+  allow_setting: { source: "env" | "file" | "default"; locked: boolean; env?: string };
+  /** The mart's key (always on the list); null while BigQuery has no mart set. */
+  mart: string | null;
+  /** The person's protected columns per table (lower case); tables without an entry get the proposal (DescribedTable). */
+  protected_columns: Record<string, string[]>;
+  /** Tables whose protected columns the person confirmed. */
+  confirmed: string[];
+  descriptions: Record<string, string>;
+  max_bytes_per_question: number;
+  /** The demo file's tables; null on BigQuery. An older demo file has the mart alone until it is rebuilt. */
+  demo_tables: string[] | null;
+}
+
+/** What the credential can see, for the table picker (list_tables). */
+export interface TableListing {
+  location: string | null;
+  datasets: { project: string | null; dataset: string; location: string | null; same_location: boolean; tables: { table: string; rows: number; bytes: number | null; modified: string | null }[] }[];
+}
+
+/** One allowed table as describe_tables returns it. */
+export interface DescribedTable {
+  table: string;
+  mart: boolean;
+  type: "table" | "view";
+  description: string | null;
+  rows: number | null;
+  bytes: number | null;
+  modified: string | null;
+  partitioned_by: string | null;
+  columns: { name: string; type: string; description?: string }[];
+  protected_columns: string[];
+  protected_confirmed: boolean;
+}
+
 export interface Settings {
   server: { loopback: boolean; config_file: string; data_dir: string; pack_dir: string; address: string; version: string };
   data_source: {
@@ -544,6 +593,9 @@ export interface Settings {
     checked_at: string | null;
     credentials: { adc_found: boolean; identity: string | null };
     max_bytes: SettingValue<number> & { ceiling: number };
+    /** ISO 4217; AI_ANALYST_CURRENCY locks it. */
+    currency: SettingValue<string>;
+    explore: ExploreSettings;
   };
   model: { provider: SettingValue<ProviderId | "planner">; providers: ProviderStatus[] };
   help: { on: boolean; email: string };
@@ -557,7 +609,7 @@ export interface Preferences {
   exploratory?: "on" | "off";
 }
 
-export type BqStepId = "credentials" | "jobs" | "dataset" | "table" | "read" | "cost";
+export type BqStepId = "credentials" | "jobs" | "dataset" | "table" | "read" | "allowed" | "cost";
 
 export interface BqStep {
   id: BqStepId;
@@ -572,6 +624,8 @@ export interface BqTest {
   steps: BqStep[];
   detected: { location: string | null };
   values: BigQueryConfig;
+  /** credential_broader: the credential can see more datasets than the tables the agent may read. */
+  warnings?: { code: "credential_broader"; params: { n: number; datasets: string } }[];
 }
 
 export interface ModelTestResult {
@@ -635,6 +689,8 @@ export interface CheckRun {
 export interface AppState {
   workspace: Workspace;
   source: { kind: "demo" | "bigquery"; label: Text; project: string | null; table: string | null };
+  /** The workspace currency (ISO 4217, default TRY): every money figure is written in it. */
+  currency: string;
   agent: AgentMode;
   offer: { help_email: string | null; cloud_email: string };
   preferences: Preferences;
@@ -758,6 +814,7 @@ export interface Actions {
   test_bigquery: { input: BigQueryConfig; result: BqTest };
   save_data_source: { input: { kind: "demo" } | { kind: "bigquery"; test_id: string }; result: Settings };
   set_bytes_cap: { input: { max_bytes: number }; result: Settings };
+  set_currency: { input: { currency: string }; result: Settings };
   rebuild_demo: { input: Record<string, never>; result: { ok: true } };
   test_model_key: { input: { provider: ProviderId; key?: string; model: string; base_url?: string }; result: ModelTestResult };
   save_model_key: { input: { provider: ProviderId; key?: string; model: string; base_url?: string }; result: Settings };
@@ -765,6 +822,11 @@ export interface Actions {
   set_model_provider: { input: { provider: ProviderId | "planner" }; result: Settings };
   get_chat_app_setup: { input: { client: ChatClient }; result: ChatAppSetup };
   list_chat_app_calls: { input: Record<string, never>; result: ChatAppCall[] };
+  list_tables: { input: Record<string, never>; result: TableListing };
+  set_explore_tables: { input: { allow?: Omit<AllowEntry, "meta">[]; max_bytes_per_question?: number }; result: Settings };
+  set_protected_columns: { input: { table: string; columns: string[] }; result: Settings };
+  set_table_description: { input: { table: string; description: string }; result: Settings };
+  describe_tables: { input: { refresh?: boolean }; result: { dialect: "duckdb" | "bigquery"; tables: DescribedTable[] } };
   set_preference: { input: { key: "make_it_yours"; value: "shown" | "hidden" } | { key: "not_now"; value: string } | { key: "exploratory"; value: "on" | "off" }; result: Preferences };
 }
 export type ActionName = keyof Actions;

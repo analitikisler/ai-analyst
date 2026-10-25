@@ -2,6 +2,7 @@
 // data stays on screen while a new period loads (`placeholderData`), so a filter change never blanks a page.
 import { keepPreviousData, QueryClient, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useLang } from "@/i18n";
+import { setCurrency } from "@/lib/format";
 import { api, isApiError } from ".";
 import type { ActionName, Actions, CheckId, ChatClient, MetricId } from "./types";
 
@@ -25,7 +26,7 @@ export const keys = {
 /** GET /api/state (B02). Server strings are bilingual, so the key does not carry the language. */
 export function useAppState() {
   const lang = useLang();
-  return useQuery({ queryKey: keys.state(), queryFn: () => api.state(lang) });
+  return useQuery({ queryKey: keys.state(), queryFn: () => api.state(lang).then((s) => (setCurrency(s.currency), s)) });
 }
 
 function useRead<N extends ActionName>(name: N, input: Actions[N]["input"], opts: { enabled?: boolean; keepPrevious?: boolean; refetchInterval?: number } = {}) {

@@ -5,6 +5,7 @@ import { existsSync, rmSync } from "node:fs";
 import path from "node:path";
 import { buildDemoWarehouse } from "./demo/seed.js";
 import { seedWorkspace } from "./demo/workspace.js";
+import { setCurrency } from "./format.js";
 import { loadPack } from "./metrics/load.js";
 import { Store } from "./store/store.js";
 import { demoFile, openWarehouse } from "./warehouse/index.js";
@@ -19,6 +20,7 @@ export const appDbFile = (config) => path.join(config.dataDir, "app.db");
  */
 export async function openWorkspace(config, opts = {}) {
   const { seed = false, workspace = seed } = opts;
+  setCurrency(config.currency);
   const pack = loadPack(config.packDir);
   const { warehouse, seeded } = await openWarehouse(config, { seedIfMissing: seed, bigQueryClient: opts.bigQueryClient });
   const store = new Store(appDbFile(config));
@@ -36,6 +38,7 @@ export async function openWorkspace(config, opts = {}) {
     async applyConfig(next) {
       const before = JSON.stringify([app.config.warehouse, app.config.bigquery]);
       app.config = next;
+      setCurrency(next.currency);
       if (JSON.stringify([next.warehouse, next.bigquery]) === before) return;
       const old = app.warehouse;
       const { warehouse: wh } = await openWarehouse(next, { seedIfMissing: true, bigQueryClient: opts.bigQueryClient });

@@ -1,7 +1,7 @@
 // Number and date formatting per language, the same rules as the web app's lib/format.ts, so a figure
 // in a sentence reads exactly like the same figure on a chart. The planner's sentences and default
 // titles use it, and the validator reads back exactly these formats.
-//   en 2,753 · 4.2% · −10.1% · 1.84M TL · 2.66× · 9 Oct 2026 · 9–22 Oct 2026
+//   en 2,753 · 4.2% · −10.1% · 1.84M TL ($1.84M on USD) · 2.66× · 9 Oct 2026 · 9–22 Oct 2026
 //   tr 2.753 · %4,2 · −%10,1 · 1,84 mn TL · 2,66× · 9 Eki 2026 · 9–22 Eki 2026
 export const MINUS = "−";
 
@@ -31,16 +31,33 @@ export function fmtPct(r, d = 1, signed = false, lang = "en") {
   return lang === "tr" ? `${sign}%${v}` : `${sign}${v}%`;
 }
 
-export function fmtTRY(n, lang = "en") {
+// The workspace's currency (ISO 4217; config.currency, AI_ANALYST_CURRENCY). One per workspace, set when the
+// workspace opens or the setting changes, so every money figure and the model's prompt read the same.
+export const CURRENCY_DEFAULT = "TRY";
+export const isCurrency = (c) => typeof c === "string" && /^[A-Z]{3}$/.test(c);
+let current = CURRENCY_DEFAULT;
+export const setCurrency = (c) => (current = isCurrency(c) ? c : CURRENCY_DEFAULT);
+export const getCurrency = () => current;
+
+const SYMBOL = { USD: "$", EUR: "€", GBP: "£" };
+/**
+ * Money in the workspace currency. TRY: "48,210 TL", "1.84M TL" (en) / "48.210 TL", "1,84 mn TL" (tr).
+ * USD, EUR, GBP: "$48,210", "$1.84M" (en) / "48.210 $", "1,84 mn $" (tr). Any other code goes after the number.
+ */
+export function fmtMoney(n, lang = "en", currency = current) {
   if (!isNum(n)) return DASH;
-  if (Math.abs(n) >= 1e6) return lang === "tr" ? `${fmtDec(n / 1e6, 2, lang)} mn TL` : `${fmtDec(n / 1e6, 2, lang)}M TL`;
-  return `${fmtInt(n, lang)} TL`;
+  const big = Math.abs(n) >= 1e6;
+  const body = big ? (lang === "tr" ? `${fmtDec(n / 1e6, 2, lang)} mn` : `${fmtDec(n / 1e6, 2, lang)}M`) : fmtInt(n, lang);
+  const sym = SYMBOL[currency];
+  if (sym && lang !== "tr") return body.startsWith(MINUS) ? `${MINUS}${sym}${body.slice(1)}` : `${sym}${body}`;
+  return `${body} ${sym ?? (currency === "TRY" ? "TL" : currency)}`;
 }
+export const fmtTRY = (n, lang = "en") => fmtMoney(n, lang);
 
 /** unit: count | try | pct | ratio */
 export function fmtVal(v, unit, lang = "en") {
   if (!isNum(v)) return DASH;
-  if (unit === "try") return fmtTRY(v, lang);
+  if (unit === "try") return fmtMoney(v, lang);
   if (unit === "pct") return fmtPct(v, 2, false, lang);
   if (unit === "ratio") return `${fmtDec(v, 2, lang)}×`;
   return fmtInt(v, lang);

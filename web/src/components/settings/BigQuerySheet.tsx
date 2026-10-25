@@ -12,7 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Spinner } from "@/components/ui/spinner";
-import { fmt, useT } from "@/i18n";
+import { fmt, plural, useLang, useT } from "@/i18n";
 import { describeError } from "@/lib/errors";
 import { useFormat } from "@/lib/format";
 import { notify } from "@/lib/notify";
@@ -22,6 +22,7 @@ const STEP_MS = 420;
 export function BigQuerySheet() {
   const t = useT();
   const f = useFormat();
+  const lang = useLang();
   const call = useCall();
   const [params, setParams] = useSearchParams();
   const open = params.get("connect") === "bigquery";
@@ -111,6 +112,8 @@ export function BigQuerySheet() {
         return fmt(t.set.bq.steps.table, { table: String(d.table ?? ""), n: Number(d.n ?? 0), time: f.whenMid(String(d.time ?? "")) });
       case "read":
         return fmt(t.set.bq.steps.read, { from: f.date(String(d.from ?? "")), to: f.date(String(d.to ?? ""), true), rows: f.int(Number(d.rows ?? 0)) });
+      case "allowed":
+        return Number(d.n ?? 0) ? plural(lang, Number(d.n), t.set.bq.steps.allowed, { n: f.int(Number(d.n)) }) : t.set.bq.steps.allowed_none;
       case "cost":
         return fmt(t.set.bq.steps.cost, { bytes: f.bytes(Number(d.bytes ?? 0)), cap: f.bytes(Number(d.cap ?? 0)) });
     }
@@ -221,13 +224,13 @@ export function BigQuerySheet() {
                 <h3 className="text-sm font-semibold text-text-strong">{t.set.bq.test}</h3>
                 {!testing && (
                   <span className="flex items-center gap-2 font-mono text-2xs text-text-muted" aria-live="polite">
-                    <TallyMicro expected={6} measured={ok} verdict={ok === 6 ? "adds_up" : "does_not_add_up"} width={48} />
+                    <TallyMicro expected={7} measured={ok} verdict={ok === 7 ? "adds_up" : "does_not_add_up"} width={48} />
                     {fmt(t.set.bq.summary, { ok })}
                   </span>
                 )}
               </header>
               <ol role="list" className="divide-y divide-border">
-                {(["credentials", "jobs", "dataset", "table", "read", "cost"] as const).map((id, i) => {
+                {(["credentials", "jobs", "dataset", "table", "read", "allowed", "cost"] as const).map((id, i) => {
                   const step = shown.find((x) => x.id === id) ?? { id, status: "waiting" as const };
                   return (
                     <li key={id} role="listitem" className="px-3 py-2.5">
@@ -253,6 +256,11 @@ export function BigQuerySheet() {
                   );
                 })}
               </ol>
+              {!testing && !stale && (test.warnings ?? []).map((w) => (
+                <p key={w.code} role="note" className="border-t border-border bg-warning-soft px-3 py-2 text-[13px] leading-[18px] text-text">
+                  {plural(lang, w.params.n, t.set.bq.warn.credential_broader, { n: f.int(w.params.n), datasets: w.params.datasets })}
+                </p>
+              ))}
               {stale && <p className="border-t border-border px-3 py-2 text-2xs text-text-muted">{t.set.bq.stale}</p>}
               {!testing && !test.ok && !stale && (
                 <p className="border-t border-border px-3 py-2 text-2xs text-text-muted">

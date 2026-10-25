@@ -34,6 +34,8 @@ export async function buildState(app, { loopback = true } = {}) {
       project: bigquery ? bq.project : null,
       table: bigquery ? `${bq.project}.${bq.dataset}` : null,
     },
+    // Every money figure in the app is written in this (ISO 4217).
+    currency: config.currency,
     agent: agentMode(app),
     // The "find the cause" email is offered on own data only; the demo's gap is planted.
     offer: { help_email: bigquery && config.help ? config.help.email : null, cloud_email: "hello@analitikisler.com" },

@@ -22,8 +22,9 @@ const WEB_ACTIONS = [
   "list_sources", "list_suggestions", "list_metrics", "list_metric_entries", "get_metric", "decide_metric", "list_events", "save_event", "delete_event", "import_gtm_events",
   "start_tracking_audit", "get_audit", "explain_metric", "list_checks", "run_query", "reconcile", "run_all_checks", "get_check", "watch_check", "unwatch_check", "mark_checks_seen",
   "list_conversations", "get_conversation", "decide_proposal", "undo", "list_dashboards", "get_dashboard", "create_dashboard", "rename_dashboard", "delete_dashboard",
-  "set_dashboard_period", "pin_answer", "update_tile", "move_tile", "duplicate_tile", "remove_tile", "get_settings", "test_bigquery", "save_data_source", "set_bytes_cap",
+  "set_dashboard_period", "pin_answer", "update_tile", "move_tile", "duplicate_tile", "remove_tile", "get_settings", "test_bigquery", "save_data_source", "set_bytes_cap", "set_currency",
   "rebuild_demo", "test_model_key", "save_model_key", "remove_model_key", "set_model_provider", "get_chat_app_setup", "list_chat_app_calls", "set_preference",
+  "list_tables", "set_explore_tables", "set_protected_columns", "set_table_description", "describe_tables",
 ];
 
 test("every action of the web contract is registered and a person may call it", () => {
@@ -38,7 +39,7 @@ test("every action of the web contract is registered and a person may call it", 
 
 test("the agent's tools: reads, the check run, publishing, proposals and SQL; never a person's write", () => {
   const tools = actionsFor("agent").map((a) => a.name).sort();
-  assert.deepEqual(tools, ["explain_metric", "get_workspace", "list_checks", "list_dashboards", "list_events", "list_metrics", "list_sources", "propose_event", "propose_metric", "propose_pin", "propose_watch", "publish_answer", "reconcile", "run_all_checks", "run_query", "run_sql"]);
+  assert.deepEqual(tools, ["describe_tables", "explain_metric", "get_workspace", "list_checks", "list_dashboards", "list_events", "list_metrics", "list_sources", "propose_event", "propose_metric", "propose_pin", "propose_watch", "publish_answer", "reconcile", "run_all_checks", "run_query", "run_sql"]);
   const defs = toolDefinitions(ws.pack, { eager: true });
   const rq = defs.find((t) => t.name === "run_query");
   assert.equal(rq.input_schema.type, "object");

@@ -81,7 +81,8 @@ const NOT_IN_DATA = [
 ];
 
 const outsideBody = () => ({ en: `${REFUSAL.outside.en} ${REFUSAL.coverage.en}`, tr: `${REFUSAL.outside.tr} ${REFUSAL.coverage.tr}` });
-export const exploreFailedRefusal = () => ({ code: "explore_failed", heading: REFUSAL.explore_failed.heading, body: REFUSAL.explore_failed.body(MART_COLUMNS.join(", ")), nearest: [EXPLORE_Q.weekday, EXPLORE_Q.channel_device, EXPLORE_Q.spend_growth] });
+/** tables: the allowed tables besides the mart; with none, the body lists the mart's columns. */
+export const exploreFailedRefusal = (tables = []) => ({ code: "explore_failed", heading: REFUSAL.explore_failed.heading, body: tables.length ? REFUSAL.explore_failed.body_tables(["daily_channel_device", ...tables].join(", ")) : REFUSAL.explore_failed.body(MART_COLUMNS.join(", ")), nearest: [EXPLORE_Q.weekday, EXPLORE_Q.channel_device, EXPLORE_Q.spend_growth] });
 
 /**
  * What the question asks for.

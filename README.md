@@ -77,11 +77,21 @@ for each). The chat app's model does the thinking; AI Analyst supplies the metri
 ## Exploratory answers
 
 With a model, questions the metric pack does not cover get an exploratory answer: the model writes one read-only
-query against the mart. These answers are labelled "Exploratory · not checked", show the SQL the model wrote and
-never carry a verdict. The limits are enforced in code: one `SELECT` against the mart table only, an allowlist of
-functions, a BigQuery dry run that must reference only the mart and stay under the bytes cap, a separate
-read-only DuckDB file holding only the mart, at most 1,000 rows, and at most 200 aggregated rows passed to the
-model. Settings › Model turns it off.
+query against the tables it may read. By default that is the mart alone. In Settings › Data source › "Tables the
+agent may read" you can add datasets (every table in them, also ones added later) or single tables, in the mart's
+location; `AI_ANALYST_EXPLORE_ALLOW` sets the list on the server and locks it. On the demo, one click adds the demo
+shop's own tables (orders, order lines, products, returns), generated from the same seed as the mart so their
+totals agree with it.
+
+These answers are labelled "Exploratory · not checked", show the SQL the model wrote, name the tables it read and
+never carry a verdict. The limits are enforced in code, at three layers, each enough on its own: a SQL guard (one
+`SELECT`, an allowlist of functions, every table written in full and on the list, no `INFORMATION_SCHEMA`, no
+wildcard or meta-tables); on BigQuery a dry run whose referenced tables and views must all be on the list, as a
+`SELECT`, under the bytes cap; on the demo a separate read-only DuckDB file holding only the allowed tables. A
+query returns at most 1,000 rows and the model sees at most 200. The agent reads the structure of the allowed
+tables (`describe_tables`) from the warehouse catalogue on the server, cached for 10 minutes, with a one-line
+description per table that you can write. All queries for one question share a bytes cap (5 GB by default).
+Settings › Model turns exploratory answers off.
 
 ## Hosted version
 
@@ -89,7 +99,8 @@ AI Analyst is free and open source under the MIT licence. **Analitik İşler Clo
 rather not run it themselves, and adds what is hard to do alone:
 
 - managed connectors for Google Ads, Meta, TikTok, ikas and Ticimax, and Google Tag Manager event import
-- curated metric packs per store platform, with each client's expected gap learned from its own history
+- curated metric packs per store platform, with each client's expected gap learned from its own history, and
+  curated table descriptions for exploratory answers on ikas, Ticimax and Shopify data
 - scheduled tracking checks with alert emails
 - team workspaces with roles and an audit log
 - a model with EU inference that needs no key of your own
@@ -109,8 +120,18 @@ warehouse you configure and the model provider you choose (Anthropic, OpenAI, Go
 clicks, such as the help email or "request this metric" on GitHub, open in their own mail app or browser with the
 question filled in. Fonts are served by the app itself.
 
-The model sees aggregated figures from the mart, metric definitions and the conversation, never order-level or
-personal data. The mart has no order-level rows.
+The model sees query results from the tables you allowed, minus the protected columns, along with metric
+definitions, the structure of the allowed tables and the conversation. With only the mart allowed (the default)
+that means aggregated figures by day, channel and device, never order-level or personal data. Once you allow
+order or customer tables, the model can see rows from them (at most 200 per query); prefer aggregates, and keep
+contact data in protected columns.
+
+Protected columns never leave the warehouse: a query that selects one, reads it through `*`, an alias, a CTE, a
+subquery or an expression, or groups or orders by it, is refused before it runs; a join, a filter or
+`COUNT(DISTINCT …)` may still use it. When you add a table, the server proposes protected columns by name and type
+(email, phone, names, addresses, IP addresses, customer and user ids) and you confirm the list. Detection by name
+can miss oddly named columns, so check each table. There is no masking yet. A filter on a protected column still
+lets repeated counting questions narrow down a value, so allow customer tables only to a model and people you trust.
 
 `AI_ANALYST_NO_CLOUD=1` (or `serve --no-cloud`) blocks every outbound call; tests and `bun run dev` set it by
 default.
@@ -120,7 +141,11 @@ default.
 The server listens on 127.0.0.1 only. Another address needs `AI_ANALYST_TOKEN` (24 characters or more) and is
 meant for a trusted network; behind a reverse proxy, settings cannot be changed. Requests from other websites are
 refused (Host, Origin and Sec-Fetch-Site checks, no CORS), and settings can be changed only from the machine
-running the app. Details in `docs/CONTRACT.md`. To report a security problem, see `SECURITY.md`.
+running the app. Changing the tables the agent may read, their protected columns or descriptions is a settings
+change too, and each change is written to Activity. With a personal Google sign-in the allowlist is the only
+boundary between the model's SQL and everything that sign-in can read; a service account with read access to the
+allowed datasets only is safer, and the BigQuery connection test warns when the credential can see more datasets
+than the list. Details in `docs/CONTRACT.md`. To report a security problem, see `SECURITY.md`.
 
 ## How an answer is checked
 
@@ -137,9 +162,13 @@ running the app. Details in `docs/CONTRACT.md`. To report a security problem, se
 `docs/connecting-bigquery.md` covers connecting a client's GA4 export, Google Ads transfer, back-office orders
 and ad costs in BigQuery, with the SQL in `models/` that builds the mart every metric reads. Connect it in
 Settings › Data source, or set `AI_ANALYST_WAREHOUSE=bigquery`, `BIGQUERY_PROJECT`, `BIGQUERY_DATASET` and, for
-jobs billed to another project, `BIGQUERY_JOB_PROJECT`. A service account scoped to the mart's dataset is the
-safest credential. Every BigQuery job runs a dry run first and carries a bytes-billed cap (`BIGQUERY_MAX_BYTES`,
+jobs billed to another project, `BIGQUERY_JOB_PROJECT`. A service account scoped to the mart's dataset (and any dataset
+you allow for exploratory answers) is the safest credential. Every BigQuery job runs a dry run first and carries a bytes-billed cap (`BIGQUERY_MAX_BYTES`,
 2 GB by default).
+
+Money is written in Turkish lira (TL) by default. For data in another currency, pick it in Settings › Data source ›
+Currency (TRY, USD, EUR, GBP or any ISO 4217 code) or set `AI_ANALYST_CURRENCY=USD`, which locks it. Answers,
+cards, charts and the model's prompt all follow it.
 
 ## Layout
 

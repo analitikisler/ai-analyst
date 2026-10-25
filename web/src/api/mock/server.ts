@@ -8,6 +8,9 @@ import { ApiError } from "../client";
 import type {
   Actions,
   Activity,
+  AllowEntry,
+  DescribedTable,
+  TableListing,
   AuditRun,
   ChartEvent,
   MetricEntry,
@@ -46,11 +49,12 @@ import type {
 import { checkHistory, comparisonWindow, MART_ROWS, newId, RANGE, reconcile, resolvePeriod, runQuery, validCharts, widthRules } from "./engine";
 import { CHECKS, METRICS } from "./pack";
 import { plan } from "./planner";
+import shop from "../fixtures/shop.json";
 import { exploreQuery, runExplore } from "./explore";
 import { runAudit } from "./audit";
 import { checksUsing, definitionRows, gtmImport, historyOf, seedEvents } from "./catalogue";
 import { METRIC_PROPOSED } from "./text";
-import { ACT, APPROVAL, CHART_NAMES, COMPARE_NAMES, EXPLORE_Q, f, FOLLOW_POOL, KNOWN_QUESTIONS, PERIOD_NAMES, PLANNER_TEXT, SOURCE_LABEL, SUGGEST, T } from "./text";
+import { ACT, APPROVAL, CHART_NAMES, COMPARE_NAMES, CROSS_Q, EXPLORE_Q, f, FOLLOW_POOL, KNOWN_QUESTIONS, PERIOD_NAMES, PLANNER_TEXT, SOURCE_LABEL, SUGGEST, T } from "./text";
 
 // ---------------------------------------------------------------- the database
 
@@ -94,6 +98,7 @@ interface ProposedMetric {
 interface Db {
   source: { kind: "demo" | "bigquery"; bigquery: BigQueryConfig | null; checked_at: string | null };
   max_bytes: number;
+  currency?: string;
   providers: Record<ProviderId, { set: boolean; hint?: string; model: string | null; base_url?: string | null }>;
   active_provider: ProviderId | "planner";
   preferences: Preferences;
@@ -112,6 +117,23 @@ interface Db {
   audits: AuditRun[];
   audit_fixed: boolean;
   metrics_proposed: ProposedMetric[];
+  /** Tables the agent may read on the demo, their protected columns and descriptions (older saved states lack it). */
+  explore?: { allow: AllowEntry[]; protected: Record<string, { columns: string[]; confirmed: boolean }>; descriptions: Record<string, string>; cap: number };
+}
+
+const SHOP = shop as unknown as { listing: TableListing; describe: { dialect: "duckdb"; tables: DescribedTable[] }; demo_tables: string[] };
+const exploreDb = () => (db.explore ??= { allow: [], protected: {}, descriptions: {}, cap: 5 * 1024 ** 3 });
+const shopAllowed = () => exploreDb().allow.map((e) => e.table ?? "*");
+const allowedTables = () => ["daily_channel_device", ...(shopAllowed().includes("*") ? ["order_items", "orders", "products", "returns"] : shopAllowed())];
+function describeTables(): { dialect: "duckdb"; tables: DescribedTable[] } {
+  const ex = exploreDb();
+  const tables = SHOP.describe.tables
+    .filter((t) => allowedTables().includes(t.table))
+    .map((t) => {
+      const p = ex.protected[t.table];
+      return { ...t, description: ex.descriptions[t.table] ?? t.description, protected_columns: p ? p.columns : t.protected_columns, protected_confirmed: p ? p.confirmed : false };
+    });
+  return { dialect: "duckdb", tables };
 }
 
 const CHART_SIZE: Record<string, { w: 3 | 4 | 6 | 8 | 12; h: 1 | 2 }> = {};
@@ -354,7 +376,7 @@ function testBigQuery(v: BigQueryConfig): BqTest {
   const jobProject = (v.job_project || v.data_project).trim();
   const steps: BqStep[] = [];
   const skipRest = (from: number) => {
-    const ids: BqStep["id"][] = ["credentials", "jobs", "dataset", "table", "read", "cost"];
+    const ids: BqStep["id"][] = ["credentials", "jobs", "dataset", "table", "read", "allowed", "cost"];
     for (const id of ids.slice(from)) steps.push({ id, status: "skipped" });
   };
   if (v.auth.kind === "key_file") {
@@ -382,6 +404,7 @@ function testBigQuery(v: BigQueryConfig): BqTest {
   steps.push({ id: "dataset", status: "ok", detail: { project: v.data_project, dataset: v.dataset, location: "EU" } });
   steps.push({ id: "table", status: "ok", detail: { table: "daily_channel_device", n: 10, time: "2026-10-23T03:00:00.000Z" } });
   steps.push({ id: "read", status: "ok", detail: { from: "2026-01-01", to: RANGE.to, rows: 3540 } });
+  steps.push({ id: "allowed", status: "ok", detail: { n: 0 } });
   steps.push({ id: "cost", status: "ok", detail: { bytes: 4.1 * 1024 ** 2, cap: v.max_bytes } });
   return finish(v, steps, "EU");
 }
@@ -390,7 +413,9 @@ function finish(v: BigQueryConfig, steps: BqStep[], location: string | null): Bq
   const ok = steps.every((s) => s.status === "ok");
   const test_id = newId("t");
   db.bq_tests[test_id] = { ok, values: bqKey(v) };
-  return { test_id, ok, steps, detected: { location }, values: clone(v) };
+  // Scripted: a personal sign-in sees more datasets than the agent may read.
+  const warnings: BqTest["warnings"] = ok && v.auth.kind === "adc" && !v.auth.impersonate ? [{ code: "credential_broader", params: { n: 2, datasets: `${v.data_project}.finance, ${v.data_project}.hr` } }] : [];
+  return { test_id, ok, steps, detected: { location }, values: clone(v), warnings };
 }
 
 function testModel(input: Actions["test_model_key"]["input"]): ModelTestResult {
@@ -437,6 +462,17 @@ function settings(): Settings {
       checked_at: db.source.checked_at,
       credentials: { adc_found: true, identity: "analyst@ornekmoda.example" },
       max_bytes: { value: db.max_bytes, ceiling: 2 * 1024 ** 3, source: db.max_bytes === 2 * 1024 ** 3 ? "default" : "file", locked: false },
+      currency: { value: db.currency ?? "TRY", source: db.currency ? "file" : "default", locked: false },
+      explore: {
+        allow: clone(exploreDb().allow),
+        allow_setting: { source: exploreDb().allow.length ? "file" : "default", locked: false },
+        mart: db.source.kind === "demo" ? "daily_channel_device" : db.source.bigquery ? `${db.source.bigquery.data_project}.${db.source.bigquery.dataset}.daily_channel_device` : null,
+        protected_columns: Object.fromEntries(Object.entries(exploreDb().protected).map(([k, v]) => [k, v.columns])),
+        confirmed: Object.entries(exploreDb().protected).filter(([, v]) => v.confirmed).map(([k]) => k),
+        descriptions: clone(exploreDb().descriptions),
+        max_bytes_per_question: exploreDb().cap,
+        demo_tables: db.source.kind === "demo" ? SHOP.demo_tables : null,
+      },
     },
     model: { provider: { value: db.active_provider, source: db.active_provider === "planner" ? "default" : "file", locked: false }, providers },
     help: { on: true, email: "hello@analitikisler.com" },
@@ -599,6 +635,7 @@ function state(): AppState {
       .map(({ turn_list, ...c }) => ({ ...c, turns: turn_list.length }))
       .sort((a, b) => (a.updated_at < b.updated_at ? 1 : -1)),
     host_is_loopback: true,
+    currency: db.currency ?? "TRY",
   };
 }
 
@@ -744,7 +781,7 @@ const handlers: { [N in keyof Actions]: Handler<N> } = {
   ],
   list_suggestions: () =>
     exploring()
-      ? [SUGGEST.ga4, ...Object.values(EXPLORE_Q).map((text) => ({ text, tag: "exploratory" as const }))]
+      ? [SUGGEST.ga4, ...[...(db.source.kind === "demo" ? Object.values(CROSS_Q) : []), ...Object.values(EXPLORE_Q)].map((text) => ({ text, tag: "exploratory" as const }))]
       : [SUGGEST.ga4, SUGGEST.meta, SUGGEST.roas, SUGGEST.revenue_week],
   list_metrics: () => Object.values(METRICS),
   explain_metric: ({ metric }) => {
@@ -933,6 +970,39 @@ const handlers: { [N in keyof Actions]: Handler<N> } = {
     return { removed: true, activity_id: act.id };
   },
   get_settings: () => settings(),
+  list_tables: () => (db.source.kind === "demo" ? clone(SHOP.listing) : { location: "EU", datasets: [] }),
+  describe_tables: () => describeTables(),
+  set_explore_tables: ({ allow, max_bytes_per_question }) => {
+    const ex = exploreDb();
+    if (allow) {
+      const key = (e: { dataset: string; table: string | null }) => e.table ?? e.dataset;
+      const next: AllowEntry[] = allow.map((e) => {
+        if (e.project !== null || e.dataset !== "demo" || (e.table !== null && !["orders", "order_items", "products", "returns"].includes(e.table))) throw new ApiError("invalid_input", "Not a table of this data source.");
+        const ts = SHOP.listing.datasets[0]!.tables.filter((t) => !e.table || t.table === e.table);
+        return { project: null, dataset: "demo", table: e.table, meta: { tables: ts.length, rows: ts.reduce((a, t) => a + t.rows, 0), bytes: null, modified: ts[0]?.modified ?? null, location: null } };
+      });
+      for (const e of next) if (!ex.allow.some((b) => key(b) === key(e))) log("person", "set_explore_tables", ACT.explore_added(key(e), !e.table));
+      for (const b of ex.allow) if (!next.some((e) => key(b) === key(e))) log("person", "set_explore_tables", ACT.explore_removed(key(b), !b.table));
+      ex.allow = next;
+    }
+    if (max_bytes_per_question) ex.cap = max_bytes_per_question;
+    return settings();
+  },
+  set_protected_columns: ({ table, columns }) => {
+    if (!allowedTables().includes(table)) throw new ApiError("sql_table_not_allowed", `${table} is not on the list of tables the agent may read.`, 409);
+    const cols = [...new Set(columns.map((c) => c.toLowerCase()))].sort();
+    exploreDb().protected[table] = { columns: cols, confirmed: true };
+    log("person", "set_protected_columns", ACT.protected_set(table, cols));
+    return settings();
+  },
+  set_table_description: ({ table, description }) => {
+    if (!allowedTables().includes(table)) throw new ApiError("sql_table_not_allowed", `${table} is not on the list of tables the agent may read.`, 409);
+    const d = exploreDb().descriptions;
+    if (description.trim()) d[table] = description.trim();
+    else delete d[table];
+    log("person", "set_table_description", ACT.description_set(table, Boolean(description.trim())));
+    return settings();
+  },
   test_bigquery: (v) => testBigQuery(v),
   save_data_source: (input) => {
     if (input.kind === "demo") {
@@ -956,6 +1026,13 @@ const handlers: { [N in keyof Actions]: Handler<N> } = {
     if (!(max_bytes > 0)) throw new ApiError("invalid_input", "The cap must be above zero.");
     db.max_bytes = max_bytes;
     log("person", "set_bytes_cap", ACT.cap(f.en.bytes(max_bytes)));
+    return settings();
+  },
+  set_currency: ({ currency }) => {
+    const code = currency.trim().toUpperCase();
+    if (!/^[A-Z]{3}$/.test(code) || !Intl.supportedValuesOf("currency").includes(code)) throw new ApiError("invalid_input", "The currency must be an ISO 4217 code such as TRY, USD or EUR.", 400);
+    db.currency = code;
+    log("person", "set_currency", { en: `Set the currency to ${code}`, tr: `Para birimi ${code} olarak ayarlandı` });
     return settings();
   },
   rebuild_demo: () => {
@@ -1091,7 +1168,7 @@ function freshFollowups(answer: Answer, conv: Conversation, req: AskRequest, mod
   for (const q of [...answer.followups, ...FOLLOW_POOL]) {
     if (out.length === 3) break;
     if (asked.has(normQ(q.en)) || asked.has(normQ(q.tr)) || seen.has(q.en)) continue;
-    const p = plan(q.en, { lastCheck: answer.check, lastAnswer: answer, context: req.context ?? null, model, explore: exploring(), demo: db.source.kind === "demo", events: db.events });
+    const p = plan(q.en, { lastCheck: answer.check, lastAnswer: answer, context: req.context ?? null, model, explore: exploring(), demo: db.source.kind === "demo", events: db.events, shopTables: shopAllowed().length > 0 });
     const sig = signature(p);
     if (!sig || done.has(sig) || seen.has(sig)) continue;
     if (p.kind === "propose_watch" && db.watches.some((w) => w.check === p.check)) continue;
@@ -1156,7 +1233,7 @@ export function startTurn(req: AskRequest, emit: (e: AskEvent) => void, signal: 
   return (async () => {
     emit({ event: "turn", data: { turn_id: turn.id, conversation_id: conv.id, question_text: questionText } });
     const model = agentModel();
-    const p = plan(req.question, { lastCheck, lastAnswer, context: req.context ?? null, model: model ? { label: model.label } : null, explore: exploring(), demo: db.source.kind === "demo", events: db.events });
+    const p = plan(req.question, { lastCheck, lastAnswer, context: req.context ?? null, model: model ? { label: model.label } : null, explore: exploring(), demo: db.source.kind === "demo", events: db.events, shopTables: shopAllowed().length > 0 });
     const started = Date.now();
     if (p.kind === "refusal") {
       await wait(STEP_MS);

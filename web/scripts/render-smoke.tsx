@@ -64,6 +64,11 @@ export async function renderSmoke(check: (name: string, ok: boolean, detail?: un
         const old = text.match(OLD_NAME[lang]);
         check(`render ${lang} ${path}: no old "check" feature name`, !old, old && text.slice(Math.max(0, text.search(OLD_NAME[lang]) - 60), text.search(OLD_NAME[lang]) + 40));
         check(`render ${lang} ${path}`, html.length > 500 && !gaps && !mixed, gaps ?? mixed ?? text.slice(0, 160));
+        if (path === "/settings/data") {
+          const title = lang === "en" ? "Tables the agent may read" : "Agent’ın okuyabileceği tablolar";
+          const one = lang === "en" ? "Add the demo shop tables" : "Demo mağaza tablolarını ekle";
+          check(`render ${lang} data source: the tables the agent may read, the mart always on it, one click to add the shop tables`, text.includes(title) && text.includes("daily_channel_device") && text.includes(one), text.slice(text.indexOf("daily_channel_device") - 80, text.indexOf("daily_channel_device") + 200));
+        }
         if (path === "/settings/model") {
           const reason = lang === "en" ? "Needs a model. The built-in planner cannot write SQL." : "Model gerekir. Yerleşik planlayıcı SQL yazamaz.";
           check(`render ${lang} exploratory switch disabled without a model, with the reason`, html.includes(reason) && /id="explore-switch"[^>]*(disabled|data-disabled)|(disabled|data-disabled)[^>]*id="explore-switch"/.test(html), html.match(/<[^>]*explore-switch[^>]*>/)?.[0]);

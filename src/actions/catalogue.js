@@ -8,7 +8,7 @@ import { workspaceName } from "../config.js";
 import { addDays } from "../format.js";
 import { compileQuery, resolveQuery } from "../metrics/compile.js";
 import { listOverlay, writeOverlay } from "../metrics/overlay.js";
-import { ACT, EXPLORE_Q, SUGGEST, T } from "../text.js";
+import { ACT, CROSS_Q, EXPLORE_Q, SUGGEST, T } from "../text.js";
 import { defineAction } from "./registry.js";
 
 export const metricInfo = (m) => ({
@@ -105,7 +105,9 @@ defineAction({
   input: z.object({}).strict(),
   run(ctx) {
     const mode = agentMode(ctx.app);
-    if (mode.mode === "model" && mode.exploratory) return [SUGGEST.ga4, ...Object.values(EXPLORE_Q).map((text) => ({ text, tag: "exploratory" }))];
+    // On the demo, one question across the shop's tables (it needs them on the list in Settings › Data source).
+    const cross = ctx.warehouse.demo ? [CROSS_Q.returns_category] : [];
+    if (mode.mode === "model" && mode.exploratory) return [SUGGEST.ga4, ...[...cross, ...Object.values(EXPLORE_Q)].map((text) => ({ text, tag: "exploratory" }))];
     return [SUGGEST.ga4, SUGGEST.meta, SUGGEST.roas, SUGGEST.revenue_week];
   },
 });
