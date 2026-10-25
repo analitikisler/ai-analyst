@@ -24,4 +24,4 @@ CREATE TABLE IF NOT EXISTS `{project}.{backoffice_dataset}.orders` (
   device       STRING             OPTIONS (description = 'Device the order was placed on: mobile, tablet or desktop (or a user-agent family). NULL counts as desktop.')
 )
 PARTITION BY DATE(created_at)
-OPTIONS (description = 'Back-office orders for AI Analyst. No personal data.');
+OPTIONS (description = 'Back-office orders for ai analyst. No personal data.');

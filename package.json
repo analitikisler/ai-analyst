@@ -1,7 +1,7 @@
 {
   "name": "@analitikisler/ai-analyst",
   "version": "0.2.0-alpha.1",
-  "description": "Analytics you can ask, with every number checked. By Analitik İşler: ask in Turkish or English, get a chart, the SQL, the metric definition and a tally against the source system.",
+  "description": "ai analyst by Analitik İşler: analytics agents on a brand's own data and metric definitions. Ask in Turkish or English; every answer shows its query, its definition and its check against the source system.",
   "type": "module",
   "bin": {
     "ai-analyst": "src/cli.js"

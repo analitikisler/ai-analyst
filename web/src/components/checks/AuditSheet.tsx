@@ -1,4 +1,4 @@
-// "Test the purchase journey" (owner round 5): an AI Tag Debugger audit started from a failing tracking check. The
+// "Test the purchase journey" (owner round 5): an ai tag debugger audit started from a failing tracking check. The
 // sheet lives on every page (`?audit=new:<check>` for the form, `?audit=<run id>` for a result). In the prototype the run
 // is simulated: the steps stream with the hits each sent, then the result links back to the tracking check.
 import { useEffect, useState } from "react";
@@ -20,7 +20,7 @@ import { notify } from "@/lib/notify";
 
 const PLATFORMS: AuditPlatform[] = ["ga4", "google_ads", "meta", "tiktok"];
 
-/** On own data the server hands the audit to AI Tag Debugger instead of simulating it: the MCP steps to run and,
+/** On own data the server hands the audit to ai tag debugger instead of simulating it: the MCP steps to run and,
  *  when its app is installed, a deep link with the journey prefilled. result and finished_at are null meanwhile. */
 type Handoff = NonNullable<AuditRun["handoff"]>;
 type AuditFinding = NonNullable<AuditRun["result"]>;

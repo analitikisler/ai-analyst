@@ -3,7 +3,7 @@ version: 1
 label: { en: "Ad spend", tr: "Reklam harcaması" }
 unit: try
 source: ads
-owner: Bahadır Ölez
+owner: Analitik İşler
 description:
   en: "Cost reported by Google Ads, Meta Ads and TikTok Ads, converted to TRY at the day’s TCMB rate."
   tr: "Google Ads, Meta Ads ve TikTok Ads’in bildirdiği maliyet; günün TCMB kuruyla TRY’ye çevrilir."
@@ -15,7 +15,7 @@ dimensions: [day, week, month, channel, device]
 history:
   - version: 1
     date: 2026-03-01
-    actor: Bahadır Ölez
+    actor: Analitik İşler
     change:
       en: "First version."
       tr: "İlk sürüm."

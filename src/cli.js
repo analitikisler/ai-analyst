@@ -118,7 +118,7 @@ async function main(argv) {
       app: ws,
       conversationId: "new",
       emit: (type, data) => {
-        if (type === "step") console.error(`  ${data.ok ? "·" : "×"} ${data.tool} · ${data.summary[lang]}`);
+        if (type === "step") console.error(`  ${data.tool} · ${data.summary[lang]}${data.ok ? "" : " · failed"}`);
       },
     });
     for (const a of turn.answers) console.log(`\n${a.sentence[lang]}\n\n${a.query.sql}\n`);
@@ -136,7 +136,8 @@ async function main(argv) {
     console.log(`Tracking checks, ${run.from} to ${run.to}:`);
     for (const r of run.results) {
       const delta = r.delta_pct == null ? "–" : fmtPct(r.delta_pct, 1, true);
-      console.log(`  ${r.verdict === "adds_up" ? "✓" : "×"} ${r.check.padEnd(22)} Δ ${delta.padStart(7)}  ${words[r.verdict]}${r.out_of_tolerance_since && r.verdict !== "adds_up" ? ` since ${r.out_of_tolerance_since}` : ""}`);
+      // Plain words for the verdict, no ✓ or × in front (brand/ai/BRAND.md §11).
+      console.log(`  ${r.check.padEnd(22)} Δ ${delta.padStart(7)}  ${words[r.verdict]}${r.out_of_tolerance_since && r.verdict !== "adds_up" ? ` since ${r.out_of_tolerance_since}` : ""}`);
     }
     ws.close();
     return run.results.some((r) => r.verdict === "does_not_add_up") ? 1 : 0;

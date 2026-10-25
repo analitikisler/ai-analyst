@@ -51,7 +51,7 @@ const WAITLIST: [WaitlistItem["id"], string][] = [
   ["gtm", "Google Tag Manager"],
 ];
 export const waitlist = (): WaitlistItem[] =>
-  WAITLIST.map(([id, name]) => ({ id, name: T(name, name), mailto: `mailto:hello@analitikisler.com?subject=${encodeURIComponent(`Analitik İşler Cloud waitlist: ${name}`)}` }));
+  WAITLIST.map(([id, name]) => ({ id, name: T(name, name), mailto: `mailto:hello@analitikisler.com?subject=${encodeURIComponent(`ai cloud waitlist: ${name}`)}` }));
 
 // ---------------------------------------------------------------- tests (scripted on the input)
 

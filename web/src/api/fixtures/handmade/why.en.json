@@ -54,8 +54,8 @@
         "answer": {
           "kind": "why",
           "sentence": {
-            "en": "GA4 recorded 10.1% fewer purchases than the back office for 9–22 Oct 2026. The gap is on mobile (−15.6%); desktop is inside the tolerance (−1.6%). It starts on 9 Oct, the day of release v4.12. AI Tag Debugger found that purchase is not sent on mobile Safari since v4.12.",
-            "tr": "9–22 Eki 2026 döneminde GA4 sipariş paneline göre %10,1 daha az satın alma kaydetti. Fark mobilde (−%15,6); masaüstü kabul edilen sapma içinde (−%1,6). Fark, v4.12 sürümünün yayımlandığı 9 Ekim’de başlıyor. AI Tag Debugger, v4.12’den beri mobil Safari’de purchase gönderilmediğini buldu."
+            "en": "GA4 recorded 10.1% fewer purchases than the back office for 9–22 Oct 2026. The gap is on mobile (−15.6%); desktop is inside the tolerance (−1.6%). It starts on 9 Oct, the day of release v4.12. ai tag debugger found that purchase is not sent on mobile Safari since v4.12.",
+            "tr": "9–22 Eki 2026 döneminde GA4 sipariş paneline göre %10,1 daha az satın alma kaydetti. Fark mobilde (−%15,6); masaüstü kabul edilen sapma içinde (−%1,6). Fark, v4.12 sürümünün yayımlandığı 9 Ekim’de başlıyor. ai tag debugger, v4.12’den beri mobil Safari’de purchase gönderilmediğini buldu."
           },
           "title": {
             "en": "GA4 purchases against back-office orders · 9–22 Oct 2026",
@@ -157,7 +157,7 @@
             "findings": [
               {
                 "id": "f_ga4_mobile_safari",
-                "source": "AI Tag Debugger",
+                "source": "ai tag debugger",
                 "text": {
                   "en": "purchase is not sent on mobile Safari since release v4.12 (9 Oct): the thank-you page loads the tag before dataLayer is ready.",
                   "tr": "v4.12 sürümünden (9 Ekim) beri mobil Safari’de purchase gitmiyor: teşekkür sayfası tag’i dataLayer hazır olmadan yüklüyor."
@@ -376,8 +376,8 @@
                 "tr": "Teşekkür sayfası, purchase tag’i dataLayer hazır olduktan sonra yükleyecek şekilde düzeltilmeli ve v4.12’den sonraki bir sürümle yayımlanmalı."
               },
               {
-                "en": "Run the AI Tag Debugger purchase journey on mobile Safari to confirm the fix.",
-                "tr": "Düzeltme, AI Tag Debugger’ın satın alma yolu mobil Safari’de çalıştırılarak doğrulanabilir."
+                "en": "Run the ai tag debugger purchase journey on mobile Safari to confirm the fix.",
+                "tr": "Düzeltme, ai tag debugger’ın satın alma yolu mobil Safari’de çalıştırılarak doğrulanabilir."
               },
               {
                 "en": "Watch this tracking check: a changed verdict shows when the gap is back inside the tolerance.",

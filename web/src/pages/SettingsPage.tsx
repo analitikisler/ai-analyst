@@ -28,6 +28,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Spinner } from "@/components/ui/spinner";
 import { fmt, LANGS, useBilingual, useLang, useT } from "@/i18n";
 import { StatusGlyph } from "@/components/art/StatusGlyph";
+import { AiAnalystEndorsed } from "@/components/art/BrandLogos";
 import { describeError, sourceUnavailableSentence } from "@/lib/errors";
 import { useFormat } from "@/lib/format";
 import { notify } from "@/lib/notify";
@@ -717,6 +718,10 @@ function AboutSection({ s }: { s: Settings }) {
   return (
     <Card id="about" title={t.set.nav.about} lead={t.about.privacy}>
       <div className="flex flex-col gap-4 px-4 py-3 text-[13px]">
+        {/* The maker line is the endorsed lockup (BRAND §6): the master logo, never the name set in type. */}
+        <div className="w-fit p-2 text-text-strong">
+          <AiAnalystEndorsed height={44} title={t.about.maker} />
+        </div>
         <p className="flex flex-wrap gap-x-3 gap-y-1 text-text">
           <span className="font-mono">{fmt(t.about.version, { v: s.server.version })}</span>
           <a href="https://github.com/analitikisler/ai-analyst" target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 font-medium text-accent hover:underline">

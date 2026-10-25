@@ -3,7 +3,7 @@ version: 2
 label: { en: "GA4 purchases", tr: "GA4 satın almaları" }
 unit: count
 source: ga4
-owner: Bahadır Ölez
+owner: Analitik İşler
 description:
   en: "Purchase events in the GA4 BigQuery export, counted once per transaction_id."
   tr: "GA4 BigQuery dışa aktarımındaki purchase etkinlikleri; her transaction_id bir kez sayılır."
@@ -15,13 +15,13 @@ check: ga4_vs_orders
 history:
   - version: 2
     date: 2026-07-01
-    actor: Bahadır Ölez
+    actor: Analitik İşler
     change:
       en: "Counted once per transaction_id, so a reloaded thank-you page no longer counts twice."
       tr: "transaction_id başına bir kez sayılıyor; yenilenen teşekkür sayfası artık iki kez sayılmıyor."
   - version: 1
     date: 2026-03-01
-    actor: Bahadır Ölez
+    actor: Analitik İşler
     change:
       en: "First version."
       tr: "İlk sürüm."

@@ -207,7 +207,7 @@
             "findings": [
               {
                 "id": "f_meta_view_through",
-                "source": "AI Tag Debugger",
+                "source": "ai tag debugger",
                 "text": {
                   "en": "Meta counts view-through purchases (1-day view) that the back office attributes to other channels.",
                   "tr": "Meta, arka ofisin başka kanallara atadığı görüntüleme sonrası satın almaları da sayıyor (1 günlük görüntüleme)."

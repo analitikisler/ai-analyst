@@ -282,7 +282,7 @@ export interface AuditRun {
   result: { ok: boolean; severity: "high" | "none"; title: Text; evidence: Text[]; fix: Text; console: string | null } | null;
   /** Run after the simulated fix. */
   fixed: boolean;
-  /** "done": the run and its result (simulated on demo data); "handoff": own data, AI Tag Debugger runs it in a chat app. */
+  /** "done": the run and its result (simulated on demo data); "handoff": own data, ai tag debugger runs it in a chat app. */
   status: "done" | "handoff";
   /** While status is "handoff": what the chat app runs. null once a finding is attached. */
   handoff?: { mcp_steps: string[]; deep_link: string | null } | null;

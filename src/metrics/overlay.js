@@ -51,7 +51,7 @@ export function writeOverlay(dataDir, metric) {
   mkdirSync(dir, { recursive: true });
   const file = path.join(dir, `${m.id}.yaml`);
   const tmp = `${file}.tmp`;
-  writeFileSync(tmp, `# Accepted from an exploratory answer in AI Analyst. Defined by the SQL below; no tracking check uses it.\n${stringify(m, { lineWidth: 0 })}`);
+  writeFileSync(tmp, `# Accepted from an exploratory answer in ai analyst. Defined by the SQL below; no tracking check uses it.\n${stringify(m, { lineWidth: 0 })}`);
   renameSync(tmp, file);
   return file;
 }

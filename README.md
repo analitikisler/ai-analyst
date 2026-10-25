@@ -1,6 +1,11 @@
-# AI Analyst
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="brand/ai/assets/lockups/ai-analyst-endorsed-dark.svg">
+  <img alt="ai analyst by Analitik İşler" src="brand/ai/assets/lockups/ai-analyst-endorsed-light.svg" height="56">
+</picture>
 
-> **Alpha.** AI Analyst is an early version, not a finished product. Expect rough edges and breaking changes;
+# ai analyst
+
+> **Alpha.** ai analyst is an early version, not a finished product. Expect rough edges and breaking changes;
 > the model providers and the BigQuery connection have not yet run against the real services.
 
 Analytics you can ask, with every number checked. By Analitik İşler.
@@ -33,7 +38,7 @@ web app on its own, on recorded demo data, with no server.
 Other commands:
 
 ```bash
-node src/cli.js ask "Do GA4 purchases match our orders in the last 14 days?"
+node src/cli.js ask "Do GA4 purchases match orders in the last 14 days?"
 node src/cli.js check            # runs every tracking check; exits 1 when one does not add up
 node src/cli.js mcp              # the tools over MCP, for Claude Desktop, Claude Code, Cursor and Codex
 node src/cli.js seed-demo        # rebuilds the demo and starts a fresh workspace
@@ -52,7 +57,7 @@ node src/cli.js seed-demo        # rebuilds the demo and starts a fresh workspac
 - **Events**: releases, campaigns, tag changes and price changes, shown as markers on every time chart and used
   by the agent to explain gaps and spikes.
 - **Tracking audit**: a failing GA4 check offers "Test the purchase journey", which hands the journey, device and
-  site to AI Tag Debugger and links its finding back to the check.
+  site to ai tag debugger and links its finding back to the check.
 - **Sources**: connect GA4, an orders file (CSV or Excel), or Shopify or WooCommerce, and the app builds its
   data from them on this machine. BigQuery and the demo stay available. Other connectors are on the Analitik
   İşler Cloud waitlist.
@@ -75,7 +80,7 @@ Settings are kept in `secrets.json` in the data folder, readable by your user on
 the browser.
 
 To use the plan you already pay for, connect a chat app over MCP instead (Settings › Chat apps shows the config
-for each). The chat app's model does the thinking; AI Analyst supplies the metrics and the checks.
+for each). The chat app's model does the thinking; ai analyst supplies the metrics and the checks.
 
 ## Exploratory answers
 
@@ -98,8 +103,8 @@ Settings › Model turns exploratory answers off.
 
 ## Hosted version
 
-AI Analyst is free and open source under the MIT licence. **Analitik İşler Cloud** runs it for teams that would
-rather not run it themselves, and adds what is hard to do alone:
+ai analyst is free and open source under the MIT licence. **ai cloud** runs it for teams that would rather not
+run it themselves, and adds what is hard to do alone:
 
 - managed connectors, on the waitlist: Meta Ads, Google Ads, TikTok Ads, ikas, Ticimax, Search Console and
   Google Tag Manager (Settings › Sources has a "Join the waitlist" button for each)
@@ -109,7 +114,7 @@ rather not run it themselves, and adds what is hard to do alone:
 - team workspaces with roles and an audit log
 - a model with EU inference that needs no key of your own
 
-Analitik İşler Cloud is in early access: email hello@analitikisler.com with the subject "Analitik İşler Cloud".
+ai cloud is on a waitlist: email hello@analitikisler.com with the subject "ai cloud".
 When a check does not add up, the app offers an email to Analitik İşler with the tally filled in, so the cause
 can be found. `AI_ANALYST_HELP_EMAIL` sends it to your own team instead; `AI_ANALYST_HELP=off` removes it.
 
@@ -121,7 +126,7 @@ With early-access credentials, set `AI_ANALYST_CLOUD_URL` and `AI_ANALYST_CLOUD_
 A self-hosted copy sends no usage data, telemetry or update checks to anyone. The only outbound calls are to the
 warehouse or the sources you connect (BigQuery, the GA4 Data API, your Shopify or WooCommerce shop), the model
 provider you choose (Anthropic, OpenAI, Google, or the base URL you set;
-`ANTHROPIC_BASE_URL` is honoured), and to Analitik İşler Cloud only if you set its credentials. Links the person
+`ANTHROPIC_BASE_URL` is honoured), and to ai cloud only if you set its credentials. Links the person
 clicks, such as the help email or "request this metric" on GitHub, open in their own mail app or browser with the
 question filled in. Fonts are served by the app itself.
 
@@ -177,7 +182,7 @@ than the list. Details in `docs/CONTRACT.md`. To report a security problem, see 
    pack, never written by the model, and filter values are checked against known values.
 2. When the metric has a tracking check in `checks/`, the agent reconciles it for the same period: expected
    against measured, Δ, a verdict against the tolerance, a split by device, the date the gap started and any
-   linked AI Tag Debugger finding.
+   linked ai tag debugger finding.
 3. `publish_answer` compares every number in the agent's sentence with the query and the check. A number it
    cannot find goes back to the model to fix; after two failed tries the answer is shown as "not checked".
 
@@ -229,13 +234,17 @@ cards, charts and the model's prompt all follow it.
   ikas, Ticimax and WooCommerce export steps in the guide are marked where they are unverified.
 - The orders file and the shop connectors give no ad spend, so ROAS, CPA and the ad-platform checks say no data
   on a shop connected that way.
-- On demo data the tracking audit is simulated. On own data it is handed to AI Tag Debugger through a chat app.
+- On demo data the tracking audit is simulated. On own data it is handed to ai tag debugger through a chat app.
 - Not built in the open-source app: Meta, Google Ads, TikTok, ikas, Ticimax, Search Console and Google Tag
   Manager connectors (on the Cloud waitlist), scheduled alert delivery, multi-workspace hosting.
 
 ## Licence and trademarks
 
-The code is under the MIT licence (`LICENSE`). The Analitik İşler name and logo, and the AI Analyst and AI Tag
-Debugger names, are trademarks of Analitik İşler and are not covered by the MIT licence: forks and redistributions
-must not use them in a way that suggests they come from or are endorsed by Analitik İşler. The fonts are under the
-SIL Open Font License 1.1 (`web/public/fonts/OFL-*.txt`). Security reports: see `SECURITY.md`.
+The code is under the MIT licence (`LICENSE`). The Analitik İşler name and logo, the ai mark, and the names ai
+analyst, ai tag debugger, ai tagging server, ai cloud and ai visibility are trademarks of Analitik İşler and are not
+covered by the MIT licence: forks and redistributions must not use them in a way that suggests they come from or are
+endorsed by Analitik İşler. The brand files are in `brand/ai/` (see `brand/ai/BRAND.md`); use them only to refer to
+this project. The fonts are under the SIL Open Font License 1.1 (`web/public/fonts/OFL-*.txt`). Security reports: see
+`SECURITY.md`.
+
+“ai” stands for two things: AI, and the initials of analitik işler.

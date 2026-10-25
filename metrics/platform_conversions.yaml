@@ -3,7 +3,7 @@ version: 1
 label: { en: "Platform-reported conversions", tr: "Platformun bildirdiği dönüşüm" }
 unit: count
 source: ads
-owner: Bahadır Ölez
+owner: Analitik İşler
 description:
   en: "Conversions as Google Ads, Meta Ads and TikTok Ads report them in their own interfaces, each with its own attribution window."
   tr: "Google Ads, Meta Ads ve TikTok Ads’in kendi arayüzlerinde, kendi atıf pencereleriyle bildirdiği dönüşümler."
@@ -15,7 +15,7 @@ dimensions: [day, week, month, channel, device]
 history:
   - version: 1
     date: 2026-03-01
-    actor: Bahadır Ölez
+    actor: Analitik İşler
     change:
       en: "First version."
       tr: "İlk sürüm."

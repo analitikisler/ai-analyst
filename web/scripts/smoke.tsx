@@ -377,7 +377,7 @@ check("tr formats", trf.value(2753, "count") === "2.753" && trf.value(1843210, "
   } else {
     const st0 = await driver.state();
     check("Sources: four connectors, all not connected; seven waitlist items", st0.connectors.map((c) => `${c.id}:${c.status}`).join(",") === "ga4:not_connected,orders_file:not_connected,shopify:not_connected,woocommerce:not_connected" && st0.waitlist.length === 7);
-    check("waitlist: each a mailto to hello@analitikisler.com with the Cloud waitlist subject", st0.waitlist.every((w) => w.mailto.startsWith("mailto:hello@analitikisler.com?subject=") && decodeURIComponent(w.mailto.split("subject=")[1]!) === `Analitik İşler Cloud waitlist: ${w.name.en}`), st0.waitlist[0]);
+    check("waitlist: each a mailto to hello@analitikisler.com with the Cloud waitlist subject", st0.waitlist.every((w) => w.mailto.startsWith("mailto:hello@analitikisler.com?subject=") && decodeURIComponent(w.mailto.split("subject=")[1]!) === `ai cloud waitlist: ${w.name.en}`), st0.waitlist[0]);
     const badGa4 = await driver.act("test_ga4", { property_id: "G-ABC123", auth: { kind: "adc" } }, "en");
     check("GA4 test: a measurement id instead of a property id fails at step 2 with property_not_found", !badGa4.ok && badGa4.steps[1]?.error?.code === "property_not_found" && badGa4.steps.slice(2).every((x) => x.status === "skipped"));
     const ga4 = await driver.act("test_ga4", { property_id: "412345678", auth: { kind: "adc" } }, "en");

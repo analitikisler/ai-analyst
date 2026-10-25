@@ -366,7 +366,7 @@ const checks = {
     "findings": [
       {
         "id": "f_ga4_mobile_safari",
-        "source": "AI Tag Debugger",
+        "source": "ai tag debugger",
         "text": {
           "en": "purchase is not sent on mobile Safari since release v4.12 (9 Oct): the thank-you page loads the tag before dataLayer is ready.",
           "tr": "v4.12 sürümünden (9 Ekim) beri mobil Safari’de purchase gitmiyor: teşekkür sayfası tag’i dataLayer hazır olmadan yüklüyor."
@@ -401,7 +401,7 @@ const checks = {
     "findings": [
       {
         "id": "f_ga4_mobile_safari",
-        "source": "AI Tag Debugger",
+        "source": "ai tag debugger",
         "text": {
           "en": "purchase is not sent on mobile Safari since release v4.12 (9 Oct): the thank-you page loads the tag before dataLayer is ready.",
           "tr": "v4.12 sürümünden (9 Ekim) beri mobil Safari’de purchase gitmiyor: teşekkür sayfası tag’i dataLayer hazır olmadan yüklüyor."
@@ -469,7 +469,7 @@ const checks = {
     "findings": [
       {
         "id": "f_meta_view_through",
-        "source": "AI Tag Debugger",
+        "source": "ai tag debugger",
         "text": {
           "en": "Meta counts view-through purchases (1-day view) that the back office attributes to other channels.",
           "tr": "Meta, sipariş panelinin başka kanallara atadığı görüntüleme sonrası satın almaları da sayıyor (1 günlük görüntüleme)."

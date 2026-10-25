@@ -448,7 +448,7 @@ defineAction({
     if (left || ctx.app.config.warehouse !== "local") return state;
     if (ctx.app.config.warehouseSetting.locked) {
       const env = ctx.app.config.warehouseSetting.env ?? "AI_ANALYST_WAREHOUSE";
-      return { ...state, warnings: [...state.warnings, { en: `Nothing is connected now, so your shop's data is empty. ${env} in the environment fixes the data source, so the app stays on it: connect a source, or change ${env} and restart.`, tr: `Artık bağlı kaynak yok; mağazanın verisi boş. Ortamdaki ${env} veri kaynağını sabitlediği için uygulama bu kaynakta kalıyor: bir kaynak bağlayın veya ${env} değerini değiştirip yeniden başlatın.` }] };
+      return { ...state, warnings: [...state.warnings, { en: `Nothing is connected now, so your shop's data is empty. ${env} in the environment fixes the data source, so the app stays on it: connect a source, or change ${env} and restart.`, tr: `Artık bağlı kaynak yok; mağazanın verisi boş. Ortamdaki ${env} veri kaynağını sabitlediği için uygulama bu kaynakta kalıyor: yeni bir kaynak bağlanabilir ya da ${env} değiştirilip uygulama yeniden başlatılabilir.` }] };
     }
     const next = updateConfigFile(ctx.app.config, (file) => (file.warehouse = "duckdb"));
     await ctx.app.applyConfig(next);

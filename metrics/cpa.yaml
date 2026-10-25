@@ -3,7 +3,7 @@ version: 1
 label: { en: "Cost per order", tr: "Sipariş başı maliyet" }
 unit: try
 source: backoffice+ads
-owner: Bahadır Ölez
+owner: Analitik İşler
 description:
   en: "Channel spend divided by back-office orders attributed to that channel (last non-direct click)."
   tr: "Kanal harcaması bölü o kanala atanan sipariş paneli siparişleri (son doğrudan olmayan tıklama)."
@@ -15,7 +15,7 @@ dimensions: [day, week, month, channel, device]
 history:
   - version: 1
     date: 2026-03-01
-    actor: Bahadır Ölez
+    actor: Analitik İşler
     change:
       en: "First version."
       tr: "İlk sürüm."

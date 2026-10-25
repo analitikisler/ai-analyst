@@ -17,7 +17,8 @@
     "stub": "bun scripts/state-stub.ts",
     "fixtures": "bun scripts/capture-fixtures.mjs",
     "fixtures:handmade": "vite build -c vite.smoke.config.ts && WRITE_HANDMADE=1 bun .smoke/smoke.js",
-    "fixtures:mart": "node scripts/export-mart.mjs"
+    "fixtures:mart": "node scripts/export-mart.mjs",
+    "brand": "bun scripts/gen-brand.mjs"
   },
   "dependencies": {
     "@base-ui/react": "1.8.0",

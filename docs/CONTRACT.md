@@ -1,6 +1,6 @@
-# AI Analyst · build contract, version 0.2
+# ai analyst · build contract, version 0.2
 
-AI Analyst is Analitik İşler's analytics tool that people and an agent use together. A person asks a question in Turkish or English; the
+ai analyst is Analitik İşler's analytics tool that people and an agent use together. A person asks a question in Turkish or English; the
 agent answers with a chart, the SQL it ran, the versioned metric definition and a tracking check that reconciles
 the figure against the system that owns it. Every UI action, agent tool and chat-app tool is the same action
 from one registry.
@@ -66,7 +66,7 @@ drops from 9 Oct 2026, release v4.12). The prototype's `fixtures/mart.json` is b
 history:
   - version: 3
     date: 2026-08-18
-    actor: Bahadır Ölez
+    actor: Analitik İşler
     change: { en: "...", tr: "..." }
 ```
 
@@ -84,7 +84,7 @@ are `Text` (`{ en, tr }`); a typed question stays as typed. Agreed additions in 
 lead at integration:
 
 ```ts
-// Tracking audits on own data are handed off to AI Tag Debugger (agreed with the lead, 24 Oct).
+// Tracking audits on own data are handed off to ai tag debugger (agreed with the lead, 24 Oct).
 export interface AuditRun {
   // … existing fields …
   status: "done" | "handoff";
@@ -127,7 +127,7 @@ export interface Turn { /* … */ usage?: TurnUsage | null }
 export interface AppState { /* … */ source: { /* … */ error?: ApiErrorBody | null } }  // code "source_unavailable", params { service, reason, status? }
 ```
 
-`deep_link` is always `null` in 0.2 (AI Tag Debugger has no deep link scheme yet); `mcp_steps` are four lines,
+`deep_link` is always `null` in 0.2 (ai tag debugger has no deep link scheme yet); `mcp_steps` are four lines,
 each starting with the MCP server and tool: `ai-tag-debugger start_audit {url, journey: "purchase", providers,
 device}`, `ai-tag-debugger browser_action …`, `ai-tag-debugger finish_audit`, `ai-analyst attach_audit_finding
 {audit_id, …}`.
@@ -183,10 +183,10 @@ Who: P person (web app), A agent tool, M chat app over MCP, S settings (loopback
 | `pin_answer`, `update_tile`, `move_tile`, `duplicate_tile`, `remove_tile` | write | P | undoable; chart grammar and width rules enforced |
 | `list_events` | read | P A M | sorted by date; the model sees them labelled as data |
 | `save_event`, `delete_event` | write | P | undoable |
-| `import_gtm_events` | write | P | demo: the simulated three GTM versions, undoable; own data: `unavailable` (needs Google Tag Manager API access, planned for Analitik İşler Cloud). No call to Google |
+| `import_gtm_events` | write | P | demo: the simulated three GTM versions, undoable; own data: `unavailable` (needs Google Tag Manager API access, planned for ai cloud). No call to Google |
 | `start_tracking_audit` | write | P | demo: the simulated run (`status: "done"`); own data: `status: "handoff"` with the MCP steps, no network call |
 | `get_audit` | read | P M | |
-| `attach_audit_finding` | write | M | `{ audit_id, ok, title, evidence?, fix?, console?, steps? }` from the chat app after the AI Tag Debugger run; stores the result and, when not ok, a finding on the check |
+| `attach_audit_finding` | write | M | `{ audit_id, ok, title, evidence?, fix?, console?, steps? }` from the chat app after the ai tag debugger run; stores the result and, when not ok, a finding on the check |
 | `get_chat_app_setup` | read | P | the real snippet: this Node, this repo's `src/cli.js`, this config file and data dir |
 | `list_chat_app_calls` | read | P | the last 5 MCP calls (client name from the MCP handshake) |
 | `get_settings` | read | P | `Settings`; keys only as `hint` ("…wxyz"), never the key |
@@ -444,8 +444,8 @@ never returned (hints only). Env vars win and lock: `AI_ANALYST_GA4_PROPERTY`, `
 **Sync.** After connecting, on demand (`sync_sources`), and once a day while `serve` runs. Default history 90 days;
 `history_days` up to 400 (13 months). One sync at a time (`sync_running`).
 
-**Waitlist (Analitik İşler Cloud).** `AppState.waitlist`: Meta Ads, Google Ads, TikTok Ads, ikas, Ticimax, Search
-Console, Google Tag Manager, each a `mailto:hello@analitikisler.com` with the subject "Analitik İşler Cloud waitlist:
+**Waitlist (ai cloud).** `AppState.waitlist`: Meta Ads, Google Ads, TikTok Ads, ikas, Ticimax, Search
+Console, Google Tag Manager, each a `mailto:hello@analitikisler.com` with the subject "ai cloud waitlist:
 <name>". No network call. The simulated GTM import is removed; events stay (by hand or proposed by the agent).
 
 **Types** (web/src/api/types.ts):
@@ -530,7 +530,7 @@ as a four-character hint.
 | `ANTHROPIC_API_KEY`, `OPENAI_API_KEY`, `GEMINI_API_KEY`, `AI_ANALYST_OPENAI_COMPATIBLE_KEY` | model keys |
 | `AI_ANALYST_OPENAI_COMPATIBLE_URL` | base URL of an OpenAI-compatible server |
 | `AI_ANALYST_MODEL` | the active provider's model (defaults: claude-opus-5-5, gpt-5.5, gemini-pro-latest) |
-| `AI_ANALYST_CLOUD_URL`, `AI_ANALYST_CLOUD_TOKEN` | Analitik İşler Cloud, an Anthropic-compatible endpoint |
+| `AI_ANALYST_CLOUD_URL`, `AI_ANALYST_CLOUD_TOKEN` | ai cloud, an Anthropic-compatible endpoint |
 | `AI_ANALYST_NO_CLOUD` | `1`: every call to an outside service is refused with `no_cloud` (see below); `--no-cloud` on `serve` sets it |
 | `AI_ANALYST_WORKSPACE`, `AI_ANALYST_LANG`, `AI_ANALYST_HELP`, `AI_ANALYST_HELP_EMAIL`, `AI_ANALYST_PACK_DIR` | as in 0.1; with no workspace name set, demo data is "Örnek Moda" and own data is named after the BigQuery dataset (else the project) |
 
@@ -618,7 +618,7 @@ ignored. `test/guard.test.js` checks the four exploratory queries against `fixtu
 
 ### Deliberate differences from the mock
 
-- The Meta "why" sentence keeps the capital in "AI Tag Debugger found that Meta counts …" (the mock lower-cased
+- The Meta "why" sentence keeps the capital in "ai tag debugger found that Meta counts …" (the mock lower-cased
   the first letter of the finding).
 - `list_events` is sorted by date (the mock listed insertion order; its state was already sorted).
 - The exploratory suggestions are known questions too, so a turn started from one keeps both languages.
@@ -638,7 +638,7 @@ Real: every figure (SQL compiled from the pack, run on DuckDB or BigQuery), chec
 the model loop (with a key), exploratory SQL through the guard, settings and secrets, dashboards, events,
 proposals, undo, the MCP server and its call log, the chat-app snippets. Simulated, on demo data only: the demo
 shop's source list, the GTM import (three scripted versions), the tracking audit run (scripted to the planted
-bug). On own data the GTM import is unavailable and the audit is a handoff to AI Tag Debugger in the chat app.
+bug). On own data the GTM import is unavailable and the audit is a handoff to ai tag debugger in the chat app.
 
 ## Exceptions
 

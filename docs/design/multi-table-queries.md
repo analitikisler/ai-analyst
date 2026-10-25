@@ -145,7 +145,7 @@ on the demo, such as "Which product categories are returned most often?".
    with a one-click "add this dataset".
 2. Is masking (hashing) protected columns worth adding, so they can still be grouped on, or is refusing enough for
    now? Proposed: refuse now, masking later.
-3. Should Analitik İşler Cloud offer this with managed connectors and curated table descriptions per store platform
+3. Should ai cloud offer this with managed connectors and curated table descriptions per store platform
    (ikas, Ticimax, Shopify)? Proposed: yes, as part of the curated packs.
 
 ## Estimate

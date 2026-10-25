@@ -40,8 +40,8 @@
             "tr": "Meta dönüşümleri ve sipariş panelindeki siparişler izlensin"
           },
           "body": {
-            "en": "It runs again when AI Analyst starts, every hour while it runs, and on every ai-analyst check. A changed verdict shows under Tracking health on the dashboard and in Settings › Activity. Nothing is emailed.",
-            "tr": "AI Analyst açıldığında, açıkken saatte bir ve her ai-analyst check çalıştığında yeniden çalışır. Sonuç değişirse dashboard’daki Ölçüm sağlığı bölümünde ve Ayarlar › İşlem geçmişi’nde görünür. E-posta gönderilmez."
+            "en": "It runs again when ai analyst starts, every hour while it runs, and on every ai-analyst check. A changed verdict shows under Tracking health on the dashboard and in Settings › Activity. Nothing is emailed.",
+            "tr": "ai analyst açıldığında, açıkken saatte bir ve her ai-analyst check çalıştığında yeniden çalışır. Sonuç değişirse dashboard’daki Ölçüm sağlığı bölümünde ve Ayarlar › İşlem geçmişi’nde görünür. E-posta gönderilmez."
           },
           "status": "pending",
           "created_by": "agent",

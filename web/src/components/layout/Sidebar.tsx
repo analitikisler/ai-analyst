@@ -1,12 +1,12 @@
 // Left navigation (Overt Sidebar; 08-art.md §2.2, 09-ux.md S01): 232 px; the same component in the phone drawer.
-// Logo row 56 (the mono Analitik İşler logo, a divider, "AI Analyst"), the workspace row, four items, the
+// Logo row 56 (the mono Analitik İşler logo, a divider, "ai analyst"), the workspace row, four items, the
 // Make it yours card, then Settings and the status line.
 import { Link, NavLink, useLocation } from "react-router";
 import { cn } from "cn";
 import { FlaskConicalIcon } from "lucide-react";
 import { useAppState } from "@/api/queries";
 import { useAskStore } from "@/ask/AskStore";
-import { AnalitikIslerLogo } from "@/components/art/Logo";
+import { AiAnalystLogo } from "@/components/art/BrandLogos";
 import { StatusGlyph } from "@/components/art/StatusGlyph";
 import { Skeleton } from "@/components/ui/skeleton";
 import { fmt, useT } from "@/i18n";
@@ -23,10 +23,10 @@ const itemCls = (active: boolean) =>
 export function Lockup({ onNavigate }: { onNavigate?: () => void }) {
   const t = useT();
   return (
-    <Link to="/ask" onClick={onNavigate} aria-label={t.shell.home} className="flex items-center gap-2 rounded-sm text-text-strong">
-      <AnalitikIslerLogo height={16} />
-      <span aria-hidden className="h-4 w-px bg-border-strong" />
-      <span className="text-sm leading-5 font-semibold whitespace-nowrap">{t.app.name}</span>
+    // The ai analyst lockup (BRAND §6) in the text colour, red point only; 20 px tall keeps the x-height above 9 px,
+    // and the padding gives it its clear space (2 stems).
+    <Link to="/ask" onClick={onNavigate} aria-label={t.shell.home} className="flex w-fit items-center rounded-sm p-1.5 text-text-strong">
+      <AiAnalystLogo height={20} decorative />
     </Link>
   );
 }

@@ -10,7 +10,7 @@ export interface Prefs {
   theme: "system" | "light" | "dark";
   /** The sidebar "Make it yours" card was dismissed. */
   makeItYoursDismissed: boolean;
-  /** "Not now" on the Analitik İşler Cloud line. */
+  /** "Not now" on the ai cloud line. */
   cloudNotNow: boolean;
   /** The Ask page conversation column is collapsed. */
   askColumnCollapsed: boolean;

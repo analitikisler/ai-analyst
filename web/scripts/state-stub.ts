@@ -69,7 +69,7 @@ const overrides: Partial<{ [N in keyof Actions]: (input: Actions[N]["input"]) =>
         ],
       },
     }),
-  import_gtm_events: () => fail("unavailable", "The GTM import needs Google Tag Manager API access (planned for Analitik İşler Cloud).", 409),
+  import_gtm_events: () => fail("unavailable", "The GTM import needs Google Tag Manager API access (planned for ai cloud).", 409),
   start_tracking_audit: (input) => {
     const run: AuditRun = { ...callAction("start_tracking_audit", input, "en"), status: "handoff", steps: [], result: null, finished_at: null };
     run.handoff = {

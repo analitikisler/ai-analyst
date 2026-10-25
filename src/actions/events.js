@@ -1,4 +1,4 @@
-// Events on charts, tracking audits with AI Tag Debugger, and chat-app setup.
+// Events on charts, tracking audits with ai tag debugger, and chat-app setup.
 import { z } from "zod";
 import { ROOT } from "../config.js";
 import { AppError } from "../errors.js";
@@ -33,7 +33,7 @@ export const listEvents = (store, config) => {
 
 /**
  * The demo's events: the release, the sale behind the 10–13 Oct spike, a GTM publish, a price change. Importing
- * Google Tag Manager versions is on the Analitik İşler Cloud waitlist; events are added by hand or proposed.
+ * Google Tag Manager versions is on the ai cloud waitlist; events are added by hand or proposed.
  */
 export function demoEvents() {
   return [
@@ -141,7 +141,7 @@ function simulatedAudit(input, at, id) {
   };
 }
 
-/** On own data the audit runs in AI Tag Debugger, driven by the chat app's model: the steps it calls, prefilled. */
+/** On own data the audit runs in ai tag debugger, driven by the chat app's model: the steps it calls, prefilled. */
 function handoffAudit(input, at, id) {
   const url = /^https?:\/\//.test(input.url) ? input.url : `https://${input.url}`;
   const providers = input.platforms;
@@ -172,7 +172,7 @@ function handoffAudit(input, at, id) {
 
 defineAction({
   name: "start_tracking_audit",
-  description: "Tests the purchase journey for a tracking check with AI Tag Debugger. Simulated on demo data; on own data it returns the MCP steps for AI Tag Debugger (no call is made from here).",
+  description: "Tests the purchase journey for a tracking check with ai tag debugger. Simulated on demo data; on own data it returns the MCP steps for ai tag debugger (no call is made from here).",
   kind: "write",
   input: (pack) => z.object({ check: z.enum(Object.keys(pack.checks)), url: z.string().min(3).max(300).regex(/^(https?:\/\/)?[A-Za-z0-9.-]+(:\d+)?(\/[^\s]*)?$/, "a site address"), device: z.string().min(1).max(60), platforms: z.array(z.enum(PLATFORMS)).min(1).max(4) }).strict(),
   run(ctx, input) {
@@ -200,7 +200,7 @@ defineAction({
 defineAction({
   name: "attach_audit_finding",
   description:
-    "After running the AI Tag Debugger purchase journey for an audit that start_tracking_audit handed off, attach what it found. ok: true when purchase reached every platform. The finding is linked to the tracking check.",
+    "After running the ai tag debugger purchase journey for an audit that start_tracking_audit handed off, attach what it found. ok: true when purchase reached every platform. The finding is linked to the tracking check.",
   kind: "write",
   person: false,
   mcp: true,
@@ -233,7 +233,7 @@ defineAction({
     ctx.store.put("audits", done);
     if (!input.ok) {
       const checks = [a.check, ...(a.check === "ga4_vs_orders" ? ["ga4_rev_vs_revenue"] : a.check === "ga4_rev_vs_revenue" ? ["ga4_vs_orders"] : [])];
-      ctx.store.saveFinding({ id: newId("f"), source: "AI Tag Debugger", since: at.slice(0, 10), release: null, checks, text: tt(input.title), audit_id: a.id });
+      ctx.store.saveFinding({ id: newId("f"), source: "ai tag debugger", since: at.slice(0, 10), release: null, checks, text: tt(input.title), audit_id: a.id });
     }
     ctx.log(ACT.audit_attached(tt(input.title), input.ok));
     return done;

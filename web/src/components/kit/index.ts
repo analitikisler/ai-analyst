@@ -1,4 +1,4 @@
-// Overt's own components, ported (DECISIONS.md §7), plus AI Analyst's small additions (VerdictBadge).
+// Overt's own components, ported (DECISIONS.md §7), plus ai analyst's small additions (VerdictBadge).
 export { CodeBlock, CopyButton, useCopy, type CodeBlockProps } from "./CodeBlock";
 export { DeltaBadge, type DeltaBadgeProps } from "./DeltaBadge";
 export { EmptyState, ErrorState, type EmptyStateProps, type ErrorStateProps } from "./EmptyState";

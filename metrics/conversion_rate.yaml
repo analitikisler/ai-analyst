@@ -3,7 +3,7 @@ version: 2
 label: { en: "Conversion rate", tr: "Dönüşüm oranı" }
 unit: pct
 source: backoffice+ga4
-owner: Bahadır Ölez
+owner: Analitik İşler
 description:
   en: "Back-office orders divided by GA4 sessions. By channel, orders take the channel stored with the order and sessions the GA4 session source."
   tr: "Sipariş paneli siparişleri bölü GA4 oturumları. Kanal kırılımında sipariş, siparişle kaydedilen kanala; oturum, GA4 oturum kaynağına göre atanır."
@@ -14,13 +14,13 @@ dimensions: [day, week, month, channel, device]
 history:
   - version: 2
     date: 2026-06-02
-    actor: Bahadır Ölez
+    actor: Analitik İşler
     change:
       en: "Orders by last non-direct click, matching Orders v2."
       tr: "Siparişler son doğrudan olmayan tıklamaya göre; Sipariş v2 ile uyumlu."
   - version: 1
     date: 2026-03-01
-    actor: Bahadır Ölez
+    actor: Analitik İşler
     change:
       en: "First version."
       tr: "İlk sürüm."

@@ -1,6 +1,6 @@
 # Connecting your shop
 
-AI Analyst can answer from your own shop's data without a BigQuery project. Three connectors and one file import
+ai analyst can answer from your own shop's data without a BigQuery project. Three connectors and one file import
 feed a local DuckDB file on this machine, `<data_dir>/warehouse.duckdb` (the source called **Your shop's data**):
 
 | Source | Fills | How |
@@ -18,7 +18,7 @@ Everything is set up in **Settings › Sources**, from this machine only. Each c
 connected (Connect), which fetches 90 days by default (up to 400). While `ai-analyst serve` runs, the connected
 sources sync once a day; **Sync now** fetches them again.
 
-Facts we could not confirm from a primary source are marked **(unverified)**.
+Facts Analitik İşler could not confirm from a primary source are marked **(unverified)**.
 
 ## What is stored
 
@@ -48,7 +48,7 @@ Facts we could not confirm from a primary source are marked **(unverified)**.
 
 ## Google Analytics 4
 
-AI Analyst asks the Analytics Data API (`analyticsdata.googleapis.com`, scope `analytics.readonly`) for sessions,
+ai analyst asks the Analytics Data API (`analyticsdata.googleapis.com`, scope `analytics.readonly`) for sessions,
 transactions and purchase revenue by date, default channel group and device category. It cannot change the
 property. Find the **property ID** (a number) in GA4 › Admin › Property details.
 
@@ -140,10 +140,10 @@ WooCommerce directly (below).
 
 ## Shopify
 
-AI Analyst reads orders through a **custom app** in your shop with one scope, `read_orders`.
+ai analyst reads orders through a **custom app** in your shop with one scope, `read_orders`.
 
 1. Shopify admin › Settings › Apps and sales channels › **Develop apps** (allow custom app development if asked),
-   **Create an app**, name it "AI Analyst".
+   **Create an app**, name it "ai analyst".
 2. **Configure Admin API scopes**: tick `read_orders` only (and `read_all_orders` if you have it). Leave every other
    scope off: the app refuses a token with a `write_*` scope, with `read_customers` or any other scope that reads
    people's data, or with anything beyond a few read-only scopes (`read_products`, `read_analytics`,

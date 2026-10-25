@@ -68,7 +68,7 @@ export async function buildState(app, { loopback = true } = {}) {
     audits: store.list("audits", { limit: 10 }),
     // The prototype's "Simulate the tracking fix" does not exist here.
     audit_fixed: false,
-    // The sources that feed the local source, and the connectors planned for Analitik İşler Cloud.
+    // The sources that feed the local source, and the connectors planned for ai cloud.
     // From another machine: no shop domain, property or file name (security review 3, L7).
     connectors: loopback ? connectorStates(app) : remoteStates(app),
     waitlist: waitlist(),

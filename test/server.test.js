@@ -15,7 +15,7 @@ before(async () => {
   ws = await demoWorkspace({ seed: true });
   webDir = tempDir("web-");
   await mkdir(path.join(webDir, "assets"));
-  await writeFile(path.join(webDir, "index.html"), `<!doctype html><title>AI Analyst</title><script>${THEME}</script><script type="module" src="/assets/index-AbCdEf12.js"></script>`);
+  await writeFile(path.join(webDir, "index.html"), `<!doctype html><title>ai analyst</title><script>${THEME}</script><script type="module" src="/assets/index-AbCdEf12.js"></script>`);
   await writeFile(path.join(webDir, "assets", "index-AbCdEf12.js"), "export {};");
   await writeFile(path.join(webDir, "favicon.svg"), "<svg/>");
   ws.config = { ...ws.config, port: 0 };

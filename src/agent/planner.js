@@ -217,16 +217,16 @@ function whyText(c, data) {
     const starts = c.out_of_tolerance_since;
     const onRelease = fd && starts === fd.since;
     return {
-      en: `GA4 recorded ${pct("en", abs(c.delta_pct))} fewer purchases than the back office for ${r.en}. The gap is on mobile (${pct("en", mob.delta_pct)}); desktop is inside the tolerance (${pct("en", desk.delta_pct)}).${starts ? ` It starts on ${enShort(starts)}${onRelease ? `, the day of release ${fd.release ?? RELEASE.label.en.split(" ")[0]}` : ""}.` : ""}${onRelease ? ` AI Tag Debugger found that purchase is not sent on mobile Safari since ${fd.release ?? "v4.12"}.` : ""}`,
-      tr: `${r.tr} döneminde GA4 sipariş paneline göre ${pct("tr", abs(c.delta_pct))} daha az satın alma kaydetti. Fark mobilde (${pct("tr", mob.delta_pct)}); masaüstü kabul edilen sapma içinde (${pct("tr", desk.delta_pct)}).${starts ? (onRelease ? ` Fark, ${fd.release ?? "v4.12"} sürümünün yayımlandığı ${trAt(starts)} başlıyor.` : ` Fark ${trLong(starts)} tarihinde başlıyor.`) : ""}${onRelease ? ` AI Tag Debugger, ${fd.release ?? "v4.12"}’den beri mobil Safari’de purchase gönderilmediğini buldu.` : ""}`,
+      en: `GA4 recorded ${pct("en", abs(c.delta_pct))} fewer purchases than the back office for ${r.en}. The gap is on mobile (${pct("en", mob.delta_pct)}); desktop is inside the tolerance (${pct("en", desk.delta_pct)}).${starts ? ` It starts on ${enShort(starts)}${onRelease ? `, the day of release ${fd.release ?? RELEASE.label.en.split(" ")[0]}` : ""}.` : ""}${onRelease ? ` ai tag debugger found that purchase is not sent on mobile Safari since ${fd.release ?? "v4.12"}.` : ""}`,
+      tr: `${r.tr} döneminde GA4 sipariş paneline göre ${pct("tr", abs(c.delta_pct))} daha az satın alma kaydetti. Fark mobilde (${pct("tr", mob.delta_pct)}); masaüstü kabul edilen sapma içinde (${pct("tr", desk.delta_pct)}).${starts ? (onRelease ? ` Fark, ${fd.release ?? "v4.12"} sürümünün yayımlandığı ${trAt(starts)} başlıyor.` : ` Fark ${trLong(starts)} tarihinde başlıyor.`) : ""}${onRelease ? ` ai tag debugger, ${fd.release ?? "v4.12"}’den beri mobil Safari’de purchase gönderilmediğini buldu.` : ""}`,
     };
   }
   const fd = c.findings[0];
   const base = checkSentence(c, data);
   const strip = (x) => x.replace(/^(Does not add up|Tutmuyor)\. /, "");
   return {
-    en: `${strip(base.en)}${fd ? ` AI Tag Debugger found that ${lowerFirst(fd.text.en)}` : ""}`,
-    tr: `${strip(base.tr)}${fd ? ` AI Tag Debugger şunu buldu: ${fd.text.tr}` : ""}`,
+    en: `${strip(base.en)}${fd ? ` ai tag debugger found that ${lowerFirst(fd.text.en)}` : ""}`,
+    tr: `${strip(base.tr)}${fd ? ` ai tag debugger şunu buldu: ${fd.text.tr}` : ""}`,
   };
 }
 

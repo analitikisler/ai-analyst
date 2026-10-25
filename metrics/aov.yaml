@@ -3,7 +3,7 @@ version: 1
 label: { en: "Average order value", tr: "Sepet ortalaması" }
 unit: try
 source: backoffice
-owner: Bahadır Ölez
+owner: Analitik İşler
 description:
   en: "Revenue divided by orders, both from the back office."
   tr: "Ciro bölü sipariş; ikisi de sipariş panelinden."
@@ -14,7 +14,7 @@ dimensions: [day, week, month, channel, device]
 history:
   - version: 1
     date: 2026-03-01
-    actor: Bahadır Ölez
+    actor: Analitik İşler
     change:
       en: "First version."
       tr: "İlk sürüm."

@@ -1,15 +1,15 @@
 # Security
 
-AI Analyst is in alpha. Security reports are welcome and taken seriously.
+ai analyst is in alpha. Security reports are welcome and taken seriously.
 
 ## Reporting a problem
 
-Email hello@analitikisler.com with the subject "AI Analyst security". Please do not open a public issue for a
+Email hello@analitikisler.com with the subject "ai analyst security". Please do not open a public issue for a
 security problem. Include what you found, how to reproduce it, and the version (Settings › About, or `version`
 in `package.json`).
 
-You will get a reply within five working days. Once a fix is released, the report can be credited in the release
-notes if you wish.
+Analitik İşler answers every report. Once a fix is released, the report can be credited in the release notes if you
+wish.
 
 ## Supported versions
 

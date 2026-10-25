@@ -176,7 +176,7 @@
                 "findings": [
                   {
                     "id": "f_ga4_mobile_safari",
-                    "source": "AI Tag Debugger",
+                    "source": "ai tag debugger",
                     "text": {
                       "en": "purchase is not sent on mobile Safari since release v4.12 (9 Oct): the thank-you page loads the tag before dataLayer is ready.",
                       "tr": "v4.12 sürümünden (9 Eki) beri mobil Safari’de purchase gitmiyor: teşekkür sayfası tag’i dataLayer hazır olmadan yüklüyor."

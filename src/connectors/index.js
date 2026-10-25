@@ -1,6 +1,6 @@
 // The connectors as one thing: their states for the app (AppState.connectors), the sync that fetches daily aggregates
 // from each connected source into the landing rows and rebuilds the local warehouse, the switch to the local source,
-// and the Analitik İşler Cloud waitlist. One sync at a time per app. A failed fetch stores nothing for that source.
+// and the ai cloud waitlist. One sync at a time per app. A failed fetch stores nothing for that source.
 import { AppError } from "../errors.js";
 import { addDays } from "../format.js";
 import { updateConfigFile } from "../settings.js";
@@ -108,8 +108,8 @@ const WAITLIST = [
   ["search_console", "Search Console"],
   ["gtm", "Google Tag Manager"],
 ];
-/** AppState.waitlist: the connectors planned for Analitik İşler Cloud, each a mailto. No network call. */
-export const waitlist = () => WAITLIST.map(([id, name]) => ({ id, name: T(name, name), mailto: `mailto:hello@analitikisler.com?subject=${encodeURIComponent(`Analitik İşler Cloud waitlist: ${name}`)}` }));
+/** AppState.waitlist: the connectors planned for ai cloud, each a mailto. No network call. */
+export const waitlist = () => WAITLIST.map(([id, name]) => ({ id, name: T(name, name), mailto: `mailto:hello@analitikisler.com?subject=${encodeURIComponent(`ai cloud waitlist: ${name}`)}` }));
 
 const errorBody = (err) => ({ code: err.code ?? "internal", message: err instanceof AppError ? err.message : "The sync failed. The log has the details.", ...(err.params ? { params: err.params } : {}) });
 
@@ -174,13 +174,13 @@ export function switchNote(config) {
     const env = config.warehouseSetting.env ?? "AI_ANALYST_WAREHOUSE";
     return T(
       `Your shop's data is ready, but ${env} in the environment fixes the data source, so the app still reads it. Set ${env}=local (or remove it) and restart to use your shop's data.`,
-      `Mağazanın verisi hazır, ancak ortamdaki ${env} veri kaynağını sabitliyor; uygulama hâlâ onu okuyor. Mağazanın verisini kullanmak için ${env}=local yapın (veya kaldırın) ve yeniden başlatın.`,
+      `Mağazanın verisi hazır, ancak ortamdaki ${env} veri kaynağını sabitliyor; uygulama hâlâ onu okuyor. Mağazanın verisine geçmek için ${env}=local yapılmalı (ya da değişken kaldırılmalı) ve uygulama yeniden başlatılmalı.`,
     );
   }
   if (config.warehouse === "bigquery") {
     return T(
       "Your shop's data is ready. The app still reads your BigQuery data, which is never replaced on its own: switch to Your shop's data in Settings › Data source when you want it.",
-      "Mağazanın verisi hazır. Uygulama hâlâ BigQuery verinizi okuyor; bu kaynak kendiliğinden değiştirilmez. İstediğinizde Ayarlar › Veri kaynağı bölümünden Mağazanın kendi verisi'ne geçin.",
+      "Mağazanın verisi hazır. Uygulama hâlâ BigQuery verisini okuyor; bu kaynak kendiliğinden değiştirilmez. Mağazanın kendi verisine geçiş Ayarlar › Veri kaynağı bölümünden yapılır.",
     );
   }
   return null;

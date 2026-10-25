@@ -1,4 +1,4 @@
-# UX audit · AI Analyst, current build (23 Oct 2026)
+# UX audit · ai analyst, current build (23 Oct 2026)
 
 Audited: `web/index.html`, `web/app.js`, `web/app.css`, `web/i18n.js`, run on the demo workspace at desktop and 375 px, dark and light. Each item names where it is and the fix the mockups in `design/mockups/` show.
 

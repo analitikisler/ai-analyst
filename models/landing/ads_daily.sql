@@ -16,4 +16,4 @@ CREATE TABLE IF NOT EXISTS `{project}.{dataset}.ads_daily` (
   conversions NUMERIC NOT NULL OPTIONS (description = 'Purchases as the platform reports them, with its default attribution setting.')
 )
 PARTITION BY date
-OPTIONS (description = 'Daily Meta and TikTok spend and conversions for AI Analyst.');
+OPTIONS (description = 'Daily Meta and TikTok spend and conversions for ai analyst.');

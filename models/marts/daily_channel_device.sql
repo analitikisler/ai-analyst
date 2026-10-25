@@ -1,7 +1,7 @@
 -- The mart every metric reads (docs/CONTRACT.md, "The mart"): one row per date x channel x device.
 --
 -- This file creates two objects:
---   daily_channel_device        the table AI Analyst queries
+--   daily_channel_device        the table ai analyst queries
 --   daily_channel_device_build  a table function that computes the rows for a date range
 -- daily_channel_device_incremental.sql (nightly MERGE) and daily_channel_device_full_refresh.sql
 -- (rebuild) both call the function, so there is one definition of the mart.
@@ -26,7 +26,7 @@ CREATE TABLE IF NOT EXISTS `{project}.{dataset}.daily_channel_device` (
 )
 PARTITION BY date
 CLUSTER BY channel, device
-OPTIONS (description = 'AI Analyst mart: one row per date x channel x device. Aggregates only, no personal data.');
+OPTIONS (description = 'ai analyst mart: one row per date x channel x device. Aggregates only, no personal data.');
 
 CREATE OR REPLACE TABLE FUNCTION `{project}.{dataset}.daily_channel_device_build`(date_from DATE, date_to DATE) AS (
   WITH

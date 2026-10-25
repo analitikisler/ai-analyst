@@ -1,4 +1,4 @@
-# Flows · AI Analyst redesign (23 Oct 2026)
+# Flows · ai analyst redesign (23 Oct 2026)
 
 Read with `design/ux-audit.md` and the mockups in `design/mockups/` (open `index.html`). Component names in brackets are the shadcn vocabulary the build will use, themed with the design-system tokens (`web/vendor/tokens.css`): sharp corners, navy grounds, Google Sans, the tally.
 
@@ -56,7 +56,7 @@ flowchart TD
   TC -->|found · dry run within cap| S2
   TC -->|not found or no access| S1c
   S1a --> S2
-  S2[Step 2 · Model] --> S2a[Analitik İşler Cloud · early access · EU inference · no key]
+  S2[Step 2 · Model] --> S2a[ai cloud · early access · EU inference · no key]
   S2 --> S2b[Own API key · set on the server · shown as set or not set]
   S2 --> S2c[Chat app over MCP · Claude Desktop, ChatGPT, Gemini · questions run on the person's own plan]
   S2 --> S2d[Built-in planner · no model · common questions]
@@ -71,7 +71,7 @@ flowchart TD
 
 Rules:
 - Progress is visible ("1 of 3 done") and each step can be reopened from Settings later (data source and model both link back to the step).
-- Nothing in the checklist asks for a credential in the browser. BigQuery uses the Google credentials on the machine running AI Analyst; the form says so and "Test connection" reports what it found (dataset, table, dry-run bytes, the bytes cap). An API key is set on the server and shown only as "set" or "not set".
+- Nothing in the checklist asks for a credential in the browser. BigQuery uses the Google credentials on the machine running ai analyst; the form says so and "Test connection" reports what it found (dataset, table, dry-run bytes, the bytes cap). An API key is set on the server and shown only as "set" or "not set".
 - Public data needs the person's own Google Cloud project for billing; the mockup says it fits the monthly free query allowance and that the bytes cap (2 GB by default) protects them.
 - The GA4 sample (`bigquery-public-data.ga4_obfuscated_sample_ecommerce`) has no order source, so the checks cannot run; the option says "GA4 metrics only · no check" so nobody expects a tally.
 - With MCP as the model route, the first question is asked in the chat app, not here; step 3 shows the question to paste and finishes when the server logs its first `run_query` from that client.
@@ -125,7 +125,7 @@ TR is impersonal (no "siz", no "-niz"), headings are noun phrases without a full
 | 20 | Step 1 result | Connected · daily_channel_device · 90 days · dry run 12 MB | Bağlandı · daily_channel_device · 90 gün · deneme çalıştırma 12 MB |
 | 21 | Step 1 error | Dataset not found. Check the project and dataset names. Nothing was changed. | Veri kümesi bulunamadı. Proje ve veri kümesi adları kontrol edilmeli. Hiçbir şey değiştirilmedi. |
 | 22 | Step 2 | Model | Model |
-| 23 | Step 2 option | Analitik İşler Cloud · early access · EU inference · no key | Analitik İşler Cloud · erken erişim · AB’de çalışır · anahtar gerekmez |
+| 23 | Step 2 option | ai cloud · early access · EU inference · no key | ai cloud · erken erişim · AB’de çalışır · anahtar gerekmez |
 | 24 | Step 2 option | The company’s own API key · Anthropic now, OpenAI and Gemini later | Şirketin API anahtarı · şimdilik Anthropic, sonra OpenAI ve Gemini |
 | 25 | Step 2 option | From a chat app over MCP · Claude Desktop, ChatGPT, Gemini · questions run on the person’s own plan | Sohbet uygulamasından, MCP ile · Claude Desktop, ChatGPT, Gemini · sorular kişinin kendi planında çalışır |
 | 26 | Step 2 option | Built-in planner · no model · common questions | Yerleşik planlayıcı · model yok · sık sorulan sorular |

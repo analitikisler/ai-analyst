@@ -18,7 +18,7 @@ const MOCK = JSON.parse(readFileSync(new URL("./fixtures/mock-parity.json", impo
 const DROP = new Set(["cached", "confirmed", "handoff", "data_source"]);
 const n = (v) => normalize(v, DROP);
 /** Mock text that breaks a house rule; this build writes the corrected form. */
-const DEVIATIONS = [["AI Tag Debugger found that meta counts", "AI Tag Debugger found that Meta counts"]];
+const DEVIATIONS = [["ai tag debugger found that meta counts", "ai tag debugger found that Meta counts"]];
 const fix = (v) => JSON.parse(DEVIATIONS.reduce((s, [a, b]) => s.split(a).join(b), JSON.stringify(v)));
 // The exploratory suggestions are known questions here too, so a turn started from one keeps both languages.
 const EXPLORE_TEXT = { "Which weekday brings the most revenue?": { en: "Which weekday brings the most revenue?", tr: "Hangi hafta günü en çok ciro getiriyor?" } };

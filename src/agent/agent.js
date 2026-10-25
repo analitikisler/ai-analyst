@@ -62,7 +62,7 @@ export function systemPromptParts({ pack, range, workspace, demo, lang, today = 
     `The person writes in ${lang === "tr" ? "Turkish" : "English"}.`,
   ].join(" ");
   const stable = [
-    `You are the analytics agent in AI Analyst by Analitik İşler, working in the workspace "${workspace}".${demo ? " It is the demo workspace of Örnek Moda, an invented Turkish online fashion shop. All data is generated demo data." : ""}`,
+    `You are the analytics agent in ai analyst by Analitik İşler, working in the workspace "${workspace}".${demo ? " It is the demo workspace of Örnek Moda, an invented Turkish online fashion shop. All data is generated demo data." : ""}`,
     `Channels, as id (English / Turkish label): ${label("channel")}. Devices: ${label("device")}. Currency ${currency}. The data range and today's date are at the end of these instructions.`,
     `Metrics:\n${metrics}`,
     `Tracking checks:\n${checks}`,

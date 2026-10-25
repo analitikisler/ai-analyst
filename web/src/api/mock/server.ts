@@ -804,7 +804,7 @@ const handlers: { [N in keyof Actions]: Handler<N> } = {
     { id: "google_ads", name: T("Google Ads", "Google Ads"), detail: "campaign, cost, conversions", rows: 9120 },
     { id: "meta_ads", name: T("Meta Ads", "Meta Ads"), detail: "campaign, spend, purchases", rows: 7340 },
     { id: "tiktok_ads", name: T("TikTok Ads", "TikTok Ads"), detail: "campaign, spend, conversions", rows: 2210 },
-    { id: "ai_tag_debugger", name: T("AI Tag Debugger", "AI Tag Debugger"), detail: "audit findings", rows: 14 },
+    { id: "ai_tag_debugger", name: T("ai tag debugger", "ai tag debugger"), detail: "audit findings", rows: 14 },
   ],
   list_suggestions: () =>
     exploring()

@@ -3,7 +3,7 @@ version: 2
 label: { en: "Revenue", tr: "Ciro" }
 unit: try
 source: backoffice
-owner: Bahadır Ölez
+owner: Analitik İşler
 description:
   en: "Order value in TRY including VAT, excluding shipping, from the back office. Refunds are not subtracted."
   tr: "Sipariş panelinden, KDV dahil ve kargo hariç TRY sipariş tutarı. İadeler düşülmez."
@@ -15,13 +15,13 @@ check: ga4_rev_vs_revenue
 history:
   - version: 2
     date: 2026-08-18
-    actor: Bahadır Ölez
+    actor: Analitik İşler
     change:
       en: "Same cancellation rule as Orders v3; shipping removed from the value."
       tr: "Sipariş v3 ile aynı iptal kuralı; kargo tutardan çıkarıldı."
   - version: 1
     date: 2026-03-01
-    actor: Bahadır Ölez
+    actor: Analitik İşler
     change:
       en: "First version."
       tr: "İlk sürüm."

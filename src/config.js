@@ -135,7 +135,7 @@ export function loadConfig({ env = process.env, cwd = process.cwd(), file } = {}
       last_test: fileP.lastTest ?? null,
     };
   }
-  // Analitik İşler Cloud: a hosted endpoint that speaks the Anthropic API, for teams without their own key.
+  // ai cloud: a hosted endpoint that speaks the Anthropic API, for teams without their own key.
   const cloud = { url: env.AI_ANALYST_CLOUD_URL || null, token: env.AI_ANALYST_CLOUD_TOKEN || null };
   if (!providers.anthropic.set && cloud.url && cloud.token) Object.assign(providers.anthropic, { set: true, source: "env", env: "AI_ANALYST_CLOUD_TOKEN", cloud: true });
 

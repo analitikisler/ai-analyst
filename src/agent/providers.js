@@ -155,7 +155,7 @@ export function adapterFor(app, mode) {
   const c = app.config;
   const p = c.providers[mode.provider];
   if (mode.provider === "anthropic") {
-    assertCloudAllowed(p.cloud ? "Analitik İşler Cloud" : "Anthropic");
+    assertCloudAllowed(p.cloud ? "ai cloud" : "Anthropic");
     const client = p.cloud ? new Anthropic({ baseURL: c.cloud.url, authToken: c.cloud.token, apiKey: null, timeout: 300_000, maxRetries: 2 }) : new Anthropic({ apiKey: p.key, timeout: 300_000, maxRetries: 2 });
     return anthropicAdapter({ client, model: mode.model });
   }

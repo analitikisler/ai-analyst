@@ -392,7 +392,7 @@ const dayOf = (raw, timeZone) => {
 
 // ---------------------------------------------------------------- aggregates
 
-export const CANCELLED_NOTE = T("Cancelled orders are counted, as in the Orders metric. Exclude them here only if GA4 does not record them.", "İptal edilen siparişler, Siparişler metriğinde olduğu gibi sayılır. Bunları burada yalnızca GA4 kaydetmiyorsa hariç tutun.");
+export const CANCELLED_NOTE = T("Cancelled orders are counted, as in the Orders metric. Exclude them here only if GA4 does not record them.", "İptal edilen siparişler, Siparişler metriğinde olduğu gibi sayılır. Burada yalnızca GA4 bunları kaydetmiyorsa hariç tutulmalı.");
 
 /**
  * The daily aggregates of a table under a mapping, and the preview of them.

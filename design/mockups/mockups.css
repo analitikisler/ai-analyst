@@ -1,4 +1,4 @@
-/* AI Analyst · redesign mockups (23 Oct 2026). Static HTML for review, not the app.
+/* ai analyst · redesign mockups (23 Oct 2026). Static HTML for review, not the app.
    Every colour is a design-system role token from ../../web/vendor/tokens.css; the only new values are layout sizes.
    Component names in comments are the shadcn parts the React build will use (Sidebar, Card, Tabs, DropdownMenu, Dialog, Sheet, Switch, Badge, Separator). */
 @import url("../../web/vendor/tokens.css");

@@ -248,8 +248,8 @@ function whySentence(c: CheckResult): Text {
   const desk = c.breakdown.find((b) => b.key === "desktop")!;
   const r = range(c.from, c.to);
   return {
-    en: `GA4 recorded ${pct("en", abs(c.delta_pct))} fewer purchases than the back office for ${r.en}. The gap is on mobile (${pct("en", mob.delta_pct)}); desktop is inside the tolerance (${pct("en", desk.delta_pct)}). It starts on ${enShort(RELEASE.date)}, the day of release v4.12. AI Tag Debugger found that purchase is not sent on mobile Safari since v4.12.`,
-    tr: `${r.tr} döneminde GA4 sipariş paneline göre ${pct("tr", abs(c.delta_pct))} daha az satın alma kaydetti. Fark mobilde (${pct("tr", mob.delta_pct)}); masaüstü kabul edilen sapma içinde (${pct("tr", desk.delta_pct)}). Fark, v4.12 sürümünün yayımlandığı 9 Ekim’de başlıyor. AI Tag Debugger, v4.12’den beri mobil Safari’de purchase gönderilmediğini buldu.`,
+    en: `GA4 recorded ${pct("en", abs(c.delta_pct))} fewer purchases than the back office for ${r.en}. The gap is on mobile (${pct("en", mob.delta_pct)}); desktop is inside the tolerance (${pct("en", desk.delta_pct)}). It starts on ${enShort(RELEASE.date)}, the day of release v4.12. ai tag debugger found that purchase is not sent on mobile Safari since v4.12.`,
+    tr: `${r.tr} döneminde GA4 sipariş paneline göre ${pct("tr", abs(c.delta_pct))} daha az satın alma kaydetti. Fark mobilde (${pct("tr", mob.delta_pct)}); masaüstü kabul edilen sapma içinde (${pct("tr", desk.delta_pct)}). Fark, v4.12 sürümünün yayımlandığı 9 Ekim’de başlıyor. ai tag debugger, v4.12’den beri mobil Safari’de purchase gönderilmediğini buldu.`,
   };
 }
 
@@ -260,8 +260,8 @@ function whyText(c: CheckResult): Text {
   const base = checkSentence(c);
   const strip = (x: string) => x.replace(/^(Does not add up|Tutmuyor)\. /, "");
   return {
-    en: `${strip(base.en)}${fd ? ` AI Tag Debugger found that ${fd.text.en.charAt(0).toLowerCase()}${fd.text.en.slice(1)}` : ""}`,
-    tr: `${strip(base.tr)}${fd ? ` AI Tag Debugger şunu buldu: ${fd.text.tr}` : ""}`,
+    en: `${strip(base.en)}${fd ? ` ai tag debugger found that ${fd.text.en.charAt(0).toLowerCase()}${fd.text.en.slice(1)}` : ""}`,
+    tr: `${strip(base.tr)}${fd ? ` ai tag debugger şunu buldu: ${fd.text.tr}` : ""}`,
   };
 }
 

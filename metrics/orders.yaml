@@ -3,7 +3,7 @@ version: 3
 label: { en: "Orders", tr: "Sipariş" }
 unit: count
 source: backoffice
-owner: Bahadır Ölez
+owner: Analitik İşler
 description:
   en: "Orders placed in the back office, by order date in Europe/Istanbul time. Test orders are excluded; cancelled orders are kept."
   tr: "Sipariş panelinde oluşan siparişler, İstanbul saatine göre sipariş tarihinde. Test siparişleri hariç, iptal edilen siparişler dahildir."
@@ -15,19 +15,19 @@ check: ga4_vs_orders
 history:
   - version: 3
     date: 2026-08-18
-    actor: Bahadır Ölez
+    actor: Analitik İşler
     change:
       en: "Cancelled orders no longer excluded: an order counts on the day it was placed, as GA4 records the purchase."
       tr: "İptal edilen siparişler artık hariç tutulmuyor: sipariş, GA4’ün satın almayı kaydettiği gibi verildiği gün sayılıyor."
   - version: 2
     date: 2026-06-02
-    actor: Bahadır Ölez
+    actor: Analitik İşler
     change:
       en: "Channel taken from the last non-direct click instead of the first touch."
       tr: "Kanal ilk temas yerine son doğrudan olmayan tıklamadan alınıyor."
   - version: 1
     date: 2026-03-01
-    actor: Bahadır Ölez
+    actor: Analitik İşler
     change:
       en: "First version."
       tr: "İlk sürüm."

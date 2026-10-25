@@ -3,7 +3,7 @@ version: 2
 label: { en: "ROAS", tr: "ROAS" }
 unit: ratio
 source: backoffice+ads
-owner: Bahadır Ölez
+owner: Analitik İşler
 description:
   en: "Back-office revenue from orders whose last non-direct click came from the channel, divided by that channel’s spend. Platform-reported conversions are not used."
   tr: "Son doğrudan olmayan tıklaması kanaldan gelen siparişlerin sipariş paneli cirosu, bölü o kanalın harcaması. Platformların bildirdiği dönüşümler kullanılmaz."
@@ -15,13 +15,13 @@ dimensions: [day, week, month, channel, device]
 history:
   - version: 2
     date: 2026-06-02
-    actor: Bahadır Ölez
+    actor: Analitik İşler
     change:
       en: "Revenue by last non-direct click instead of platform conversions."
       tr: "Platform dönüşümleri yerine son doğrudan olmayan tıklamaya göre ciro."
   - version: 1
     date: 2026-03-01
-    actor: Bahadır Ölez
+    actor: Analitik İşler
     change:
       en: "First version."
       tr: "İlk sürüm."

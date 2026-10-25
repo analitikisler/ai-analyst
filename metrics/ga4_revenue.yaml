@@ -3,7 +3,7 @@ version: 1
 label: { en: "GA4 revenue", tr: "GA4 geliri" }
 unit: try
 source: ga4
-owner: Bahadır Ölez
+owner: Analitik İşler
 description:
   en: "Purchase revenue in TRY from GA4 purchase events, counted once per transaction_id."
   tr: "GA4 purchase etkinliklerinden TRY satın alma geliri; her transaction_id bir kez sayılır."
@@ -15,7 +15,7 @@ check: ga4_rev_vs_revenue
 history:
   - version: 1
     date: 2026-03-01
-    actor: Bahadır Ölez
+    actor: Analitik İşler
     change:
       en: "First version."
       tr: "İlk sürüm."

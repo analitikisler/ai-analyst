@@ -1,4 +1,4 @@
-// A simulated AI Tag Debugger audit of the purchase journey (owner round 5). Nothing is called: the steps, hits and the
+// A simulated ai tag debugger audit of the purchase journey (owner round 5). Nothing is called: the steps, hits and the
 // result are scripted to match the demo's planted problem (purchase not sent on mobile Safari since v4.12). In the real
 // app this would be the companion tool's MCP tools (start_audit, browser_action, finish_audit); see PHASE2.md.
 import type { AuditPlatform, AuditRun, AuditStep, CheckId, Text } from "../types";

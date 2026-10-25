@@ -1,4 +1,4 @@
-# AI Analyst web app
+# ai analyst web app
 
 React 19, Vite, Tailwind 4 and shadcn on Base UI. Bun ≥1.3. Run everything from `web/`.
 
@@ -61,3 +61,10 @@ a 502). Use it with `API_URL=http://127.0.0.1:8790 bun run dev` to look at those
 The mock serves fixtures in `src/api/fixtures`. `fixtures` captures them from a local server on the demo data
 (loopback only), `fixtures:mart` exports the demo mart from its DuckDB file (default `web/.capture/data/demo.duckdb`),
 and `fixtures:handmade` rewrites the hand-made ones from the smoke run.
+
+## Brand
+
+The logo components in `src/components/art/BrandLogos.tsx` are generated from `../brand/ai/assets` with
+`bun run brand` (ink as currentColor, the point as `--color-brand-point`). The favicons and the app icon in
+`public/brand` are copies of `../brand/ai/assets/icons`; the 180 px `apple-touch-icon.png` is made on macOS with
+`sips -s format png ai-analyst-512.svg --out ai-512.png && sips -z 180 180 ai-512.png --out apple-touch-icon.png`.

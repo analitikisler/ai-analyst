@@ -63,8 +63,8 @@ export const REFUSAL = {
   metric_howto: {
     heading: T("Metrics are defined in the metric pack", "Metrikler metrik paketinde tanımlanır"),
     demo: T(
-      "On demo data, metrics live in metrics/*.yaml in the AI Analyst folder: a definition (columns, filters, unit), an owner, and a tracking check when another system owns the number. The guide shows the format; after a restart the new metric answers like the others, with its definition and check.",
-      "Demo veride metrikler AI Analyst klasöründeki metrics/*.yaml dosyalarındadır: bir tanım (sütunlar, filtreler, birim), bir sorumlu ve rakamın sahibi başka bir sistemse bir ölçüm kontrolü. Biçim rehberde anlatılır; yeniden başlatmadan sonra yeni metrik diğerleri gibi tanımı ve kontrolüyle cevaplanır.",
+      "On demo data, metrics live in metrics/*.yaml in the ai analyst folder: a definition (columns, filters, unit), an owner, and a tracking check when another system owns the number. The guide shows the format; after a restart the new metric answers like the others, with its definition and check.",
+      "Demo veride metrikler ai analyst klasöründeki metrics/*.yaml dosyalarındadır: bir tanım (sütunlar, filtreler, birim), bir sorumlu ve rakamın sahibi başka bir sistemse bir ölçüm kontrolü. Biçim rehberde anlatılır; yeniden başlatmadan sonra yeni metrik diğerleri gibi tanımı ve kontrolüyle cevaplanır.",
     ),
     own: T(
       "Metrics live in metrics/*.yaml next to the BigQuery connection: a definition, an owner, and a tracking check when another system owns the number. The guide shows the format, and Analitik İşler can add it to the pack with the team.",
@@ -154,7 +154,7 @@ export const KNOWN_QUESTIONS = [...Object.values(SUGGEST).map((x) => x.text), ..
 export const WHY_NEXT = {
   ga4: [
     T("Fix the thank-you page so the purchase tag waits for dataLayer, and ship it in a release after v4.12.", "Teşekkür sayfası, purchase tag’i dataLayer hazır olduktan sonra yükleyecek şekilde düzeltilmeli ve v4.12’den sonraki bir sürümle yayımlanmalı."),
-    T("Run the AI Tag Debugger purchase journey on mobile Safari to confirm the fix.", "Düzeltme, AI Tag Debugger’ın satın alma yolu mobil Safari’de çalıştırılarak doğrulanabilir."),
+    T("Run the ai tag debugger purchase journey on mobile Safari to confirm the fix.", "Düzeltme, ai tag debugger’ın satın alma yolu mobil Safari’de çalıştırılarak doğrulanabilir."),
     T("Watch this tracking check: a changed verdict shows when the gap is back inside the tolerance.", "Bu ölçüm kontrolü izlenirse fark kabul edilen sapmanın içine döndüğünde sonuç değişikliği görünür."),
   ],
   meta: [
@@ -163,7 +163,7 @@ export const WHY_NEXT = {
     T("Watch this tracking check: a changed verdict shows when the gap is back inside the tolerance.", "Bu ölçüm kontrolü izlenirse fark kabul edilen sapmanın içine döndüğünde sonuç değişikliği görünür."),
   ],
   other: [
-    T("Run the AI Tag Debugger purchase journey to see what the platform receives.", "Platformun ne aldığını görmek için AI Tag Debugger’ın satın alma yolu çalıştırılabilir."),
+    T("Run the ai tag debugger purchase journey to see what the platform receives.", "Platformun ne aldığını görmek için ai tag debugger’ın satın alma yolu çalıştırılabilir."),
     T("Watch this tracking check: a changed verdict shows when the gap is back inside the tolerance.", "Bu ölçüm kontrolü izlenirse fark kabul edilen sapmanın içine döndüğünde sonuç değişikliği görünür."),
   ],
 };
@@ -188,8 +188,8 @@ export const APPROVAL = {
   }),
   watch_title: (check) => ({ en: `Watch ${check.en}`, tr: `${check.tr} izlensin` }),
   watch_body: T(
-    "It runs again when AI Analyst starts, every hour while it runs, and on every ai-analyst check. A changed verdict shows under Tracking health on the dashboard and in Settings › Activity. Nothing is emailed.",
-    "AI Analyst açıldığında, açıkken saatte bir ve her ai-analyst check çalıştığında yeniden çalışır. Sonuç değişirse dashboard’daki Ölçüm sağlığı bölümünde ve Ayarlar › İşlem geçmişi’nde görünür. E-posta gönderilmez.",
+    "It runs again when ai analyst starts, every hour while it runs, and on every ai-analyst check. A changed verdict shows under Tracking health on the dashboard and in Settings › Activity. Nothing is emailed.",
+    "ai analyst açıldığında, açıkken saatte bir ve her ai-analyst check çalıştığında yeniden çalışır. Sonuç değişirse dashboard’daki Ölçüm sağlığı bölümünde ve Ayarlar › İşlem geçmişi’nde görünür. E-posta gönderilmez.",
   ),
   pin_title: (dash) => ({ en: `Pin this answer to ${dash.en}`, tr: `Bu cevap ${dash.tr} dashboard’una eklensin` }),
   pin_body: (chart, w) => ({
@@ -221,11 +221,11 @@ export const ACT = {
     ok
       ? { en: `Audit of the purchase journey on mobile Safari passed (simulated): ${title.en}`, tr: `Mobil Safari’de satın alma yolu denetimi geçti (canlandırma): ${title.tr}` }
       : { en: `Audit of the purchase journey on mobile Safari confirmed the finding (simulated): ${title.en}`, tr: `Mobil Safari’de satın alma yolu denetimi bulguyu doğruladı (canlandırma): ${title.tr}` },
-  audit_handoff: (check) => ({ en: `Prepared a purchase journey audit for AI Tag Debugger: ${check.en}`, tr: `AI Tag Debugger için satın alma yolu denetimi hazırlandı: ${check.tr}` }),
+  audit_handoff: (check) => ({ en: `Prepared a purchase journey audit for ai tag debugger: ${check.en}`, tr: `ai tag debugger için satın alma yolu denetimi hazırlandı: ${check.tr}` }),
   audit_attached: (title, ok) =>
     ok
-      ? { en: `AI Tag Debugger audit passed: ${title.en}`, tr: `AI Tag Debugger denetimi geçti: ${title.tr}` }
-      : { en: `AI Tag Debugger audit confirmed a finding: ${title.en}`, tr: `AI Tag Debugger denetimi bir bulguyu doğruladı: ${title.tr}` },
+      ? { en: `ai tag debugger audit passed: ${title.en}`, tr: `ai tag debugger denetimi geçti: ${title.tr}` }
+      : { en: `ai tag debugger audit confirmed a finding: ${title.en}`, tr: `ai tag debugger denetimi bir bulguyu doğruladı: ${title.tr}` },
   pinned: (title, dash) => ({ en: `Pinned “${title.en}” to ${dash.en}`, tr: `“${title.tr}” ${dash.tr} dashboard’una eklendi` }),
   removed: (title, dash) => ({ en: `Removed “${title.en}” from ${dash.en}`, tr: `“${title.tr}” ${dash.tr} dashboard’undan kaldırıldı` }),
   chart: (title, chart) => ({ en: `Changed “${title.en}” to a ${chart.en.toLowerCase()} chart`, tr: `“${title.tr}” için grafik türü ${chart.tr.toLowerCase()} olarak değiştirildi` }),

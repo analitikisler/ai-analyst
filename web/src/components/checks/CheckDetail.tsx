@@ -55,7 +55,7 @@ export function CheckDetail({ check, period, onAsk }: { check: CheckId; period?:
     notify(fmt(t.checks.last_run, { time: f.whenMid(r.created_at), n: r.results.length, bad: r.results.filter((x) => x.verdict === "does_not_add_up").length, from: f.date(r.from), to: f.date(r.to, true) }), { type: "success" });
   };
   const runRun = runId ? data.runs.find((r) => r.id === runId) : null;
-  // A failing GA4 check whose finding points to the purchase journey can start an AI Tag Debugger audit.
+  // A failing GA4 check whose finding points to the purchase journey can start an ai tag debugger audit.
   const journey = c.verdict === "does_not_add_up" && c.findings.some((x) => x.since) && (check === "ga4_vs_orders" || check === "ga4_rev_vs_revenue");
   const lastAudit = state?.audits.find((a) => a.check === check) ?? null;
   const runLink = (id: string) => {

@@ -18,7 +18,7 @@ export interface PageHeaderProps {
   breadcrumbs?: Crumb[];
   /** Inline after the title (the "Example" badge on a dashboard). */
   titleAddon?: ReactNode;
-  /** `document.title`; defaults to "{title} · AI Analyst" when `title` is a string. `false` leaves it. */
+  /** `document.title`; defaults to "{title} · ai analyst" when `title` is a string. `false` leaves it. */
   documentTitle?: string | false;
   className?: string;
 }

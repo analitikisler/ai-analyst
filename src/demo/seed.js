@@ -228,11 +228,11 @@ export async function buildDemoWarehouse(file, rows = generateFacts()) {
   return rows.length;
 }
 
-/** Findings from AI Tag Debugger audits of the demo shop, linked to the checks they explain. */
+/** Findings from ai tag debugger audits of the demo shop, linked to the checks they explain. */
 export const DEMO_FINDINGS = [
   {
     id: "f_ga4_mobile_safari",
-    source: "AI Tag Debugger",
+    source: "ai tag debugger",
     since: DEMO.release,
     release: "v4.12",
     checks: ["ga4_vs_orders", "ga4_rev_vs_revenue"],
@@ -243,7 +243,7 @@ export const DEMO_FINDINGS = [
   },
   {
     id: "f_meta_view_through",
-    source: "AI Tag Debugger",
+    source: "ai tag debugger",
     since: null,
     release: null,
     checks: ["meta_vs_orders"],

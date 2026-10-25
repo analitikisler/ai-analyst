@@ -80,8 +80,8 @@
       {
         "id": "ai_tag_debugger",
         "name": {
-          "en": "AI Tag Debugger",
-          "tr": "AI Tag Debugger"
+          "en": "ai tag debugger",
+          "tr": "ai tag debugger"
         },
         "detail": "audit findings",
         "connected": true,

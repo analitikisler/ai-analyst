@@ -1,5 +1,5 @@
 /* =====================================================================
-   AI Analyst: design tokens (08-art.md §1.2). Tally values, named the Overt way so Overt's components port
+   ai analyst: design tokens (08-art.md §1.2). Tally values, named the Overt way so Overt's components port
    unchanged; shadcn/ui names are bridged onto them in src/index.css.
 
    No product colour: the one data blue is Tally `accent`, so chart-1 = accent. Overt's cobalt and ember are
@@ -15,6 +15,8 @@
 
 :root {
   color-scheme: light;
+  /* the ai family's red point (brand/ai BRAND.md §4): the logo's point only, never a UI colour */
+  --color-brand-point: #C12D30;
   /* surfaces: well < bg < surface < surface-2 */
   --well: #e9eef5;  --bg: #f4f6fa;  --surface: #ffffff;  --surface-2: #ecf1f8;
   /* lines */
@@ -48,6 +50,7 @@
 
 :root[data-theme="dark"] {
   color-scheme: dark;
+  --color-brand-point: #FA6B6D;
   --well: #040e1f;  --bg: #071529;  --surface: #0e1e34;  --surface-2: #15263f;
   --border: #22354e;  --border-strong: #607695;
   --text-strong: #f9fbff;  --text: #e1e8f3;  --text-muted: #a2b1c6;  --text-subtle: #a2b1c6;
@@ -72,6 +75,7 @@
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
       color-scheme: dark;
+      --color-brand-point: #FA6B6D;
       --well: #040e1f;  --bg: #071529;  --surface: #0e1e34;  --surface-2: #15263f;
       --border: #22354e;  --border-strong: #607695;
       --text-strong: #f9fbff;  --text: #e1e8f3;  --text-muted: #a2b1c6;  --text-subtle: #a2b1c6;

@@ -22,6 +22,7 @@ SOFTWARE.
 
 ---
 
-The MIT licence above covers the source code only. The Analitik İşler name and logo, and the AI Analyst and
-AI Tag Debugger names, are trademarks of Analitik İşler and are not licensed under it. The fonts in
-web/public/fonts are licensed under the SIL Open Font License 1.1; see the OFL files next to them.
+The MIT licence above covers the source code only. The Analitik İşler name and logo, the ai mark, and the
+names ai analyst, ai tag debugger, ai tagging server, ai cloud and ai visibility are trademarks of Analitik İşler
+and are not licensed under it; nor are the brand files in brand/ai. The fonts in web/public/fonts are licensed
+under the SIL Open Font License 1.1; see the OFL files next to them.

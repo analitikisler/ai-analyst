@@ -1,14 +1,14 @@
 # Connecting BigQuery
 
-AI Analyst reads one table in your BigQuery project, `daily_channel_device`: one row per day, channel and device,
+ai analyst reads one table in your BigQuery project, `daily_channel_device`: one row per day, channel and device,
 with sessions, orders, revenue, GA4 purchases, GA4 revenue, ad spend and platform conversions. You build that
 table in your own project from three sources: the GA4 export, the Google Ads transfer and a back-office orders
-export. AI Analyst gets read-only access to the result. It never reads raw events or orders, and it never writes
+export. ai analyst gets read-only access to the result. It never reads raw events or orders, and it never writes
 to your project.
 
 This guide covers the setup, cost, KVKK and a checklist to confirm the table is right before anyone relies on it.
 
-Facts we could not confirm from a primary source are marked **(unverified)**.
+Facts Analitik İşler could not confirm from a primary source are marked **(unverified)**.
 
 ## What you end up with
 
@@ -21,7 +21,7 @@ Facts we could not confirm from a primary source are marked **(unverified)**.
                           daily_channel_device                   written by the nightly build
 ```
 
-AI Analyst's service account can read `{dataset}` only.
+ai analyst's service account can read `{dataset}` only.
 
 The SQL is in `models/`:
 
@@ -102,13 +102,13 @@ Things to know:
   `platform_conversions` will include the others.
 - A forum report says Demand Gen campaigns were missing from `p_ads_CampaignBasicStats_*` while present in
   `p_ads_CampaignStats_*` [Google forum] **(unverified, no confirmed fix)**. The checklist below compares spend
-  against the Google Ads interface for one day; if it differs, tell us.
+  against the Google Ads interface for one day; if it differs, tell Analitik İşler (hello@analitikisler.com).
 - The transfer re-pulls recent days to catch restated conversions; the length of that refresh window is a
   transfer setting **(default value unverified)**. Run the weekly 30-day rebuild described in step 8.
 
 ## 4. Back-office orders
 
-The back office is the system that owns orders and revenue. Your export (or our connector) fills
+The back office is the system that owns orders and revenue. Your export (or a connector) fills
 `{backoffice_dataset}.orders` with this schema (`models/landing/backoffice_orders.sql`):
 
 | Column | Type | Meaning |
@@ -158,7 +158,7 @@ Both land in `{dataset}.ads_daily` (`models/landing/ads_daily.sql`): one row per
   into `ads_daily` is the recommended route. Otherwise use a loader of your choice against the Marketing API
   Insights endpoint, with breakdown `impression_device` and the purchase action (for example `omni_purchase`)
   **(action name unverified)**.
-- **TikTok**: we found no native BigQuery transfer; third-party loaders exist [TikTok loaders]. Load the Business
+- **TikTok**: Analitik İşler found no native BigQuery transfer; third-party loaders exist [TikTok loaders]. Load the Business
   API report into `ads_daily` with a device breakdown if available.
 - Set both ad accounts to the Europe/Istanbul time zone, so `date` means the same day as everywhere else.
 
@@ -168,7 +168,7 @@ Google Ads and Meta accounts billed in USD or EUR are converted to TRY with `{da
 (`models/landing/fx_daily.sql`). Load the TCMB daily bulletin (`https://www.tcmb.gov.tr/kurlar/today.xml`, and the
 dated archive for history): `try_per_unit = ForexBuying / Unit` [TCMB]. TCMB publishes on business days only; the
 model uses the latest rate on or before the spend date, up to 10 days back. If a rate is missing, the build stops
-with an error instead of counting the spend as zero. We use the buying rate by default; confirm with your
+with an error instead of counting the spend as zero. The models use the buying rate by default; confirm with your
 accountant which rate your books use.
 
 Accounts already in TRY need nothing.
@@ -209,9 +209,9 @@ Analyst's): BigQuery Data Viewer on the three source datasets, Data Editor on `{
 The incremental run ends at the last complete GA4 daily table, so a late export never produces a day with orders
 and no sessions; the next run fills it. Run the full refresh again after any change to the models.
 
-## 9. AI Analyst's read-only access
+## 9. ai analyst's read-only access
 
-1. Create a service account for AI Analyst, for example `ai-analyst-reader@<ai-analyst-project>.iam.gserviceaccount.com`.
+1. Create a service account for ai analyst, for example `ai-analyst-reader@<ai-analyst-project>.iam.gserviceaccount.com`.
 2. Grant it **BigQuery Data Viewer** on `{dataset}` only. Run in the BigQuery console of `{project}`:
 
    ```sql
@@ -222,7 +222,7 @@ and no sessions; the next run fills it. Run the full refresh again after any cha
 
    Do not grant it the GA4, Ads or back-office datasets. The order-level scripts in `models/checks/` are for your
    analyst to run with their own access.
-3. Grant it **BigQuery Job User** in the AI Analyst project, where its queries run and are billed:
+3. Grant it **BigQuery Job User** in the ai analyst project, where its queries run and are billed:
 
    ```sh
    gcloud projects add-iam-policy-binding <ai-analyst-project> \
@@ -230,7 +230,7 @@ and no sessions; the next run fills it. Run the full refresh again after any cha
      --role="roles/bigquery.jobUser"
    ```
 
-4. Connect AI Analyst. In the web app, Settings › Sources › Connect BigQuery tests the connection in six
+4. Connect ai analyst. In the web app, Settings › Sources › Connect BigQuery tests the connection in six
    steps (credentials, running queries in the job project, the dataset, the table, reading it, the cost of a
    typical question) and saves it to `ai-analyst.config.json` once every step passes. Or set it in the
    environment, which wins over the file and locks the field in Settings:
@@ -243,7 +243,7 @@ and no sessions; the next run fills it. Run the full refresh again after any cha
    | `BIGQUERY_DATASET` | `{dataset}` |
    | `BIGQUERY_LOCATION` | the location from step 1, `EU` by default |
    | `BIGQUERY_MAX_BYTES` | per-query cap in bytes, 2 GB by default (`2147483648`); Settings can lower it, only this raises it |
-   | `GOOGLE_APPLICATION_CREDENTIALS` | path to the service account's key file, if not using `gcloud auth application-default login`; AI Analyst never stores credentials |
+   | `GOOGLE_APPLICATION_CREDENTIALS` | path to the service account's key file, if not using `gcloud auth application-default login`; ai analyst never stores credentials |
    | `AI_ANALYST_WORKSPACE` | the store's name |
 
 Prefer the dataset-scoped reader service account of step 3, or impersonation of it ("Service account to
@@ -257,18 +257,18 @@ Testing the connection makes real BigQuery calls with the credentials on this ma
 `--no-cloud` or `AI_ANALYST_NO_CLOUD=1` (the default for tests, `bun run dev` and the smoke server) refuses them
 with `no_cloud` instead; set `AI_ANALYST_NO_CLOUD=0` to connect from those.
 
-AI Analyst dry-runs every query first and sends it with `maximumBytesBilled` set to `BIGQUERY_MAX_BYTES`, so a
+ai analyst dry-runs every query first and sends it with `maximumBytesBilled` set to `BIGQUERY_MAX_BYTES`, so a
 query over the cap fails instead of being billed. The mart holds 12 rows per day; a year of it is well under
 1 MB, so the 2 GB cap is never close for normal use. Keep the cap; lower it if you like.
 
 ## 10. Cost
 
-- **AI Analyst's queries** read only the mart, a few hundred kilobytes at most. BigQuery bills on-demand queries
+- **ai analyst's queries** read only the mart, a few hundred kilobytes at most. BigQuery bills on-demand queries
   with a 10 MB minimum per table referenced **(minimum unverified for current pricing)**, so each question costs a
   fraction of a cent.
 - **The nightly build** scans the GA4 columns it uses for about 5 daily tables (3 days, plus one day either side,
   plus 7 days of `purchase` events for deduplication). Wildcard pruning on `_TABLE_SUFFIX` keeps the scan to those
-  tables; we confirmed with dry runs that a longer window scans proportionally more. Expect a few hundred MB per
+  tables; dry runs confirmed that a longer window scans proportionally more. Expect a few hundred MB per
   run for a property with about a million events a day **(estimate; dry-run your own)**. The weekly 30-day run
   scans about ten times as much.
 - **The full refresh** scans the same columns over the whole export history. Dry-run it first.
@@ -280,7 +280,7 @@ query over the cap fails instead of being billed. The mart holds 12 rows per day
 
 ## 11. KVKK
 
-- **Only aggregates reach the model.** AI Analyst's service account can read `{dataset}` and nothing else. The mart
+- **Only aggregates reach the model.** ai analyst's service account can read `{dataset}` and nothing else. The mart
   has counts and sums by day, channel and device. The language model sees query results from the mart and the
   metric definitions, never events, orders or identifiers.
 - **No personal data in the mart.** It has no user ids, order ids, click ids, IP addresses or free text.
@@ -290,13 +290,13 @@ query over the cap fails instead of being billed. The mart holds 12 rows per day
 - **Keep the orders export clean.** The orders table needs no customer fields; do not export them.
 - **Order-level diagnosis.** `models/checks/*.sql` return order ids. Run them in your own console; do not paste the
   results into a chat with a model.
-- **Location.** Keep every dataset in the EU location from step 1. AI Analyst's queries run in that location.
+- **Location.** Keep every dataset in the EU location from step 1. ai analyst's queries run in that location.
   Whether processing in the EU counts as a transfer abroad under KVKK and the 2024 By-Law, and which safeguard
   applies, is a question for your legal adviser; this guide does not answer it.
 
 ## 12. Validation checklist
 
-Run these before anyone uses AI Analyst on the data. Replace the placeholders; dates are examples.
+Run these before anyone uses ai analyst on the data. Replace the placeholders; dates are examples.
 
 **1. Row count: 12 rows per day, no gaps.**
 
