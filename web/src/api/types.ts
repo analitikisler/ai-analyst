@@ -5,8 +5,6 @@
 export type Lang = "en" | "tr";
 /** A server-made string in both languages (B06). */
 export type Text = Record<Lang, string>;
-/** @deprecated the name used before B06; same shape. */
-export type Bilingual = Text;
 
 export type MetricId =
   | "ad_spend"
@@ -321,7 +319,8 @@ export interface Refusal {
   code: "planner_unknown" | "not_in_data" | "explore_failed" | "metric_howto" | "metric_proposed";
   /** metric_proposed: the proposed metric on the Metrics page. */
   metric_id?: string;
-  missing?: "product" | "return" | "customer" | "weekday";
+  /** period: the question names days the data does not cover. */
+  missing?: "product" | "return" | "customer" | "weekday" | "period";
   heading: Text;
   body: Text;
   nearest: Text[];
@@ -802,6 +801,8 @@ export interface ConnectorSecret { set: boolean; source: "env" | "saved" | null;
 export interface ConnectorState {
   id: ConnectorId; name: Text; fills: MartColumn[]; status: ConnectorStatus; target: string | null;
   last_sync: { at: string; from: string | null; to: string | null; days: number; ok: boolean } | null;
+  /** The time zone its days are counted in. */
+  time_zone?: string | null;
   error: ApiErrorBody | null; warnings: Text[]; secret: ConnectorSecret | null;
 }
 export type WaitlistId = "meta_ads" | "google_ads" | "tiktok_ads" | "ikas" | "ticimax" | "search_console" | "gtm";
@@ -809,7 +810,7 @@ export interface WaitlistItem { id: WaitlistId; name: Text; mailto: string }
 export interface ConnStep { id: string; status: "ok" | "failed" | "skipped" | "warning"; detail?: Record<string, string | number>; error?: { code: string; params: Record<string, string | number> } }
 export interface ConnectorTest { test_id: string; connector: ConnectorId; ok: boolean; steps: ConnStep[]; warnings: Text[] }
 export interface OrdersMapping {
-  order_id: string | null; created_at: string; status: string | null; total: string; currency: string | null;
+  order_id: string | null; created_at: string; status: string | null; total: string; shipping?: string | null; currency: string | null;
   channel: string | null; utm_source: string | null; utm_medium: string | null; device: string | null; user_agent: string | null;
   exclude_statuses: string[];
 }

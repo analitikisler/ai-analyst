@@ -37,7 +37,7 @@ const SIMULATED = T("Simulated in this demo: nothing was fetched, the figures st
 export function connectorStates(c: ConnDb): ConnectorState[] {
   return IDS.map((id) => {
     const r = c[id];
-    return { id, name: NAME[id], fills: FILLS[id], status: r.status, target: r.target, last_sync: r.last_sync, error: r.error, warnings: r.status === "connected" ? [SIMULATED] : [], secret: id === "shopify" || id === "woocommerce" ? (r.status === "connected" ? { set: true, source: "saved", locked: false, hint: "…a1f3" } : { set: false, source: null, locked: false }) : null };
+    return { id, name: NAME[id], fills: FILLS[id], status: r.status, target: r.target, last_sync: r.last_sync, time_zone: r.status === "connected" ? "Europe/Istanbul" : null, error: r.error, warnings: r.status === "connected" ? [SIMULATED] : [], secret: id === "shopify" || id === "woocommerce" ? (r.status === "connected" ? { set: true, source: "saved", locked: false, hint: "…a1f3" } : { set: false, source: null, locked: false }) : null };
   });
 }
 
@@ -181,6 +181,7 @@ const HEADERS: Record<Exclude<keyof OrdersMapping, "exclude_statuses">, string[]
   created_at: ["created at", "created", "order date", "date", "siparis tarihi", "tarih", "olusturulma tarihi", "olusturma tarihi"],
   status: ["status", "order status", "financial status", "durum", "siparis durumu", "odeme durumu"],
   total: ["total", "order total", "grand total", "total price", "toplam", "tutar", "siparis tutari", "genel toplam", "toplam tutar"],
+  shipping: ["shipping total", "shipping cost", "shipping", "kargo ucreti", "kargo tutari", "kargo"],
   currency: ["currency", "para birimi", "doviz", "kur"],
   channel: ["channel", "source", "kanal", "kaynak", "satis kanali"],
   utm_source: ["utm source", "utm kaynak"],
@@ -203,6 +204,7 @@ function guess(columns: string[], statuses: { value: string }[]): OrdersMapping 
     created_at: pickCol("created_at") ?? columns[0] ?? "",
     status: pickCol("status"),
     total: pickCol("total") ?? "",
+    shipping: pickCol("shipping"),
     currency: pickCol("currency"),
     channel: pickCol("channel"),
     utm_source: pickCol("utm_source"),
@@ -295,7 +297,7 @@ function deviceOf(raw: string | undefined, ua: string | undefined): Device {
 function previewOf(u: Upload, currency: string): OrdersPreview {
   const col = (name: string | null) => (name ? u.columns.indexOf(name) : -1);
   const m = u.mapping;
-  const [ci, ti, si, cu, ch, us, um, dv, ua] = [m.created_at, m.total, m.status, m.currency, m.channel, m.utm_source, m.utm_medium, m.device, m.user_agent].map(col);
+  const [ci, ti, si, cu, ch, us, um, dv, ua, sh] = [m.created_at, m.total, m.status, m.currency, m.channel, m.utm_source, m.utm_medium, m.device, m.user_agent, m.shipping ?? null].map(col);
   const excluded = { status: 0, no_date: 0, bad_total: 0 };
   const daily = new Map<string, { orders: number; revenue: number }>();
   const channels = new Map<Channel, number>();
@@ -319,7 +321,7 @@ function previewOf(u: Upload, currency: string): OrdersPreview {
     if (cu >= 0 && (r[cu] ?? "").trim() && (r[cu] ?? "").trim().toUpperCase() !== currency && !/^(tl|₺)$/i.test((r[cu] ?? "").trim())) mismatch = true;
     const d = daily.get(day) ?? { orders: 0, revenue: 0 };
     d.orders++;
-    d.revenue += total;
+    d.revenue += total - (sh >= 0 ? (amountOf(r[sh] ?? "") ?? 0) : 0);
     daily.set(day, d);
     const c = channelOf(ch >= 0 ? r[ch] : undefined, us >= 0 ? r[us] : undefined, um >= 0 ? r[um] : undefined);
     channels.set(c, (channels.get(c) ?? 0) + 1);
@@ -331,6 +333,7 @@ function previewOf(u: Upload, currency: string): OrdersPreview {
   const list = days.map((date) => ({ date, orders: daily.get(date)!.orders, revenue: Math.round(daily.get(date)!.revenue * 100) / 100 }));
   // As on the server: one line on cancelled orders, which the Orders metric counts.
   const warnings: Text[] = [T("Cancelled orders are counted, as in the Orders metric. Exclude them here only if GA4 does not record them.", "İptal edilen siparişler Siparişler metriğindeki gibi sayılır. Yalnızca GA4 bunları kaydetmiyorsa burada çıkarılmalı.")];
+  if (sh < 0 && list.length) warnings.push(T("No shipping column chosen: if the totals in the file include shipping, revenue here does too. The Revenue metric leaves shipping out, as the other sources do.", "Kargo sütunu seçilmedi: dosyadaki tutarlar kargoyu içeriyorsa buradaki ciro da içerir. Ciro metriği, diğer kaynaklarda olduğu gibi kargoyu dışarıda bırakır."));
   if ([...devices.keys()].every((k) => k === "unknown") && list.length) warnings.push(T("No device column: the tracking checks run on totals, without a device split.", "Cihaz sütunu yok: ölçüm kontrolleri cihaz ayrımı olmadan toplamlar üzerinden çalışır."));
   return {
     from: days[0] ?? null,

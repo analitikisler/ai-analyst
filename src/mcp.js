@@ -5,6 +5,7 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { callAction, registry } from "./actions/index.js";
 import { VERSION } from "./config.js";
+import { AppError } from "./errors.js";
 
 export const MCP_ACTIONS = () => [...registry.values()].filter((a) => a.mcp).map((a) => a.name);
 
@@ -36,7 +37,10 @@ export function buildMcpServer(app, { lang = app.config.language ?? "en" } = {})
         const { series, ...rest } = result && typeof result === "object" && !Array.isArray(result) ? result : { result };
         return { content: [{ type: "text", text: JSON.stringify(Array.isArray(result) ? result : rest, null, 1) }] };
       } catch (err) {
-        return { content: [{ type: "text", text: err.code ? err.message : `${name} failed.` }], isError: true };
+        // Only this app's own errors are worded for people; a system error's message can carry paths.
+        if (err instanceof AppError) return { content: [{ type: "text", text: err.message }], isError: true };
+        console.error("[ai-analyst]", err?.stack ?? String(err));
+        return { content: [{ type: "text", text: `${name} failed.` }], isError: true };
       }
     });
   }

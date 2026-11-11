@@ -49,17 +49,22 @@ export function decodeText(buf) {
   }
 }
 
-/** The delimiter of a CSV: the one of , ; tab | found most often outside quotes on the first line. */
+/**
+ * The delimiter of a CSV: the one of , ; tab | found most often outside quotes on the first lines. Several lines,
+ * because a title line above the header ("Sipariş Raporu") has no delimiter at all.
+ */
 function delimiterOf(text) {
   const counts = { ",": 0, ";": 0, "\t": 0, "|": 0 };
   let quoted = false;
-  for (let i = 0; i < text.length && i < 64 * 1024; i++) {
+  let lines = 0;
+  for (let i = 0; i < text.length && i < 64 * 1024 && lines < 10; i++) {
     const ch = text[i];
     if (ch === '"') quoted = !quoted;
-    else if (!quoted && (ch === "\n" || ch === "\r")) break;
+    else if (!quoted && ch === "\n") lines++;
     else if (!quoted && ch in counts) counts[ch]++;
   }
-  return Object.entries(counts).sort((a, b) => b[1] - a[1])[0][1] ? Object.entries(counts).sort((a, b) => b[1] - a[1])[0][0] : ",";
+  const [best, n] = Object.entries(counts).sort((a, b) => b[1] - a[1])[0];
+  return n ? best : ",";
 }
 
 /** RFC 4180 CSV (quotes doubled inside quoted fields, newlines inside quotes), any of four delimiters. */
@@ -165,7 +170,7 @@ const unxml = (s) =>
   });
 const attr = (tag, name) => tag.match(new RegExp(`\\s${name}="([^"]*)"`))?.[1] ?? null;
 /** The text of an <si> or <is>: every <t>, without phonetic runs. */
-const textOf = (xml) => unxml([...xml.replace(/<rPh\b[\s\S]*?<\/rPh>/g, "").matchAll(/<t\b[^>]*>([\s\S]*?)<\/t>|<t\b[^>]*\/>/g)].map((m) => m[1] ?? "").join(""));
+const textOf = (xml) => unxml([...xml.replace(/<rPh\b[\s\S]*?<\/rPh>/g, "").matchAll(/<t\b[^>]*?(?:\/>|>([\s\S]*?)<\/t>)/g)].map((m) => m[1] ?? "").join(""));
 
 const colIndex = (ref) => {
   const letters = String(ref).match(/^[A-Z]+/i)?.[0].toUpperCase() ?? "";
@@ -212,7 +217,7 @@ export function parseXlsx(buf, { maxShared = MAX_SHARED } = {}) {
   if (!sheet) throw unreadable("no worksheet in the XLSX file");
   const sharedXml = zipRead(buf, entries, "xl/sharedStrings.xml", budget) ?? "";
   const shared = [];
-  for (const m of sharedXml.matchAll(/<si\b[^>]*>([\s\S]*?)<\/si>|<si\b[^>]*\/>/g)) {
+  for (const m of sharedXml.matchAll(/<si\b[^>]*?(?:\/>|>([\s\S]*?)<\/si>)/g)) {
     if (shared.length >= maxShared) throw unreadable(`more than ${maxShared.toLocaleString("en")} different texts in the XLSX file`);
     shared.push(textOf(m[1] ?? "").slice(0, 4000));
   }
@@ -286,6 +291,8 @@ export const HEADERS = {
   created_at: ["created at", "order date", "date created", "order created", "created", "processed at", "date", "siparis tarihi", "olusturulma tarihi", "olusturma tarihi", "siparis olusturma tarihi", "kayit tarihi", "tarih"],
   status: ["order status", "status", "financial status", "payment status", "siparis durumu", "durum", "durumu", "odeme durumu"],
   total: ["order total", "total", "grand total", "total price", "order amount", "toplam tutar", "genel toplam", "siparis tutari", "siparis toplami", "odenen tutar", "toplam", "tutar"],
+  // Revenue leaves shipping out (the Revenue metric, v2): when the file has it in a column, it comes off the total.
+  shipping: ["shipping total", "shipping cost", "shipping price", "shipping amount", "shipping fee", "shipping", "kargo ucreti", "kargo tutari", "kargo bedeli", "teslimat ucreti", "kargo"],
   currency: ["order currency", "currency", "currency code", "para birimi", "doviz", "doviz cinsi"],
   channel: ["channel", "sales channel", "source", "source name", "referring site", "kanal", "satis kanali", "kaynak", "siparis kaynagi"],
   utm_source: ["utm source", "utm kaynak", "origin", "attribution source"],
@@ -294,6 +301,7 @@ export const HEADERS = {
   user_agent: ["user agent", "useragent", "browser", "tarayici"],
 };
 const FIELDS = Object.keys(HEADERS);
+const EXACT_ONLY = new Set(["shipping", "kargo"]);
 
 const isTest = (v) => /\btest\b/.test(norm(v));
 const isCancelled = (v) => /cancel|iptal|void|refund|iade/.test(norm(v));
@@ -310,9 +318,10 @@ export function guessMapping(columns, rows = []) {
         return columns[i];
       }
     }
-    // A header that starts with a known name ("Toplam Tutar (TL)").
+    // A header that starts with a known name ("Toplam Tutar (TL)"). Not for a bare "shipping" or "kargo": the
+    // carrier, the method and the tracking number start with it too, and are not amounts.
     for (const h of HEADERS[field]) {
-      if (h.length < 4) continue;
+      if (h.length < 4 || EXACT_ONLY.has(h)) continue;
       const i = n.findIndex((c, j) => c.startsWith(`${h} `) && !used.has(j));
       if (i >= 0) {
         used.add(i);
@@ -323,7 +332,7 @@ export function guessMapping(columns, rows = []) {
   };
   const m = {};
   // Dates and totals first, so a generic name ("tarih", "tutar") does not take a better column's place.
-  for (const f of ["created_at", "total", "order_id", "status", "currency", "utm_source", "utm_medium", "channel", "device", "user_agent"]) m[f] = pick(f);
+  for (const f of ["created_at", "total", "shipping", "order_id", "status", "currency", "utm_source", "utm_medium", "channel", "device", "user_agent"]) m[f] = pick(f);
   const mapping = Object.fromEntries(FIELDS.map((f) => [f, m[f] ?? null]));
   mapping.created_at ??= "";
   mapping.total ??= "";
@@ -351,7 +360,6 @@ export function checkMapping(columns, mapping) {
     out[f] = v === "" ? null : v;
   }
   for (const f of ["created_at", "total"]) if (!out[f]) throw new AppError("mapping_invalid", `Choose the column with the order ${f === "created_at" ? "date" : "total"}.`, { params: { field: f } });
-  out.created_at ??= "";
   return out;
 }
 
@@ -362,6 +370,8 @@ export function amountOf(raw) {
   if (typeof raw === "number") return Number.isFinite(raw) ? raw : null;
   let s = String(raw ?? "").trim();
   if (!s) return null;
+  // Exponent notation (a spreadsheet's 1E3): the number as written, never its digits glued together.
+  if (/^[-+]?\d+(\.\d+)?[eE][-+]?\d+$/.test(s)) return Number.isFinite(Number(s)) ? Number(s) : null;
   const neg = /^-|^\(.*\)$|-$/.test(s.replace(/[^\d.,()-]/g, ""));
   s = s.replace(/[^\d.,]/g, "");
   if (!/\d/.test(s)) return null;
@@ -394,13 +404,18 @@ const dayOf = (raw, timeZone) => {
 
 export const CANCELLED_NOTE = T("Cancelled orders are counted, as in the Orders metric. Exclude them here only if GA4 does not record them.", "İptal edilen siparişler, Siparişler metriğinde olduğu gibi sayılır. Burada yalnızca GA4 bunları kaydetmiyorsa hariç tutulmalı.");
 
+export const SHIPPING_NOTE = T(
+  "No shipping column chosen: if the totals in the file include shipping, revenue here does too. The Revenue metric leaves shipping out, as the other sources do.",
+  "Kargo sütunu seçilmedi: dosyadaki tutarlar kargoyu içeriyorsa buradaki ciro da içerir. Ciro metriği, diğer kaynaklarda olduğu gibi kargoyu dışarıda bırakır.",
+);
+
 /**
  * The daily aggregates of a table under a mapping, and the preview of them.
  * @returns {{ rows: { date, channel, device, orders, revenue }[], preview: object }}
  */
 export function aggregate({ columns, rows }, mapping, { timeZone = "Europe/Istanbul", currency }) {
   const col = (name) => (name ? columns.indexOf(name) : -1);
-  const [ci, ti, si, cu, ch, us, um, dv, ua, oi] = [mapping.created_at, mapping.total, mapping.status, mapping.currency, mapping.channel, mapping.utm_source, mapping.utm_medium, mapping.device, mapping.user_agent, mapping.order_id].map(col);
+  const [ci, ti, si, cu, ch, us, um, dv, ua, oi, sh] = [mapping.created_at, mapping.total, mapping.status, mapping.currency, mapping.channel, mapping.utm_source, mapping.utm_medium, mapping.device, mapping.user_agent, mapping.order_id, mapping.shipping].map(col);
   const exclude = new Set(mapping.exclude_statuses ?? []);
   const excluded = { status: 0, no_date: 0, bad_total: 0 };
   const byKey = new Map();
@@ -442,7 +457,8 @@ export function aggregate({ columns, rows }, mapping, { timeZone = "Europe/Istan
     const key = `${date}|${channel}|${device}`;
     const acc = byKey.get(key) ?? { date, channel, device, orders: 0, revenue: 0 };
     acc.orders += 1;
-    acc.revenue += total;
+    // An empty or unreadable shipping cell is no shipping.
+    acc.revenue += total - (sh >= 0 ? (amountOf(r[sh]) ?? 0) : 0);
     byKey.set(key, acc);
   }
   if (others.size) {
@@ -467,6 +483,7 @@ export function aggregate({ columns, rows }, mapping, { timeZone = "Europe/Istan
   if (si >= 0 && statuses.some((s) => isCancelled(s.value) && !exclude.has(s.value))) warnings.push(CANCELLED_NOTE);
   if (days.length && [...devices.keys()].every((k) => k === "unknown")) warnings.push(T("No device column: the tracking checks run on totals, without a device split.", "Cihaz sütunu yok: ölçüm kontrolleri cihaz ayrımı olmadan toplamlar üzerinden çalışır."));
   if (days.length && [...channels.keys()].every((k) => k === "unknown")) warnings.push(T("No channel or UTM column: orders are not split by channel.", "Kanal veya UTM sütunu yok: siparişler kanala göre ayrılmaz."));
+  if (days.length && sh < 0) warnings.push(SHIPPING_NOTE);
   if (repeats) warnings.push(T(`${repeats} ${repeats === 1 ? "row repeats" : "rows repeat"} an order number (one row per product); each order is counted once.`, `${repeats} satır bir sipariş numarasını tekrar ediyor (ürün başına bir satır); her sipariş bir kez sayılır.`));
   const sum = (k) => Math.round(days.reduce((s, d) => s + d[k], 0) * 100) / 100;
   const sorted = (m) => [...m].map(([key, orders]) => ({ key, orders })).sort((a, b) => b.orders - a.orders);

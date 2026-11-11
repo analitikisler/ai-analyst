@@ -357,6 +357,8 @@ const mapping = z
     created_at: z.string().max(200),
     status: z.string().max(200).nullable(),
     total: z.string().max(200),
+    // Optional: a mapping saved before shipping could be chosen has none.
+    shipping: z.string().max(200).nullable().optional(),
     currency: z.string().max(200).nullable(),
     channel: z.string().max(200).nullable(),
     utm_source: z.string().max(200).nullable(),
@@ -386,10 +388,11 @@ defineAction({
   async run(ctx, input) {
     const { upload, rows, preview } = await uploadAggregates(ctx.app, input);
     replaceLanding(ctx.store, { table: "orders", source: "orders_file", from: preview.from, to: preview.to, rows });
-    const days = Math.round((Date.parse(preview.to) - Date.parse(preview.from)) / 86_400_000) + 1;
     const prev = stateOf(ctx.store, "orders_file");
     const allFrom = prev.last_sync?.from && prev.last_sync.from < preview.from ? prev.last_sync.from : preview.from;
     const allTo = prev.last_sync?.to && prev.last_sync.to > preview.to ? prev.last_sync.to : preview.to;
+    // The span the source now covers (this file and the ones before it), as from and to say.
+    const days = Math.round((Date.parse(allTo) - Date.parse(allFrom)) / 86_400_000) + 1;
     setState(ctx.store, "orders_file", { target: upload.file_name, time_zone: input.time_zone, error: null, warnings: preview.warnings, last_sync: { at: new Date().toISOString(), from: allFrom, to: allTo, days, ok: true } });
     dropUpload(ctx.app, upload.id);
     ctx.log({ en: `Imported the orders file ${upload.file_name}: ${preview.orders} orders, ${preview.from} to ${preview.to}`, tr: `${upload.file_name} sipariş dosyası içe aktarıldı: ${preview.orders} sipariş, ${preview.from} – ${preview.to}` });

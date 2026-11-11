@@ -2,14 +2,14 @@
 import { z } from "zod";
 import { agentMode } from "../agent/mode.js";
 import { listDashboards } from "../dashboards.js";
-import { runQuery, runReconcile } from "../engine.js";
+import { dataRange, runQuery, runReconcile } from "../engine.js";
 import { AppError } from "../errors.js";
 import { workspaceName } from "../config.js";
 import { addDays } from "../format.js";
 import { compileQuery, resolveQuery } from "../metrics/compile.js";
 import { listOverlay, writeOverlay } from "../metrics/overlay.js";
 import { ACT, CROSS_Q, EXPLORE_Q, FOLLOW, NEAR, SUGGEST, T } from "../text.js";
-import { availableColumns, availableSplits, checkAnswerable, metricAnswerable, splitAnswerable } from "../connectors/index.js";
+import { availableColumns, availableSplits, checkAnswerable, connectorStates, metricAnswerable, remoteStates, splitAnswerable } from "../connectors/index.js";
 import { defineAction } from "./registry.js";
 
 export const metricInfo = (m) => ({
@@ -93,13 +93,13 @@ defineAction({
   input: z.object({}).strict(),
   async run(ctx) {
     if (ctx.warehouse.demo) return DEMO_SOURCES;
-    const range = await ctx.warehouse.range();
     if (ctx.warehouse.local) {
-      const { connectorStates } = await import("../connectors/index.js");
-      return connectorStates(ctx.app)
+      // From another machine: no shop domain, property or file name, as in /api/state (security review 3, L7).
+      return (ctx.loopback === false ? remoteStates(ctx.app) : connectorStates(ctx.app))
         .filter((s) => s.status !== "not_connected")
         .map((s) => ({ id: s.id, name: s.name, detail: [s.target, s.last_sync?.from && s.last_sync?.to ? `${s.last_sync.from} – ${s.last_sync.to}` : null, s.fills.join(", ")].filter(Boolean).join(" · "), rows: null }));
     }
+    const range = await ctx.warehouse.range();
     return [{ id: "mart", name: T("BigQuery mart", "BigQuery mart tablosu"), detail: ctx.warehouse.table.replace(/`/g, ""), rows: range.rows }];
   },
 });
@@ -161,7 +161,7 @@ defineAction({
   input: (pack) => z.object({ metric: z.enum(Object.keys(pack.metrics)) }).strict(),
   async run(ctx, { metric: id }) {
     const m = ctx.pack.metrics[id];
-    const range = await ctx.warehouse.range();
+    const range = await dataRange(ctx.warehouse);
     const q = resolveQuery(ctx.pack, { metric: id, from: addDays(range.to, -27), to: range.to }, range);
     const check = m.check ? ctx.pack.checks[m.check] : null;
     return {
@@ -194,9 +194,10 @@ defineAction({
   async run(ctx, { metric: id }) {
     const m = ctx.pack.metrics[id];
     if (m) {
-      const range = await ctx.warehouse.range();
+      const range = await dataRange(ctx.warehouse);
       const series = await runQuery(ctx, { metric: id, group_by: "day", from: addDays(range.to, -89), to: range.to }, { save: false });
-      const sql = (await runQuery(ctx, { metric: id, from: addDays(range.to, -27), to: range.to }, { save: false })).sql;
+      // The SQL for the last 28 days is compiled, not run: the page shows the text.
+      const sql = compileQuery(ctx.pack, resolveQuery(ctx.pack, { metric: id, from: addDays(range.to, -27), to: range.to }, range), ctx.warehouse);
       const run = ctx.store.latestCheckRun();
       const checks = [];
       for (const { id: cid, role } of checksUsing(ctx.pack, id)) {

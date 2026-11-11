@@ -14,7 +14,7 @@ import { TileMenu } from "@/components/dashboard/TileMenu";
 import { TileView } from "@/components/dashboard/Tile";
 import { tileNames } from "@/components/layout/AskSheet";
 import { TopBarContent, usePhoneTitle } from "@/components/layout/TopBar";
-import { EmptyState, Page } from "@/components/kit";
+import { EmptyState, ErrorState, Page } from "@/components/kit";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuGroup, DropdownMenuItem, DropdownMenuRadioGroup, DropdownMenuRadioItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
@@ -23,6 +23,7 @@ import { NativeSelect, NativeSelectOption } from "@/components/ui/native-select"
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { fmt, plural, useBilingual, useLang, useT } from "@/i18n";
+import { isMissing } from "@/lib/errors";
 import { useFormat } from "@/lib/format";
 import { notify } from "@/lib/notify";
 import { NewDashboardDialog } from "./AskPage";
@@ -168,10 +169,19 @@ export default function DashboardPage() {
       <Page aria-busy>
         <Skeleton className="h-9 w-64" />
         <div className="grid gap-4 md:auto-rows-[minmax(180px,auto)] md:grid-cols-6 xl:grid-cols-12">
-          {[3, 3, 6, 6, 8, 4].map((w, i) => (
-            <Skeleton key={i} className={`h-[180px] rounded-lg md:h-auto md:col-span-${Math.min(w, 6)} xl:col-span-${w}`} />
+          {/* Whole class names, so Tailwind sees them: one built at run time is never generated. */}
+          {["md:col-span-3 xl:col-span-3", "md:col-span-3 xl:col-span-3", "md:col-span-6 xl:col-span-6", "md:col-span-6 xl:col-span-6", "md:col-span-6 xl:col-span-8", "md:col-span-3 xl:col-span-4"].map((span, i) => (
+            <Skeleton key={i} className={`h-[180px] rounded-lg md:h-auto ${span}`} />
           ))}
         </div>
+      </Page>
+    );
+  }
+  // A request that failed is not a missing dashboard: it says what happened and can be tried again.
+  if (error && !data && !isMissing(error)) {
+    return (
+      <Page>
+        <ErrorState bordered error={error} onRetry={() => void refetch()} retrying={isFetching} />
       </Page>
     );
   }

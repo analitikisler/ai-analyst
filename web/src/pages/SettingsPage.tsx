@@ -19,7 +19,7 @@ import { ActivityList } from "@/components/activity/ActivityList";
 import { EventsList } from "@/components/settings/EventsSection";
 import { Switch } from "@/components/ui/switch";
 import { TopBarContent, usePhoneTitle } from "@/components/layout/TopBar";
-import { CodeBlock, CopyButton, Disclosure, PageHeader, SegmentedControl } from "@/components/kit";
+import { CodeBlock, CopyButton, Disclosure, ErrorState, PageHeader, SegmentedControl } from "@/components/kit";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { NativeSelect, NativeSelectOption } from "@/components/ui/native-select";
@@ -91,7 +91,7 @@ export default function SettingsPage() {
   const { section: sectionParam, client } = useParams();
   const section = client ? "chat-apps" : sectionParam;
   const active: Section = (SECTIONS as readonly string[]).includes(section ?? "") ? (section as Section) : "sources";
-  const { data: s } = useSettings();
+  const { data: s, error: settingsError, refetch: reloadSettings, isFetching: settingsFetching } = useSettings();
   const loaded = !!s;
   usePhoneTitle(t.set.title);
   useEffect(() => {
@@ -143,7 +143,9 @@ export default function SettingsPage() {
               {t.set.readonly}
             </p>
           )}
-          {!s ? (
+          {!s && settingsError ? (
+            <ErrorState bordered error={settingsError} onRetry={() => void reloadSettings()} retrying={settingsFetching} />
+          ) : !s ? (
             <Skeleton className="h-96 w-full rounded-lg" />
           ) : (
             <>
@@ -196,10 +198,14 @@ function DataSection({ s }: { s: Settings }) {
   const localRange = froms.length && tos.length ? f.range(froms[0]!, tos[tos.length - 1]!) : t.format.dash;
   const rebuild = async () => {
     setRebuilding(true);
-    await call("rebuild_demo", {});
-    setRebuilding(false);
-    setConfirm(false);
-    notify(t.set.data.rebuilt_toast, { type: "success" });
+    try {
+      await call("rebuild_demo", {});
+      notify(t.set.data.rebuilt_toast, { type: "success" });
+    } finally {
+      // Also after a failure, so the button and the dialog do not stay locked until a reload.
+      setRebuilding(false);
+      setConfirm(false);
+    }
   };
   return (
     <Card id="sources" title={t.set.nav.sources} lead={t.sources.lead}>
@@ -525,7 +531,7 @@ function ChatSection({ client }: { client: ChatClient }) {
   const f = useFormat();
   const navigate = useNavigate();
   const lang = useLang();
-  const { data: setup } = useChatSetup(client);
+  const { data: setup, error: setupError } = useChatSetup(client);
   const { data: calls } = useChatCalls();
   const name = t.set.chat.tab[client];
   const steps = client === "claude-desktop" ? t.set.chat.claude_desktop : client === "cursor" ? t.set.chat.cursor : { ...t.set.chat.command, step3: fmt(t.set.chat.command.step3, { client: name }) };
@@ -576,6 +582,9 @@ function ChatSection({ client }: { client: ChatClient }) {
                 <CopyButton text={setup.snippet} label={setup.kind === "config" ? t.set.chat.copy_config : t.set.chat.copy_command} showLabel />
               </div>
             </div>
+          ) : setupError ? (
+            // The snippet holds this machine's paths, so the server gives it to this machine only.
+            <p role="note" className="rounded-md border border-border bg-surface-2 px-3 py-2 text-[13px] text-text-muted">{describeError(t, setupError)}</p>
           ) : (
             <Skeleton className="h-40 w-full" />
           )}

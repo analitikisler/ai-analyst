@@ -179,7 +179,7 @@ export function pinnedRequest(u, init, { address, family }, { timeoutMs = 30_000
           for (const [k, v] of Object.entries(res.headers)) if (v != null) h.set(k, Array.isArray(v) ? v.join(", ") : String(v));
           const status = res.statusCode ?? 502;
           const body = [101, 204, 205, 304].includes(status) ? null : Buffer.concat(chunks);
-          done(new Response(body, { status: status < 200 ? 502 : status, headers: h }));
+          done(new Response(body, { status: status < 200 || status > 599 ? 502 : status, headers: h }));
         });
         res.on("error", fail);
       },
@@ -187,8 +187,8 @@ export function pinnedRequest(u, init, { address, family }, { timeoutMs = 30_000
     timer = setTimeout(() => fail(Object.assign(new Error(`No complete answer within ${Math.round(timeoutMs / 1000)} s.`), { code: "timeout" })), timeoutMs);
     signal?.addEventListener?.("abort", onAbort, { once: true });
     req.on("error", fail);
-    if (init.body != null) req.write(init.body);
-    req.end();
+    if (init.body != null) req.end(init.body);
+    else req.end();
   });
 }
 

@@ -5,7 +5,7 @@ import { useId, useMemo } from "react";
 import { Area, Bar, BarChart, CartesianGrid, Cell, ComposedChart, Line, ReferenceArea, Tooltip, XAxis, YAxis } from "recharts";
 import type { QueryResult } from "@/api/types";
 import { eventLines, EventsToggle, useChartEvents } from "./events";
-import { useBilingual, useT } from "@/i18n";
+import { useT } from "@/i18n";
 import { useFormat } from "@/lib/format";
 import { axisLine, axisTick, barCursor, ChartEmpty, ChartLegend, ChartPatterns, ChartTooltipBox, cursorStroke, evenTicks, gridStroke, niceMax, prefersReducedMotion, provisionalStart, tickFormatter, useWidth } from "./common";
 
@@ -20,17 +20,19 @@ export interface TrendChartProps {
   className?: string;
 }
 
+// One empty list for "no comparison", so the chart data is not rebuilt on every parent render.
+const NO_ROWS: QueryResult["rows"] = [];
+
 export function TrendChart({ query: q, type, height = 220, showPrevious = true, compact, title, className }: TrendChartProps) {
   const t = useT();
   const f = useFormat();
-  const pick = useBilingual();
   const id = useId().replace(/:/g, "");
   const [ref, width] = useWidth<HTMLDivElement>();
   const ev = useChartEvents(
     useMemo(() => q.rows.map((r) => r.key), [q.rows]),
     q.group_by === "week" ? "week" : q.group_by === "month" ? "month" : "day",
   );
-  const prevRows = showPrevious ? (q.comparison?.rows ?? []) : [];
+  const prevRows = showPrevious ? (q.comparison?.rows ?? NO_ROWS) : NO_ROWS;
   const daily = q.group_by === "day";
   const prov = daily ? provisionalStart(q.rows.map((r) => r.key), q.provisional_from) : undefined;
   const data = useMemo(
@@ -88,7 +90,6 @@ export function TrendChart({ query: q, type, height = 220, showPrevious = true, 
     </>
   );
   const summary = t.charts.summary_line.replace("{title}", title).replace("{range}", f.range(q.from, q.to));
-  void pick;
   return (
     <div className={className}>
       <div className="mb-2 flex flex-wrap items-center justify-between gap-2">

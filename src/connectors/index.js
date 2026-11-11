@@ -4,11 +4,11 @@
 import { AppError } from "../errors.js";
 import { addDays } from "../format.js";
 import { updateConfigFile } from "../settings.js";
-import { ACT, SOURCE_LABEL, T } from "../text.js";
+import { ACT, f, SOURCE_LABEL, T } from "../text.js";
 import { todayIn, validTimeZone } from "./attribution.js";
 import { fetchGa4Days, ga4Transport, propertyId } from "./ga4.js";
 import { buildLocalWarehouse, dropLanding, LANDING, replaceLanding } from "./local.js";
-import { fetchShopifyDays, shopifyClient, shopifyInfo } from "./shopify.js";
+import { fetchShopifyDays, SHOPIFY_RECENT_DAYS, shopifyClient, shopifyInfo } from "./shopify.js";
 import { fetchWooDays, shopUrl, wooClient, wooSite } from "./woocommerce.js";
 
 export const CONNECTOR_IDS = ["ga4", "orders_file", "shopify", "woocommerce"];
@@ -22,6 +22,10 @@ export const TABLE_OF = { ga4: "ga4", orders_file: "orders", shopify: "orders", 
 export const HISTORY_DEFAULT = 90;
 export const HISTORY_MAX = 400;
 const DAY_MS = 86_400_000;
+/** The daily sync reads the last days again (GA4 settles within three; an order's status can still change) plus the new ones. */
+export const OVERLAP_DAYS = 3;
+/** And the whole history again once a week, so a change further back is picked up too. */
+export const FULL_EVERY_MS = 7 * DAY_MS;
 
 export const stateOf = (store, id) => store.getMeta(`connector:${id}`) ?? {};
 export function setState(store, id, patch) {
@@ -105,6 +109,8 @@ export function connectorStates(app) {
       status,
       target: connected ? target : null,
       last_sync: connected ? s.last_sync ?? null : null,
+      // The zone its days are counted in: the shop's or the property's own, the one chosen for a file.
+      time_zone: connected ? s.time_zone ?? null : null,
       error: connected ? s.error ?? null : null,
       warnings: connected ? s.warnings ?? [] : [],
       secret: id === "shopify" ? secretView(c.shopify.token) : id === "woocommerce" ? secretView(c.woocommerce.key, c.woocommerce.secret) : null,
@@ -135,28 +141,60 @@ const errorBody = (err) => ({ code: err.code ?? "internal", message: err instanc
 
 export const clampHistory = (n) => Math.min(HISTORY_MAX, Math.max(1, Math.round(Number(n) || HISTORY_DEFAULT)));
 
+/** The warning when a shop has more orders than one sync reads: the latest days are whole, the oldest are missing. */
+const cutShort = (from) =>
+  T(
+    `The shop has more orders than one sync reads, so the history starts on ${f.en.date(from, true)}. Earlier days are not stored.`,
+    `Mağazada bir eşitlemenin okuduğundan fazla sipariş var; geçmiş ${f.tr.date(from, true)} tarihinde başlıyor. Daha önceki günler saklanmıyor.`,
+  );
+
 const mismatch = (service, found, currency) =>
   new AppError("currency_mismatch", `${service} reports money in ${found}, and this workspace writes money in ${currency}. Change the currency in Settings first, or connect a source in ${currency}.`, { params: { currency, found } });
 
 /**
+ * The first day an incremental sync reads, or null when the whole history is due: after a failed sync, when the
+ * history length changed, or a week after the last whole read.
+ */
+export function incrementalFrom(state, days, now = Date.now()) {
+  const last = state.last_sync;
+  if (!last?.ok || !last.from || !last.to || !state.last_full_at) return null;
+  if (now - Date.parse(state.last_full_at) > FULL_EVERY_MS || clampHistory(state.history_days) !== days) return null;
+  return addDays(last.to, -(OVERLAP_DAYS - 1));
+}
+
+/**
  * Fetches one connected source's daily aggregates for its history, ending yesterday in its time zone.
+ * @param {{ historyDays?: number, since?: string|null, now?: Date }} [o] since: read from this day on only (the days
+ *   before it are already stored).
  * @returns {Promise<{ table: string, from: string, to: string, rows: object[], warnings: object[], timeZone: string }>}
  */
-export async function fetchConnector(app, id, { historyDays, now = new Date() } = {}) {
+export async function fetchConnector(app, id, { historyDays, since = null, now = new Date() } = {}) {
   const c = app.config.connectors;
   const s = stateOf(app.store, id);
   const days = clampHistory(historyDays ?? s.history_days);
   const range = (tz) => {
     const to = addDays(todayIn(tz, now), -1);
-    return { from: addDays(to, -(days - 1)), to };
+    const from = addDays(to, -(days - 1));
+    return { from: since && since > from ? (since > to ? to : since) : from, to };
   };
   if (id === "ga4") {
     const property = propertyId(c.ga4.property.value);
     if (!property) throw new AppError("connector_not_connected", "Google Analytics 4 is not connected.");
     const transport = await ga4Transport(app, c.ga4.auth);
-    const tz = validTimeZone(s.time_zone) ?? "Europe/Istanbul";
-    const { from, to } = range(tz);
-    const r = await fetchGa4Days(transport, property, from, to);
+    let tz = validTimeZone(s.time_zone) ?? "Europe/Istanbul";
+    let { from, to } = range(tz);
+    let r = await fetchGa4Days(transport, property, from, to);
+    // GA4 counts days in the property's own time zone, and says which. When "yesterday" there is another day than
+    // the one asked for (the first sync, or the property's zone changed), the days are fetched again.
+    const own = validTimeZone(r.timeZone);
+    if (own && own !== tz) {
+      tz = own;
+      const next = range(tz);
+      if (next.from !== from || next.to !== to) {
+        ({ from, to } = next);
+        r = await fetchGa4Days(transport, property, from, to);
+      }
+    }
     if (r.currency && r.currency !== app.config.currency) throw mismatch("This GA4 property", r.currency, app.config.currency);
     return { table: "ga4", from, to, rows: r.rows, warnings: r.warnings, timeZone: tz };
   }
@@ -166,9 +204,20 @@ export async function fetchConnector(app, id, { historyDays, now = new Date() } 
     const info = await shopifyInfo(client);
     if (info.currency && info.currency !== app.config.currency) throw mismatch("This Shopify shop", info.currency, app.config.currency);
     const tz = validTimeZone(info.timeZone) ?? "Europe/Istanbul";
-    const { from, to } = range(tz);
+    let { from, to } = range(tz);
+    const warnings = [T("Shopify does not record the device of an order, so the tracking checks run on totals.", "Shopify siparişin cihazını kaydetmez; ölçüm kontrolleri toplamlar üzerinden çalışır.")];
+    // Without read_all_orders Shopify answers with the last 60 days only: older days would read as days with no orders.
+    const recent = addDays(to, -(SHOPIFY_RECENT_DAYS - 1));
+    if (!info.scopes.includes("read_all_orders") && from < recent) {
+      from = recent;
+      warnings.push(T(
+        `Shopify gives this token the last 60 days of orders, so the history starts on ${f.en.date(from, true)}. Add the read_all_orders scope to the custom app for a longer history.`,
+        `Shopify bu anahtara son 60 günün siparişlerini veriyor; geçmiş ${f.tr.date(from, true)} tarihinde başlıyor. Daha uzun geçmiş için özel uygulamaya read_all_orders izni eklenmeli.`,
+      ));
+    }
     const r = await fetchShopifyDays(client, { from, to, timeZone: tz });
-    return { table: "orders", from, to, rows: r.rows, warnings: [T("Shopify does not record the device of an order, so the tracking checks run on totals.", "Shopify siparişin cihazını kaydetmez; ölçüm kontrolleri toplamlar üzerinden çalışır.")], timeZone: tz };
+    if (r.truncated) warnings.push(cutShort(r.from));
+    return { table: "orders", from: r.from, to, rows: r.rows, warnings, timeZone: tz };
   }
   if (id === "woocommerce") {
     const base = shopUrl(c.woocommerce.url.value);
@@ -177,9 +226,19 @@ export async function fetchConnector(app, id, { historyDays, now = new Date() } 
     const site = await wooSite(app, base);
     const tz = validTimeZone(site.timeZone) ?? "Europe/Istanbul";
     const { from, to } = range(tz);
-    const r = await fetchWooDays(client, { from, to, timeZone: tz });
-    if (r.currency && r.currency !== app.config.currency) throw mismatch("This WooCommerce shop", r.currency, app.config.currency);
-    return { table: "orders", from, to, rows: r.rows, warnings: [], timeZone: tz };
+    const r = await fetchWooDays(client, { from, to, timeZone: tz, currency: app.config.currency });
+    // Every order in another currency: the shop is in that currency. Some of them: they are left out and said so.
+    if (!r.orders && r.otherCurrency) throw mismatch("This WooCommerce shop", r.currency, app.config.currency);
+    const warnings = [];
+    if (r.otherCurrency) {
+      warnings.push(T(
+        `${r.otherCurrency} ${r.otherCurrency === 1 ? "order" : "orders"} in another currency than ${app.config.currency} ${r.otherCurrency === 1 ? "was" : "were"} left out, since amounts in two currencies cannot be added up.`,
+        `${app.config.currency} dışındaki para biriminde ${r.otherCurrency} sipariş dışarıda bırakıldı; iki para birimindeki tutarlar toplanamaz.`,
+      ));
+    }
+    if (!site.timeZone) warnings.push(T("The shop does not say its time zone, so days are counted in Istanbul time.", "Mağaza saat dilimini bildirmiyor; günler İstanbul saatine göre sayılıyor."));
+    if (r.truncated) warnings.push(cutShort(r.from));
+    return { table: "orders", from: r.from, to, rows: r.rows, warnings, timeZone: tz };
   }
   throw new AppError("invalid_input", "The orders file is imported again, not synced.");
 }
@@ -224,11 +283,15 @@ export async function activateLocal(app, { log } = {}) {
   log?.(ACT.data_source(SOURCE_LABEL.local));
 }
 
+const sameText = (a) => (b) => a.en === b.en;
+
 /**
  * Syncs one connector or every connected one (not the file), then rebuilds the local warehouse once.
+ * @param {{ incremental?: boolean }} [o] incremental: read only the last days and the new ones when the history
+ *   before them is already stored (the daily sync); otherwise the whole history (a connect, or Sync now).
  * @returns {Promise<object[]>} the connector states
  */
-export async function syncSources(app, { connector, historyDays, log, wait = false } = {}) {
+export async function syncSources(app, { connector, historyDays, log, wait = false, incremental = false } = {}) {
   // wait: a connect that meets a running sync (the daily one, say) waits for it, then syncs, instead of answering
   // "connected" with nothing fetched.
   while (wait && app.syncing?.size && app.syncIdle) await app.syncIdle.catch(() => {});
@@ -246,9 +309,16 @@ export async function syncSources(app, { connector, historyDays, log, wait = fal
       const at = new Date().toISOString();
       const days = clampHistory(historyDays ?? stateOf(app.store, id).history_days);
       try {
-        const r = await fetchConnector(app, id, { historyDays: days });
+        const before = stateOf(app.store, id);
+        const since = incremental ? incrementalFrom(before, days) : null;
+        const r = await fetchConnector(app, id, { historyDays: days, since });
         replaceLanding(app.store, { table: r.table, source: id, from: r.from, to: r.to, rows: r.rows });
-        setState(app.store, id, { history_days: days, time_zone: r.timeZone, error: null, warnings: r.warnings, last_sync: { at, from: r.from, to: r.to, days, ok: true } });
+        // After an incremental read the source still covers the days stored before, and what the last whole read
+        // said about them (a history cut short, say) still holds.
+        const from = since && before.last_sync.from < r.from ? before.last_sync.from : r.from;
+        const warnings = since ? [...r.warnings, ...(before.warnings ?? []).filter((w) => !r.warnings.some(sameText(w)))] : r.warnings;
+        // days: the span the source covers, which a history cut short makes shorter than the days asked for.
+        setState(app.store, id, { history_days: days, time_zone: r.timeZone, error: null, warnings, last_full_at: since ? before.last_full_at : at, last_sync: { at, from, to: r.to, days: Math.round((Date.parse(r.to) - Date.parse(from)) / DAY_MS) + 1, ok: true } });
         stored++;
       } catch (err) {
         if (!(err instanceof AppError)) console.error("[ai-analyst] sync:", err?.stack ?? String(err));
@@ -277,7 +347,8 @@ export async function disconnect(app, id, { writeSettings }) {
 }
 
 /**
- * While serve runs: syncs the connected sources once a day (checked every hour, and once a minute after start).
+ * While serve runs: syncs the connected sources once a day (checked every hour, and once a minute after start): the
+ * last days and the new ones, and the whole history once a week.
  * @returns {{ stop: () => void }}
  */
 export function startDailySync(app, { every = 60 * 60 * 1000, first = 60 * 1000 } = {}) {
@@ -288,8 +359,12 @@ export function startDailySync(app, { every = 60 * 60 * 1000, first = 60 * 1000 
   const tick = async () => {
     if (!due() || app.syncing?.size) return;
     try {
-      await syncSources(app, { log: (detail) => app.store.logActivity({ actor: "system", action: "sync_sources", detail }) });
-      app.store.logActivity({ actor: "system", action: "sync_sources", detail: { en: "Synced the connected sources", tr: "Bağlı kaynaklar eşitlendi" } });
+      const states = await syncSources(app, { incremental: true, log: (detail) => app.store.logActivity({ actor: "system", action: "sync_sources", detail }) });
+      const failed = states.filter((s) => s.id !== "orders_file" && s.status === "error").map((s) => s.name);
+      const detail = !failed.length
+        ? { en: "Synced the connected sources", tr: "Bağlı kaynaklar eşitlendi" }
+        : { en: `The daily sync failed for ${failed.map((n) => n.en).join(", ")}. Settings › Sources has the reason.`, tr: `Günlük eşitleme şu kaynaklarda başarısız oldu: ${failed.map((n) => n.tr).join(", ")}. Nedeni Ayarlar › Kaynaklar bölümünde.` };
+      app.store.logActivity({ actor: "system", action: "sync_sources", detail });
     } catch (err) {
       console.error("[ai-analyst] daily sync:", err?.code ?? err?.message);
     }

@@ -133,7 +133,8 @@ export function reportWarnings(meta = {}) {
 
 /**
  * Daily aggregates for [from, to], all pages.
- * @returns {Promise<{ rows: { date, channel, device, sessions, ga4_purchases, ga4_revenue }[], warnings: Text[], currency: string|null, quota: number|null }>}
+ * @returns {Promise<{ rows: { date, channel, device, sessions, ga4_purchases, ga4_revenue }[], warnings: Text[], currency: string|null, timeZone: string|null, quota: number|null }>}
+ *   timeZone: the property's reporting time zone; its days are the dates in the rows.
  */
 export async function fetchGa4Days(transport, property, from, to) {
   const rows = [];
@@ -158,7 +159,7 @@ export async function fetchGa4Days(transport, property, from, to) {
     offset += data?.rows?.length ?? 0;
     if (!data?.rows?.length || offset >= Number(data.rowCount ?? 0)) break;
   }
-  return { rows, warnings: reportWarnings(meta), currency: meta.currencyCode ?? null, quota };
+  return { rows, warnings: reportWarnings(meta), currency: meta.currencyCode ?? null, timeZone: meta.timeZone ?? null, quota };
 }
 
 /** The first and last day with sessions. */

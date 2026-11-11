@@ -21,7 +21,6 @@ export const axisLine = { stroke: "var(--color-border-strong)" } as const;
 export const gridStroke = "var(--color-border)";
 export const cursorStroke = { stroke: "var(--color-border-strong)", strokeWidth: 1 } as const;
 export const barCursor = { fill: "var(--color-surface-2)" } as const;
-export const margin = { top: 8, right: 8, bottom: 0, left: 0 };
 
 export const tickFormatter = (f: Format, unit: Unit) => (v: number) => f.compact(v, unit);
 

@@ -5,15 +5,19 @@
 // Reads English (1,240 · 4.2% · −10.1% · 2.66× · 22.07M TL) and Turkish (1.240 · %4,2 ·
 // −%10,1 · 2,66× · 22,07 mn TL). A token like "1.240" is ambiguous, so both readings are tried.
 // Ignored: dates (2026-10-09, 9 Oct, 9–22 Eki, Oct 9), years 2000–2100, and durations
-// ("14 days", "son 28 gün"), which describe the period rather than a result.
+// ("14 days", "son 28 gün"), which describe the period rather than a result. A number is not excused by what
+// follows it without a space: "5000TL" is a figure, and "3 may be" is not a date.
 
 const MONTHS_LONG = [
   "january", "february", "march", "april", "june", "july", "august", "september", "october", "november", "december",
   "ocak", "şubat", "mart", "nisan", "mayıs", "haziran", "temmuz", "ağustos", "eylül", "ekim", "kasım", "aralık",
 ];
-const MONTHS_SHORT = ["jan", "feb", "mar", "apr", "may", "jun", "jul", "aug", "sep", "sept", "oct", "nov", "dec", "oca", "şub", "nis", "haz", "tem", "ağu", "eyl", "eki", "kas", "ara"];
+const MONTHS_SHORT = ["jan", "feb", "mar", "apr", "jun", "jul", "aug", "sep", "sept", "oct", "nov", "dec", "oca", "şub", "nis", "haz", "tem", "ağu", "eyl", "eki", "kas"];
 // Long names may carry a Turkish suffix (Ekim'den, Ekimde); short ones must stand alone.
 const MONTH = `(?:(?:${MONTHS_LONG.join("|")})\\p{L}*|(?:${MONTHS_SHORT.join("|")})(?!\\p{L}))\\.?`;
+// "may" and "ara" are ordinary words too ("3 may be wrong", "3 ara"): a month only when written as one, with a
+// capital. Otherwise the number before them would pass unchecked as a day of the month.
+const MONTH_CAPITAL = "(?:May|MAY|Ara|ARA)(?!\\p{L})\\.?";
 const DAY = "\\d{1,2}(?:st|nd|rd|th|\\.)?";
 const DASH = "\\s*[–—-]\\s*";
 
@@ -21,12 +25,18 @@ const IGNORE = [
   /\b\d{4}-\d{2}-\d{2}\b/gu, // ISO dates
   new RegExp(`(?<![\\p{L}\\p{N}])${DAY}(?:${DASH}${DAY})?\\s+(?:of\\s+)?${MONTH}`, "giu"), // 9 Oct, 9–22 Eki
   new RegExp(`${MONTH}\\s+${DAY}(?:${DASH}${DAY})?(?![\\p{N}])`, "giu"), // Oct 9, October 9–22
+  new RegExp(`(?<![\\p{L}\\p{N}])${DAY}(?:${DASH}${DAY})?\\s+(?:of\\s+)?${MONTH_CAPITAL}`, "gu"), // 9 May, 9–22 Ara
+  new RegExp(`(?<![\\p{L}])${MONTH_CAPITAL}\\s+${DAY}(?:${DASH}${DAY})?(?![\\p{N}])`, "gu"), // May 9
   /(?<![\p{L}\p{N}.,])\d+(?:-|\s)*(?:days?|weeks?|months?|gün\p{L}*|hafta\p{L}*|ay(?:da|dan|dır|lık|ın|ı)?)(?![\p{L}])/giu, // durations
 ];
 
 const SCALES = { m: 1e6, mn: 1e6, milyon: 1e6, million: 1e6, bn: 1e9, milyar: 1e9, billion: 1e9, k: 1e3, bin: 1e3 };
 const TOKEN =
   /(?<![\p{L}\p{N}_.,])([+\-−]\s?)?(%\s?)?(\d+(?:[.,]\d+)*)(\s?%)?(\s?[×x](?![\p{L}\p{N}]))?(\s?(?:M|mn|milyon|million|bn|milyar|billion|k|K|bin)(?![\p{L}\p{N}]))?/gu;
+
+const ORDINAL = /^(?:st|nd|rd|th|inci|ıncı|uncu|üncü|nci|ncı|ncu|ncü)(?![\p{L}\p{N}])/iu;
+/** Letters that run on into more digits, or an underscore: an id. */
+const ID_TAIL = /^(?:_|[\p{L}]+[\p{N}_])/u;
 
 /** "1,240" -> [{ value: 1240, decimals: 0 }]; "1.240" -> 1.24 (en) and 1240 (tr). */
 function readings(body) {
@@ -53,9 +63,10 @@ export function extractNumbers(text) {
   const out = [];
   for (const m of s.matchAll(TOKEN)) {
     const [raw, , pctBefore, body, pctAfter, , scaleWord] = m;
-    const next = s[m.index + raw.length] ?? "";
-    // A digit run that runs into letters is part of a word or an id (q_3f9a, 4g), not a figure.
-    if (!scaleWord && /[\p{L}_]/u.test(next)) continue;
+    const rest = s.slice(m.index + raw.length, m.index + raw.length + 24);
+    // A digit run that runs into letters: an ordinal (2nd, 3üncü) or an id (3f9a1c) is not a figure. A number with
+    // its unit stuck to it is (5000TL, 120adet), and is checked like any other.
+    if (!scaleWord && /^[\p{L}_]/u.test(rest) && (ORDINAL.test(rest) || ID_TAIL.test(rest))) continue;
     const percent = Boolean(pctBefore || pctAfter);
     const scale = scaleWord ? SCALES[scaleWord.trim().toLowerCase()] : 1;
     if (!percent && scale === 1 && /^\d{4}$/.test(body) && +body >= 2000 && +body <= 2100) continue; // a year

@@ -19,7 +19,7 @@ const stop = (code = 0) => {
 for (const c of children) {
   c.on("exit", (code) => stop(code ?? 0));
   c.on("error", (err) => {
-    console.error(err.code === "ENOENT" ? "bun was not found. Install Bun 1.3 or later, or set BUN to its path." : err.message);
+    console.error(err.code === "ENOENT" ? "bun was not found. Install Bun 1.4 or later, or set BUN to its path." : err.message);
     stop(1);
   });
 }

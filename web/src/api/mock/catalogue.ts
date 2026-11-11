@@ -44,7 +44,7 @@ export function definitionRows(m: MetricInfo): { label: Text; value: Text }[] {
   return rows;
 }
 
-const H = (version: number, date: string, en: string, tr: string): MetricHistoryRow => ({ version, date, change: T(en, tr), actor: T("Bahadır Ölez", "Bahadır Ölez") });
+const H = (version: number, date: string, en: string, tr: string): MetricHistoryRow => ({ version, date, change: T(en, tr), actor: T("Analitik İşler", "Analitik İşler") });
 
 /** Seeded version history per metric, newest first (the pack carries versions; the dates and notes are seeded). */
 export function historyOf(id: MetricId): MetricHistoryRow[] {

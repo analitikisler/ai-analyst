@@ -1,8 +1,8 @@
 // Dashboards and tiles. A tile keeps the query, not a frozen answer, so it follows the dashboard's period and
 // compare setting; its chart follows the chart grammar (engine.validCharts) and its width the width rules.
-import { allWidthRules, comparisonWindow, resolvePeriod, runQuery, runReconcile, validCharts } from "./engine.js";
+import { allWidthRules, comparisonWindow, dataRange, resolvePeriod, runQuery, runReconcile, validCharts } from "./engine.js";
 import { AppError } from "./errors.js";
-import { exploreQuery } from "./explore/run.js";
+import { exploreQuery, runExploreSql } from "./explore/run.js";
 import { newId } from "./store/store.js";
 import { T } from "./text.js";
 
@@ -119,7 +119,6 @@ export async function tileResult(ctx, dash, tile, range) {
       return done({ ...base, check, previous_check: previous });
     }
     if (tile.query.type === "explore") {
-      const { runExploreSql } = await import("./explore/run.js");
       if (!tile.query.sql) throw new AppError("explore_failed", "This tile has no stored query.");
       const x = await runExploreSql(ctx, { sql: tile.query.sql, ...tile.query.spec, unit: tile.query.unit, label: tile.query.label }, ctx.pack);
       return done({ ...base, from: x.spec.from, to: x.spec.to, explore: x, query: exploreQuery(x, ctx.warehouse.dialect) });
@@ -135,7 +134,7 @@ export async function tileResult(ctx, dash, tile, range) {
 }
 
 export async function dashboardResult(ctx, dash) {
-  const range = await ctx.warehouse.range();
+  const range = await dataRange(ctx.warehouse);
   const p = resolvePeriod(range, dash.period);
   const w = dash.compare === "off" ? null : comparisonWindow(range, p.from, p.to, dash.compare, p.monthToDate);
   const tiles = [];

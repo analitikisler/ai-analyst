@@ -11,13 +11,14 @@ import { useAppState, useCall, useMetric, useMetricEntries } from "@/api/queries
 import type { MetricEntry } from "@/api/types";
 import { useOpenAskSheet } from "@/ask/hooks";
 import { TrendChart } from "@/components/charts";
-import { CodeBlock, EmptyState, Page, PageHeader, Panel, PanelHeader, Status } from "@/components/kit";
+import { CodeBlock, EmptyState, ErrorState, Page, PageHeader, Panel, PanelHeader, Status } from "@/components/kit";
 import { TopBarContent, usePhoneTitle } from "@/components/layout/TopBar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { NativeSelect, NativeSelectOption } from "@/components/ui/native-select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { fmt, plural, useBilingual, useLang, useT } from "@/i18n";
+import { isMissing } from "@/lib/errors";
 import { useFormat } from "@/lib/format";
 import { notify } from "@/lib/notify";
 import { NotFoundInline } from "./NotFoundPage";
@@ -55,7 +56,7 @@ function MetricList() {
   const pick = useBilingual();
   const lang = useLang();
   const sourceName = useSourceName();
-  const { data, isLoading } = useMetricEntries();
+  const { data, isLoading, isFetching, error, refetch } = useMetricEntries();
   const { data: state } = useAppState();
   const [q, setQ] = useState("");
   const [source, setSource] = useState<SourceFilter>("all");
@@ -89,6 +90,7 @@ function MetricList() {
         </label>
       </div>
       {isLoading && <Skeleton className="h-80 w-full rounded-lg" />}
+      {error && !data && <ErrorState bordered error={error} onRetry={() => void refetch()} retrying={isFetching} />}
       {data && !rows.length && <EmptyState bordered icon={BookOpenTextIcon} title={t.metrics.empty} />}
       {rows.length > 0 && (
         <ul className="overflow-hidden rounded-lg border border-border bg-surface">
@@ -129,10 +131,18 @@ function MetricDetail({ id }: { id: string }) {
   const sourceName = useSourceName();
   const openAsk = useOpenAskSheet();
   const { data: state } = useAppState();
-  const { data, isLoading, error } = useMetric(id);
+  const { data, isLoading, isFetching, error, refetch } = useMetric(id);
   const [busy, setBusy] = useState(false);
   usePhoneTitle(data ? pick(data.entry.label) : t.metrics.title);
-  if (error) return <NotFoundInline title={fmt(t.metrics.not_found, { id })} action={t.metrics.back} to="/metrics" />;
+  // An unknown metric is not found; a request that failed says so and can be tried again.
+  if (error && !data) {
+    if (isMissing(error)) return <NotFoundInline title={fmt(t.metrics.not_found, { id })} action={t.metrics.back} to="/metrics" />;
+    return (
+      <Page className="max-w-[1080px]">
+        <ErrorState bordered error={error} onRetry={() => void refetch()} retrying={isFetching} />
+      </Page>
+    );
+  }
   if (isLoading || !data) {
     return (
       <Page className="max-w-[1080px]" aria-busy>

@@ -14,7 +14,7 @@ import { runTurn } from "../src/agent/agent.js";
 import { loadConfig } from "../src/config.js";
 import { buildDemoWarehouse, DEMO, generateFacts, generateShop } from "../src/demo/seed.js";
 import { parseAllowEnv, policyFor, proposeProtected } from "../src/explore/allow.js";
-import { GUARD_MESSAGES, guardSql } from "../src/explore/guard.js";
+import { GUARD_MESSAGES, guardSql, stripProjections } from "../src/explore/guard.js";
 import { runExploreSql } from "../src/explore/run.js";
 import { openBigQuery } from "../src/warehouse/bigquery.js";
 import { openDuckDB } from "../src/warehouse/duckdb.js";
@@ -483,6 +483,80 @@ test("protected columns on the demo: customer_id is readable by default; protect
   await act("set_protected_columns", { table: "orders", columns: ["customer_id"] });
 });
 
+test("the second fence for protected columns: each table is read through a projection without them; an approved join key or COUNT(DISTINCT) keeps its column, in that query alone", () => {
+  const COLS = { "p-shop1.d.customers": ["customer_id", "Email", "phone", "first_name", "name", "city"], "p-shop1.d.orders": ["order_id", "customer_id", "channel", "order_total"], "p-shop1.d.products": ["product_id", "name", "category"] };
+  const opts = { policy: shopPolicy, protectedCols, columns: (k) => COLS[k] ?? null };
+  const run = (sql, o = opts, wh = shopWh) => guardSql(sql, wh, o).run.replace(/^SELECT \* FROM \(\n([\s\S]*)\n\) AS q\nLIMIT \d+$/, "$1");
+  // No approved use: every protected column the table has is left out, by the name the warehouse gives it.
+  assert.equal(run(`SELECT city, COUNT(*) AS n FROM ${C} c GROUP BY 1`), "SELECT city, COUNT(*) AS n FROM (SELECT * EXCEPT (`customer_id`, `Email`, `phone`, `first_name`, `name`) FROM `p-shop1.d.customers`) c GROUP BY 1");
+  // Without an alias the table keeps its own name, so customers.city still resolves.
+  assert.equal(run(`SELECT customers.city, COUNT(*) AS n FROM ${C} GROUP BY 1`), "SELECT customers.city, COUNT(*) AS n FROM (SELECT * EXCEPT (`customer_id`, `Email`, `phone`, `first_name`, `name`) FROM `p-shop1.d.customers`) AS `customers` GROUP BY 1");
+  // A join key stays on both sides; the contact columns still go. A table with nothing left to hide is read as written.
+  assert.equal(
+    run(`SELECT channel, COUNT(*) AS n FROM ${O} AS o JOIN ${C} c ON c.customer_id = o.customer_id GROUP BY channel`),
+    "SELECT channel, COUNT(*) AS n FROM `p-shop1.d.orders` AS o JOIN (SELECT * EXCEPT (`Email`, `phone`, `first_name`, `name`) FROM `p-shop1.d.customers`) c ON c.customer_id = o.customer_id GROUP BY channel",
+  );
+  assert.match(run(`SELECT channel, COUNT(*) AS n FROM ${O} o JOIN ${C} c USING (customer_id) GROUP BY channel`), /FROM `p-shop1\.d\.orders` o JOIN \(SELECT \* EXCEPT \(`Email`, `phone`, `first_name`, `name`\) FROM `p-shop1\.d\.customers`\) c USING/);
+  assert.equal(run(`SELECT COUNT(DISTINCT customer_id) AS customers FROM ${O}`), "SELECT COUNT(DISTINCT customer_id) AS customers FROM `p-shop1.d.orders`");
+  // The approval is per query: the same table without the use loses the column again.
+  assert.equal(run(`SELECT channel, COUNT(*) AS n FROM ${O} GROUP BY 1`), "SELECT channel, COUNT(*) AS n FROM (SELECT * EXCEPT (`customer_id`) FROM `p-shop1.d.orders`) AS `orders` GROUP BY 1");
+  // Every reference is wrapped, also inside a subquery and in a comma list.
+  assert.equal((run(`SELECT COUNT(*) AS n FROM ${O} a, ${O} b WHERE a.channel IN (SELECT channel FROM ${O} x)`).match(/EXCEPT \(`customer_id`\)/g) ?? []).length, 3);
+  // A table without protected columns, and a query without the columns' names, read as written.
+  assert.equal(run(`SELECT category, COUNT(*) AS n FROM ${P} GROUP BY 1`), `SELECT category, COUNT(*) AS n FROM ${P} GROUP BY 1`);
+  assert.equal(guardSql(`SELECT COUNT(*) AS n FROM ${O}`, shopWh, { policy: shopPolicy, protectedCols }).run, guardSql(`SELECT COUNT(*) AS n FROM ${O}`, shopWh, { policy: shopPolicy, protectedCols }).wrapped, "no schema: no projection");
+  // A stored list can name a column the table dropped: it is not written into the projection.
+  assert.equal(run(`SELECT COUNT(*) AS n FROM ${O}`, { ...opts, columns: () => ["order_id", "channel"] }), `SELECT COUNT(*) AS n FROM ${O}`);
+  // Every column protected: the rows are still there to count.
+  assert.equal(run(`SELECT COUNT(*) AS n FROM ${O} o`, { ...opts, columns: () => ["customer_id"] }), "SELECT COUNT(*) AS n FROM (SELECT 1 AS aia_no_columns FROM `p-shop1.d.orders`) o");
+  // DuckDB writes EXCLUDE and double quotes.
+  const duckPolicy = { allowed: ["daily_channel_device", "orders"], entries: [], match: (parts) => (parts.length === 1 && ["orders", "daily_channel_device"].includes(parts[0].toLowerCase()) ? parts[0].toLowerCase() : null) };
+  const duckOpts = { policy: duckPolicy, protectedCols: (k) => (k === "orders" ? new Set(["customer_id"]) : new Set()), columns: () => ["order_id", "customer_id", "channel"] };
+  assert.equal(run("SELECT channel, COUNT(*) AS n FROM orders GROUP BY 1;", duckOpts, { table: "daily_channel_device", dialect: "duckdb" }), 'SELECT channel, COUNT(*) AS n FROM (SELECT * EXCLUDE ("customer_id") FROM orders) AS "orders" GROUP BY 1');
+  // A tile runs again the SQL it showed: the projections come out, the query is guarded as written and projected anew.
+  for (const sql of [`SELECT channel, COUNT(*) AS n FROM ${O} AS o JOIN ${C} c ON c.customer_id = o.customer_id GROUP BY channel`, `SELECT customers.city, COUNT(*) AS n FROM ${C} GROUP BY 1`, `SELECT COUNT(*) AS n FROM ${O} o`]) {
+    const all = sql.endsWith(" o") ? { ...opts, columns: () => ["customer_id"] } : opts;
+    assert.equal(run(stripProjections(run(sql, all), "bigquery"), all), run(sql, all), sql);
+  }
+  assert.equal(stripProjections('SELECT COUNT(*) AS n FROM (SELECT * EXCLUDE ("customer_id") FROM orders) AS "orders"', "duckdb"), 'SELECT COUNT(*) AS n FROM orders AS "orders"');
+  // A projection written by hand is no way in: a star over a protected table is refused like any other.
+  assert.ok(refusal(`SELECT o.customer_id FROM (SELECT * EXCEPT (\`channel\`) FROM ${O}) AS o`, shopWh, opts));
+});
+
+test("the second fence on the demo file: with customer_id protected, a query the checks would have missed finds no such column; approved uses and a pinned tile still run", async () => {
+  await act("set_protected_columns", { table: "orders", columns: ["customer_id"] });
+  try {
+    const counted = await explore("SELECT channel, COUNT(*) AS n FROM orders o GROUP BY 1 ORDER BY 2 DESC, 1");
+    assert.match(counted.sql, /FROM \(SELECT \* EXCLUDE \("customer_id"\) FROM orders\) o GROUP BY 1 ORDER BY/, "the answer shows the SQL that ran");
+    const frag = '(SELECT * EXCLUDE ("customer_id") FROM orders)';
+    const policy = policyFor(ws.config, ws.warehouse);
+    const sample = (await ws.warehouse.explore("SELECT customer_id FROM orders LIMIT 1", { policy })).rows[0].customer_id;
+    assert.ok(sample, "the explore file itself still holds the column: the projection is what keeps it out");
+    // What each bypass found in the audit would have run as, once the table is read through the projection.
+    for (const sql of [`SELECT * FROM ${frag} o LIMIT 5`, `SELECT o FROM ${frag} o LIMIT 5`, `SELECT #5 FROM ${frag} o LIMIT 5`, `SELECT CAST(o AS VARCHAR) AS v FROM ${frag} o LIMIT 5`, `FROM ${frag} o LIMIT 5`]) {
+      const out = await ws.warehouse.explore(sql, { policy });
+      assert.ok(out.rows.length > 0, sql);
+      assert.ok(!JSON.stringify(out.rows).includes(String(sample)) && !out.columns.includes("customer_id"), `${sql} returned a customer id`);
+    }
+    for (const sql of [`SELECT customer_id FROM ${frag} o`, `SELECT o.customer_id FROM ${frag} o`, `SELECT COUNT(*) AS n FROM ${frag} o WHERE customer_id = '${sample}'`]) {
+      await assert.rejects(ws.warehouse.explore(sql, { policy }), (e) => e.code === "explore_sql_error", sql);
+    }
+    // Approved uses read the column as before, with the same figures.
+    const x = await explore("SELECT COUNT(DISTINCT customer_id) AS customers FROM orders");
+    assert.ok(!/EXCLUDE/.test(x.sql) && x.rows[0][0] > 1000);
+    const j = await explore("SELECT o.channel, COUNT(*) AS n FROM orders o JOIN orders f ON f.customer_id = o.customer_id AND f.is_first_order GROUP BY 1");
+    assert.ok(!/EXCLUDE/.test(j.sql) && j.rows.length > 0);
+    // A tile re-runs the SQL its answer showed, projection and all.
+    const again = await explore(counted.sql);
+    assert.deepEqual([again.sql, again.rows], [counted.sql, counted.rows]);
+    // Protection lifted: the same question reads the table as written.
+    await act("set_protected_columns", { table: "orders", columns: [] });
+    assert.ok(!/EXCLUDE/.test((await explore(counted.sql)).sql));
+  } finally {
+    await act("set_protected_columns", { table: "orders", columns: ["customer_id"] });
+  }
+});
+
 test("a cross-table question on the demo: describe_tables, one joined query, an exploratory card that lists the tables it read", async () => {
   const sql = "SELECT p.category, COUNT(r.return_id) * 1.0 / COUNT(*) AS return_rate FROM order_items i JOIN products p ON p.product_id = i.product_id LEFT JOIN returns r ON r.order_id = i.order_id AND r.line_no = i.line_no GROUP BY p.category ORDER BY return_rate DESC";
   const requests = [];
@@ -694,3 +768,45 @@ test("a query that uses a protected column cannot contain a CTE or a subquery, o
   assert.equal(refusal(`WITH k AS (SELECT channel FROM ${O}) SELECT COUNT(*) AS n FROM k`, shopWh, { policy: shopPolicy, protectedCols }), null);
   assert.equal(refusal("SELECT COUNT(DISTINCT c.email) AS n FROM customers c JOIN orders o ON o.customer_id = c.customer_id", duck, { policy: duckPolicy, protectedCols: duckProt }), null);
 });
+
+test("protected columns cannot be reached through a hidden clause, a reused alias, a whole row or a STRUCT field, on both dialects", () => {
+  const duckPolicy = { allowed: ["daily_channel_device", "orders", "customers", "products"], entries: [], match: (p) => (p.length === 1 && ["orders", "customers", "products", "daily_channel_device"].includes(p[0].toLowerCase()) ? p[0].toLowerCase() : null) };
+  const duckProt = (k) => (k === "customers" ? new Set(["email", "customer_id", "address"]) : k === "orders" ? new Set(["customer_id"]) : new Set());
+  const duck = { table: "daily_channel_device", dialect: "duckdb" };
+  const d = (sql) => refusal(sql, duck, { policy: duckPolicy, protectedCols: duckProt });
+  const b = (sql) => refusal(sql, shopWh, { policy: shopPolicy, protectedCols });
+  // A carriage return ends a line comment: the rest of the query is read.
+  assert.equal(d("SELECT 'n' AS k, COUNT(*) AS n FROM orders -- x\r WHERE 1=0 UNION ALL SELECT customer_id, 1 FROM orders"), "sql_protected_column");
+  assert.equal(b(`SELECT 'n' AS k, COUNT(*) AS n FROM ${O} -- x\r WHERE 1=0 UNION ALL SELECT email, 1 FROM ${C}`), "sql_protected_column");
+  // A table after USING (…) and a comma is read like any other: its protected columns count.
+  assert.equal(d("SELECT c.email AS e, COUNT(*) AS n FROM orders a JOIN orders b USING (order_id), customers c GROUP BY 1"), "sql_protected_column");
+  assert.equal(b(`SELECT c.email AS e, COUNT(*) AS n FROM ${O} a JOIN ${O} b USING (order_id), ${C} c GROUP BY 1`), "sql_protected_column");
+  // One name, one table: an alias that names another table, or is used again in a subquery, is refused.
+  assert.equal(d("SELECT products.customer_id AS c, COUNT(*) AS n FROM orders products, products p2 GROUP BY 1"), "sql_unsupported_syntax");
+  assert.equal(d("SELECT a.customer_id AS c, COUNT(*) AS n FROM orders a WHERE EXISTS (SELECT 1 FROM products a) GROUP BY 1"), "sql_unsupported_syntax");
+  assert.equal(b(`SELECT orders.email AS e, COUNT(*) AS n FROM ${C} AS orders JOIN ${O} AS o2 ON TRUE GROUP BY 1`), "sql_unsupported_syntax");
+  // The same alias for the same table twice (two branches of a UNION) is still fine.
+  assert.equal(d("SELECT t.channel AS k, SUM(t.revenue) AS v FROM daily_channel_device t GROUP BY 1 UNION ALL SELECT t.device, SUM(t.orders) FROM daily_channel_device t GROUP BY 1"), null);
+  // A positional column, a query that starts with FROM, DISTINCT ON.
+  assert.equal(d("SELECT #2 AS c, COUNT(*) AS n FROM orders GROUP BY 1"), "sql_unsupported_syntax");
+  assert.equal(d("SELECT x AS v, COUNT(*) AS n FROM (FROM orders) x GROUP BY 1"), "sql_unsupported_syntax");
+  assert.equal(d("SELECT 0 AS a FROM orders WHERE 1=0 UNION ALL BY NAME FROM orders"), "sql_unsupported_syntax");
+  assert.equal(d("SELECT 0 AS a, 'x' AS b FROM orders WHERE 1=0 UNION ALL SELECT DISTINCT ON (order_id) * FROM orders"), "sql_unsupported_syntax");
+  // A whole row, in any clause and under any qualifier.
+  for (const sql of [
+    "SELECT COUNT(*) AS n FROM orders o WHERE CAST(o AS VARCHAR) LIKE '%cust_A%'",
+    "SELECT CAST(main.orders AS VARCHAR) AS s, COUNT(*) AS n FROM orders GROUP BY 1",
+    "SELECT COUNT(*) AS n FROM orders o GROUP BY o",
+    "SELECT 1 IS DISTINCT FROM orders AS x FROM orders",
+  ]) assert.equal(d(sql), "sql_protected_column", sql);
+  assert.equal(b(`SELECT COUNT(*) AS n FROM ${C} c WHERE FORMAT('%t', c) LIKE '%a@b.example%'`), "sql_protected_column");
+  // A field of a protected STRUCT column.
+  assert.equal(d("SELECT c.address.street AS s, COUNT(*) AS n FROM customers c GROUP BY 1"), "sql_protected_column");
+  assert.equal(d("SELECT address.street AS s, COUNT(*) AS n FROM customers GROUP BY 1"), "sql_protected_column");
+  // BigQuery's pipe syntax.
+  assert.equal(b(`WITH x AS (FROM ${C} |> EXTEND email AS e |> SELECT e) SELECT e, COUNT(*) AS n FROM x GROUP BY 1`), "sql_unsupported_syntax");
+  // What worked before still works: a join key, COUNT(DISTINCT), CRLF line ends, a join with USING.
+  assert.equal(d("SELECT COUNT(DISTINCT o.customer_id) AS n\r\nFROM orders o -- all orders\r\nJOIN customers c ON c.customer_id = o.customer_id"), null);
+  assert.equal(d("SELECT a.channel, SUM(a.revenue * 2) AS v FROM daily_channel_device a JOIN daily_channel_device b USING (date, channel, device) GROUP BY 1"), null);
+});
+

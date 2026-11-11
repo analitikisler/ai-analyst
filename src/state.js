@@ -11,8 +11,8 @@ import { workspaceName } from "./config.js";
 import { connectorStates, remoteStates, waitlist } from "./connectors/index.js";
 
 /** A finding confirmed by a failing audit of its check says so, even on a run stored before the audit. */
-function withAudit(store, c) {
-  const a = store.list("audits", { limit: 50 }).find((x) => x.check === c.check && x.status !== "handoff" && x.result && !x.result.ok);
+function withAudit(audits, c) {
+  const a = audits.find((x) => x.check === c.check && x.status !== "handoff" && x.result && !x.result.ok);
   if (!a) return c;
   return { ...c, findings: c.findings.map((fd) => (fd.since ? { ...fd, confirmed: { audit_id: a.id, at: a.finished_at } } : fd)) };
 }
@@ -38,7 +38,11 @@ export async function buildState(app, { loopback = true } = {}) {
   const local = Boolean(app.warehouse.local);
   const bigquery = !app.warehouse.demo && !local;
   const own = bigquery || local;
-  const overlayIds = new Set(listOverlay(config.dataDir).map((m) => m.id));
+  // Newest first: the strip reads the last 50 for confirmed findings, the app shell shows the last 10.
+  const audits = store.list("audits", { limit: 50 });
+  // The overlay files are read only when a proposal is waiting: one already written there is no longer counted.
+  const proposed = store.list("metric_proposals").filter((m) => m.status === "proposed");
+  const overlayIds = proposed.length ? new Set(listOverlay(config.dataDir).map((m) => m.id)) : new Set();
   return {
     workspace: ws,
     source: {
@@ -58,20 +62,20 @@ export async function buildState(app, { loopback = true } = {}) {
     dashboards: dashboards.map((d) => ({ id: d.id, name: d.name, example: d.example, tiles: d.tiles.length })),
     pins: dashboards.flatMap((d) => d.tiles.filter((t) => t.answer_id).map((t) => ({ answer_id: t.answer_id, dashboard_id: d.id, tile_id: t.id }))),
     watches,
-    checks: (run?.results ?? []).map((c) => withAudit(store, c)),
+    checks: (run?.results ?? []).map((c) => withAudit(audits, c)),
     check_run: run ? { id: run.id, created_at: run.created_at, days: run.days, from: run.from, to: run.to, actor: run.actor } : null,
     activity: store.listActivity(100),
     proposals,
     conversations: store.listConversations().map((c) => conversationSummary(store, c)),
     host_is_loopback: loopback,
     events: listEvents(store, app.config),
-    audits: store.list("audits", { limit: 10 }),
+    audits: audits.slice(0, 10),
     // The prototype's "Simulate the tracking fix" does not exist here.
     audit_fixed: false,
     // The sources that feed the local source, and the connectors planned for ai cloud.
     // From another machine: no shop domain, property or file name (security review 3, L7).
     connectors: loopback ? connectorStates(app) : remoteStates(app),
     waitlist: waitlist(),
-    metric_proposals: store.list("metric_proposals").filter((m) => m.status === "proposed" && !overlayIds.has(m.id)).length,
+    metric_proposals: proposed.filter((m) => !overlayIds.has(m.id)).length,
   };
 }

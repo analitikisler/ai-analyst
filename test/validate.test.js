@@ -65,6 +65,28 @@ test("dates, years, day ordinals and durations are not figures", () => {
   ok("Over 3 months and 2 weeks: 2,753.");
 });
 
+test("a figure is not excused by what stands next to it: a unit stuck to it, or a word that is also a month", () => {
+  // A unit without a space used to make the number invisible to the check.
+  bad("Revenue was 5000TL.", ["5000"]);
+  bad("Dönemde 2800adet sipariş var.", ["2800"]);
+  bad("Orders reached 3,100TRY in value.", ["3,100"]);
+  ok("Orders: 2,753adet.");
+  ok("GA4: 2474purchases against 2753orders.");
+  // "may" and "ara" are words as well as months: lower case, the number before them is a figure.
+  bad("About 3 may be missing.", ["3"]);
+  bad("Orders of 2,800 may be wrong.", ["2,800"]);
+  bad("Yaklaşık 3 ara dönemde eksik.", ["3"]);
+  ok("About 279 may be missing."); // a real figure before "may" still passes
+  // Written as months, they are dates.
+  ok("Since 9 May 2026 orders are 2,753.");
+  ok("Between May 9 and 22 May orders are 2,753.");
+  ok("9 Ara – 22 Ara arasında 2.753 sipariş.");
+  // Ordinals and ids still are not figures.
+  ok("The 2nd week and the 3rd day: 2,753 orders.");
+  ok("Turn 3f9a1c2b and query 4_b returned 2,753.");
+  ok("2. hafta ve 3üncü gün: 2.753 sipariş.");
+});
+
 test("version numbers and ids are not figures", () => {
   ok("Since release v4.12, GA4 is −10.1% against orders.");
   ok("Query q_3f9a1c2b shows 2,753.");

@@ -1,11 +1,11 @@
 // Reading the warehouse: run_query, reconcile, the tracking checks and watches.
 import { z } from "zod";
-import { checkHistory, comparisonWindow, runQuery, runReconcile } from "../engine.js";
+import { checkHistory, comparisonWindow, dataRange, runQuery, runReconcile } from "../engine.js";
 import { AppError } from "../errors.js";
 import { addDays, fmtPct, fmtVal } from "../format.js";
 import { MART } from "../metrics/load.js";
 import { newId } from "../store/store.js";
-import { ACT, both, dimName, f, GROUPING, STEP } from "../text.js";
+import { ACT, dimName, f, GROUPING, STEP } from "../text.js";
 import { defineAction } from "./registry.js";
 
 const date = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "a date written YYYY-MM-DD");
@@ -114,9 +114,8 @@ defineAction({
 
 /** Runs every check over the last N days and stores the run; watches get their changed flag. */
 export async function runAllChecks(ctx, days, actor) {
-  const range = await ctx.warehouse.range();
-  // An empty source (your shop's data before any sync landed rows) has nothing to check yet.
-  if (!range?.to) throw new AppError("no_data", "There is no data to check yet: connect a source or import a file first.");
+  // An empty source (your shop's data before any sync landed rows) has nothing to check yet: no_data.
+  const range = await dataRange(ctx.warehouse);
   const from = addDays(range.to, -(days - 1));
   const results = [];
   for (const check of checkIds(ctx.pack)) results.push(await runReconcile(ctx, { check, from, to: range.to }));
@@ -142,7 +141,7 @@ defineAction({
   mcp: true,
   input: z.object({ days: z.number().int().min(1).max(90).default(14).describe("Days to check, ending on the last day with data.") }).strict(),
   async run(ctx, { days }) {
-    const run = await runAllChecks(ctx, days, ctx.actor === "chat_app" ? "chat_app" : ctx.actor);
+    const run = await runAllChecks(ctx, days, ctx.actor);
     ctx.log(ACT.checks_run(run.results.length, run.results.filter((r) => r.verdict === "does_not_add_up").length));
     return run;
   },
@@ -161,7 +160,7 @@ defineAction({
   mcp: false,
   input: (pack) => z.object({ check: z.enum(checkIds(pack)), days: z.number().int().min(1).max(90).optional(), from: date.optional(), to: date.optional(), run_id: z.string().optional() }).strict(),
   async run(ctx, { check, days = 14, from, to, run_id }) {
-    const range = await ctx.warehouse.range();
+    const range = await dataRange(ctx.warehouse);
     const runs = ctx.store.listCheckRuns(20);
     const stored = run_id ? runs.find((r) => r.id === run_id)?.results.find((r) => r.check === check) : null;
     if (run_id && !stored) throw new AppError("not_found", "Unknown run.");
@@ -229,5 +228,3 @@ defineAction({
     return { ok: true };
   },
 });
-
-export { both };

@@ -59,8 +59,8 @@ node src/cli.js seed-demo        # rebuilds the demo and starts a fresh workspac
 - **Tracking audit**: a failing GA4 check offers "Test the purchase journey", which hands the journey, device and
   site to ai tag debugger and links its finding back to the check.
 - **Sources**: connect GA4, an orders file (CSV or Excel), or Shopify or WooCommerce, and the app builds its
-  data from them on this machine. BigQuery and the demo stay available. Other connectors are on the Analitik
-  İşler Cloud waitlist.
+  data from them on this machine. BigQuery and the demo stay available. Other connectors are on the ai cloud
+  waitlist.
 - **Settings**: sources, model, chat apps, events, language and theme, help, activity.
 
 ## Models
@@ -118,8 +118,8 @@ ai cloud is on a waitlist: email hello@analitikisler.com with the subject "ai cl
 When a check does not add up, the app offers an email to Analitik İşler with the tally filled in, so the cause
 can be found. `AI_ANALYST_HELP_EMAIL` sends it to your own team instead; `AI_ANALYST_HELP=off` removes it.
 
-With early-access credentials, set `AI_ANALYST_CLOUD_URL` and `AI_ANALYST_CLOUD_TOKEN` to answer through Analitik
-İşler Cloud. A model key of your own always takes precedence.
+With early-access credentials, set `AI_ANALYST_CLOUD_URL` and `AI_ANALYST_CLOUD_TOKEN` to answer through ai cloud.
+A model key of your own always takes precedence.
 
 ## Privacy
 
@@ -143,7 +143,9 @@ runs: selected, read through `*`, an alias, a CTE or a subquery, grouped or orde
 `QUALIFY` or a join condition against a value, inside `CASE`, `LIKE`, `IN`, `COUNTIF` or any function. So what can
 leave about a protected column is the number of its distinct values in a group. A self-join, or a join to any
 column of an allowed table, is allowed; it tells whether values are equal, never what they are. A query that uses a
-protected column cannot contain a CTE or a subquery. When you add a table, the server proposes protected columns by
+protected column cannot contain a CTE or a subquery. As a second fence, the query that runs reads each such table
+through a projection without its protected columns (you see it in the answer's SQL), so a use the checks missed
+finds no such column. When you add a table, the server proposes protected columns by
 name, compound names included (`customer_email`, `contact_phone`, `client_ip`, Turkish `eposta`, `telefon`, `ad`,
 `soyad`, `adres`, `dogum_tarihi`): email, phone, names, addresses, postcodes, IP addresses, birth dates, national
 ids, IBAN and card numbers, and precise location. You confirm the list in Settings › Sources. Protection is by
@@ -191,7 +193,7 @@ than the list. Details in `docs/CONTRACT.md`. To report a security problem, see 
 **Your shop, without a warehouse.** `docs/connecting-your-shop.md` covers giving the app read access to GA4,
 exporting orders from ikas, Ticimax, Shopify or WooCommerce, and creating a read-only Shopify token or WooCommerce
 key. Connect them in Settings › Sources. With GA4 and orders connected, the GA4 tracking check runs on your own
-data; ROAS and the ad-platform checks need ad data, which comes with BigQuery or the Cloud connectors.
+data; ROAS and the ad-platform checks need ad data, which comes with BigQuery or the ai cloud connectors.
 
 **BigQuery.** `docs/connecting-bigquery.md` covers connecting a client's GA4 export, Google Ads transfer,
 back-office orders and ad costs in BigQuery, with the SQL in `models/` that builds the mart every metric reads.
@@ -213,7 +215,9 @@ cards, charts and the model's prompt all follow it.
 | `src/checks/reconcile.js` | the tally |
 | `src/agent/` | model tool loop (Anthropic, OpenAI-compatible), the no-model planner, number grounding |
 | `src/explore/` | the exploratory SQL guard and runner |
-| `src/warehouse/` | DuckDB for the demo, BigQuery for clients |
+| `src/warehouse/` | DuckDB for the demo and your shop's data, BigQuery for clients |
+| `src/connectors/` | GA4, the orders file, Shopify and WooCommerce; the guarded fetch; the local warehouse build |
+| `src/demo/` | the demo shop's generated data and the seeded workspace |
 | `src/store/` | the app database (`node:sqlite`) |
 | `src/server.js`, `src/mcp.js`, `src/cli.js` | HTTP API, MCP server, command line |
 | `web/` | the app (React, shadcn components on the Analitik İşler design system); see `web/README.md` |
@@ -238,7 +242,7 @@ cards, charts and the model's prompt all follow it.
   on a shop connected that way.
 - On demo data the tracking audit is simulated. On own data it is handed to ai tag debugger through a chat app.
 - Not built in the open-source app: Meta, Google Ads, TikTok, ikas, Ticimax, Search Console and Google Tag
-  Manager connectors (on the Cloud waitlist), scheduled alert delivery, multi-workspace hosting.
+  Manager connectors (on the ai cloud waitlist), scheduled alert delivery, multi-workspace hosting.
 
 ## Licence and trademarks
 

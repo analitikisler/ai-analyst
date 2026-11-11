@@ -4,7 +4,7 @@
 // rename. Readers (this server, the MCP server) never see a half-written file.
 import { chmodSync, existsSync, mkdirSync, renameSync, rmSync } from "node:fs";
 import path from "node:path";
-import { addDays } from "../format.js";
+import { addDays, isISODate } from "../format.js";
 import { MART } from "../metrics/load.js";
 
 export const localFile = (config) => path.join(config.dataDir, "warehouse.duckdb");
@@ -16,7 +16,6 @@ export const LANDING = {
 };
 const CHANNELS = new Set(MART.dimensions.channel);
 const DEVICES = new Set(MART.dimensions.device);
-const ISO = /^\d{4}-\d{2}-\d{2}$/;
 
 /**
  * Replaces one source's aggregates for the days it covered: rows outside [from, to] stay, rows inside are replaced.
@@ -27,7 +26,7 @@ export function replaceLanding(store, { table, source, from, to, rows }) {
   const cols = LANDING[table];
   const clean = [];
   for (const r of rows) {
-    if (!ISO.test(r.date) || r.date < from || r.date > to) continue;
+    if (!isISODate(r.date) || r.date < from || r.date > to) continue;
     const channel = CHANNELS.has(r.channel) ? r.channel : "unknown";
     const device = DEVICES.has(r.device) ? r.device : "unknown";
     clean.push({ date: r.date, channel, device, ...Object.fromEntries(cols.map((c) => [c, Number.isFinite(Number(r[c])) ? Number(r[c]) : 0])) });
@@ -57,8 +56,6 @@ export function dropLanding(store, source) {
   for (const t of Object.keys(LANDING)) store.setMeta(`landing_days:${t}:${source}`, []);
 }
 
-export const landingSources = (store) => store.db.prepare("SELECT DISTINCT source FROM landing").all().map((r) => r.source);
-
 /**
  * Writes warehouse.duckdb from the landing rows: landing_ga4, landing_orders, landing_days and the mart. Columns no
  * connector fills stay NULL (ad spend, platform conversions); a measure is 0 on a day its source covered and NULL on
@@ -86,6 +83,7 @@ export async function buildLocalWarehouse(config, store) {
   const instance = await DuckDBInstance.create(tmp, { enable_external_access: "false" });
   const conn = await instance.connect();
   let n = 0;
+  let built = false;
   try {
     await conn.run("CREATE TABLE landing_ga4 (source VARCHAR, date DATE, channel VARCHAR, device VARCHAR, sessions BIGINT, ga4_purchases BIGINT, ga4_revenue DECIMAL(18, 2))");
     await conn.run("CREATE TABLE landing_orders (source VARCHAR, date DATE, channel VARCHAR, device VARCHAR, orders BIGINT, revenue DECIMAL(18, 2))");
@@ -121,9 +119,12 @@ export async function buildLocalWarehouse(config, store) {
       ORDER BY k.date, k.channel, k.device`);
     n = Number((await conn.runAndReadAll(`SELECT COUNT(*) AS n FROM ${MART.model}`)).getRowObjectsJson()[0].n);
     await conn.run("CHECKPOINT");
+    built = true;
   } finally {
     conn.closeSync?.();
     instance.closeSync?.();
+    // A failed build leaves nothing behind; the file in use stays as it was.
+    if (!built) for (const f of [tmp, `${tmp}.wal`]) rmSync(f, { force: true });
   }
   chmodSync(tmp, 0o600);
   renameSync(tmp, file);

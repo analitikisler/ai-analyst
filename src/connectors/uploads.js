@@ -94,15 +94,15 @@ function view(app, u, table) {
 /** Registers a received file: checks it is CSV or XLSX and readable, guesses the mapping, returns OrdersUpload. */
 export async function createUpload(app, { file, size, fileName }) {
   pruneUploads(app);
-  const head = readFileSync(file).subarray(0, 4096);
-  const kind = fileKind(fileName, head);
+  const bytes = readFileSync(file);
+  const kind = fileKind(fileName, bytes.subarray(0, 4096));
   if (!kind) {
     rmSync(file, { force: true });
     throw new AppError("upload_kind", "Choose a CSV or XLSX file (an older .xls file can be saved as XLSX from Excel).", { params: { name: String(fileName).slice(0, 120) } });
   }
   let table;
   try {
-    table = await readTableSafe(readFileSync(file), kind);
+    table = await readTableSafe(bytes, kind);
   } catch (err) {
     rmSync(file, { force: true });
     throw err;

@@ -4,7 +4,8 @@ import "./setup.js";
 import { test, before, after } from "node:test";
 import assert from "node:assert/strict";
 import { runTurn } from "../src/agent/agent.js";
-import { periodOf, route } from "../src/agent/planner.js";
+import { namedRange, periodOf, route, whyDetail, whyText } from "../src/agent/planner.js";
+import { validateSentence } from "../src/agent/validate.js";
 import { demoWorkspace } from "./helpers.js";
 
 let ws;
@@ -35,6 +36,61 @@ test("periods: last N days, yesterday, last week as the last complete Monday to 
   assert.deepEqual(p("for 9–22 oct"), ["2026-10-09", "2026-10-22"]);
   assert.deepEqual(p("anything", 7), ["2026-10-16", "2026-10-22"]);
   assert.deepEqual(p("in the last 400 days"), ["2026-07-25", "2026-10-22"], "clamped to the data");
+});
+
+test("a range of days in any month, in English or Turkish; days with no data are refused, never answered with the nearest days", () => {
+  const p = (q) => {
+    const r = periodOf(q.toLocaleLowerCase("tr"), 14, DATA);
+    return [r.from, r.to, r.label.en, r.label.tr];
+  };
+  assert.deepEqual(p("Revenue for 3–9 Sep"), ["2026-09-03", "2026-09-09", "3–9 Sep", "3–9 Eyl"]);
+  assert.deepEqual(p("3-9 eylül arasında ciro"), ["2026-09-03", "2026-09-09", "3–9 Sep", "3–9 Eyl"]);
+  assert.deepEqual(p("1–15 Ağustos'ta sipariş"), ["2026-08-01", "2026-08-15", "1–15 Aug", "1–15 Ağu"]);
+  assert.deepEqual(p("orders for 28 Sep – 4 Oct"), ["2026-09-28", "2026-10-04", "28 Sep – 4 Oct", "28 Eyl – 4 Eki"]);
+  assert.deepEqual(p("orders for 20–31 July"), ["2026-07-25", "2026-07-31", "20–31 Jul", "20–31 Tem"], "clamped to where the data starts");
+  assert.deepEqual(p("orders for 15–30 October"), ["2026-10-15", "2026-10-22", "15–30 Oct", "15–30 Eki"], "and to where it ends");
+  // A month word must stand whole, and the days must be dates.
+  assert.equal(namedRange("the top 3-5 marketing channels", DATA), null);
+  assert.equal(namedRange("orders for 30–31 feb", DATA), null);
+  // A month after the data ends is read as last year's, like any date that has not come yet.
+  assert.deepEqual([namedRange("3–9 nov", DATA).from, namedRange("3–9 nov", DATA).outside], ["2025-11-03", true]);
+  assert.deepEqual([namedRange("28 dec – 3 jan", DATA).from, namedRange("28 dec – 3 jan", DATA).to], ["2025-12-28", "2026-01-03"]);
+  for (const q of ["Revenue for 3–9 Nov", "3–9 Haziran'da kaç sipariş geldi?", "Do GA4 purchases match orders for 1–7 May?"]) {
+    const r = route(q, pc());
+    assert.deepEqual([r.kind, r.refusal.code, r.refusal.missing], ["refusal", "not_in_data", "period"], q);
+    assert.match(r.refusal.body.en, /is outside the data, which covers 25 Jul–22 Oct 2026/);
+    assert.match(r.refusal.body.tr, /verinin dışında/);
+  }
+  assert.equal(route("Revenue for 3–9 Sep", pc()).kind, "metric");
+});
+
+test("why, on data that is not the demo's: only what the figures and the audits say", () => {
+  const side = (key, expected, measured, verdict) => ({ key, expected, measured, delta_pct: (measured - expected) / expected, verdict });
+  const base = { check: "ga4_vs_orders", unit: "count", from: "2026-10-09", to: "2026-10-22", tolerance: 0.05, verdict: "does_not_add_up", expected: { value: 1000 }, measured: { value: 1200 }, delta: 200, delta_pct: 0.2, out_of_tolerance_since: "2026-10-12", findings: [], breakdown: [side("mobile", 600, 610, "adds_up"), side("desktop", 400, 590, "does_not_add_up")] };
+  // GA4 counts more, on desktop: the demo's sentence ("fewer", "the gap is on mobile", a release, Safari) would be false.
+  const more = whyText(base, DATA);
+  assert.match(more.en, /^GA4 recorded 1,200 purchases against 1,000 back-office orders for 9–22 Oct 2026: 20\.0% more, outside the ±5% tolerance\. The gap is on desktop \(\+?47\.5%\) from 12 Oct\. No audit finding explains it yet\.$/);
+  assert.match(more.tr, /GA4 %20,0 daha fazla.*Fark masaüstünde.*Bunu açıklayan bir denetim bulgusu şimdilik yok\.$/);
+  assert.doesNotMatch(`${more.en} ${more.tr}`, /mobile \(|mobilde|Safari|v4\.12|release|sürüm/);
+  assert.deepEqual(validateSentence(more, { check: base }), { ok: true, unmatched: [] });
+  const detail = whyDetail(base);
+  assert.deepEqual([detail.started, detail.release, detail.segment.key, detail.narrower], ["2026-10-12", null, "desktop", null]);
+  assert.doesNotMatch(JSON.stringify(detail.next), /v4\.12|Safari|thank-you/, "the demo's fix is not advised for another gap");
+  // Both devices out: no segment is named, the day it started is.
+  const both = whyText({ ...base, breakdown: [side("mobile", 600, 720, "does_not_add_up"), side("desktop", 400, 480, "does_not_add_up")] }, DATA);
+  assert.match(both.en, /20\.0% more, outside the ±5% tolerance\. The difference has been outside the tolerance since 12 Oct\. No audit finding/);
+  assert.doesNotMatch(both.en, /The gap is on/);
+  // An audit's own finding is quoted as it was written, with no release it does not carry.
+  const found = { id: "f_1", source: "ai tag debugger", since: "2026-10-12", release: null, checks: ["ga4_vs_orders"], text: { en: "Purchase fires twice on the desktop thank-you page", tr: "Masaüstü teşekkür sayfasında purchase iki kez gönderiliyor" } };
+  const quoted = whyText({ ...base, findings: [found] }, DATA);
+  assert.match(quoted.en, /from 12 Oct\. ai tag debugger found that purchase fires twice on the desktop thank-you page\.$/);
+  assert.match(quoted.tr, /ai tag debugger şunu buldu: Masaüstü teşekkür sayfasında purchase iki kez gönderiliyor\.$/);
+  assert.equal(whyDetail({ ...base, findings: [found] }).narrower, null);
+  // GA4 short on mobile alone, on someone's own data: told by device, with their finding, not the demo's.
+  const mobile = { ...base, measured: { value: 850 }, delta: -150, delta_pct: -0.15, breakdown: [side("mobile", 600, 455, "does_not_add_up"), side("desktop", 400, 395, "adds_up")], findings: [{ ...found, text: { en: "The consent banner blocks the purchase tag on iOS.", tr: "Çerez bandı iOS’ta purchase tag’ini engelliyor." } }] };
+  const own = whyText(mobile, DATA);
+  assert.match(own.en, /^GA4 recorded 15\.0% fewer purchases than the back office for 9–22 Oct 2026\. The gap is on mobile \(−24\.2%\); desktop is inside the tolerance \(−1\.3%\)\. It starts on 12 Oct\. ai tag debugger found that the consent banner blocks the purchase tag on iOS\.$/);
+  assert.doesNotMatch(`${own.en} ${own.tr}`, /Safari|v4\.12|release|sürümünün/);
 });
 
 test("routes: checks, the device follow-up, why, metrics, proposals and refusals", () => {

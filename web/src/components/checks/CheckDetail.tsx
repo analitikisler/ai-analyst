@@ -12,7 +12,7 @@ import type { CheckId } from "@/api/types";
 import { useOpenMetric, useWatchToggle } from "@/ask/hooks";
 import { CHECK_LABELS } from "@/ask/labels";
 import { CheckEvidenceChart, DataTable, NoDeviceSplit } from "@/components/charts";
-import { CodeBlock, Disclosure, Panel, PanelHeader, Status } from "@/components/kit";
+import { CodeBlock, Disclosure, ErrorState, Panel, PanelHeader, Status } from "@/components/kit";
 import { Tally } from "@/components/tally/Tally";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -33,12 +33,13 @@ export function CheckDetail({ check, period, onAsk }: { check: CheckId; period?:
   const { data: state } = useAppState();
   const [choice, setChoice] = useState<"dashboard" | 7 | 14 | 28 | 90>(period ? "dashboard" : (state?.check_run?.days as 7 | 14 | 28 | 90 | undefined) ?? 14);
   const days = choice === "dashboard" ? (state?.check_run?.days ?? 14) : choice;
-  const { data, isLoading, isFetching } = useCheck(check, choice === "dashboard" && period ? period : { days: choice === "dashboard" ? 14 : choice }, runId);
+  const { data, isLoading, isFetching, error, refetch } = useCheck(check, choice === "dashboard" && period ? period : { days: choice === "dashboard" ? 14 : choice }, runId);
   const openMetric = useOpenMetric();
   const toggleWatch = useWatchToggle();
   const openAudit = useOpenAudit();
   const title = pick(CHECK_LABELS[check]);
   const watching = !!state?.watches.some((w) => w.check === check);
+  if (error && !data) return <ErrorState error={error} onRetry={() => void refetch()} retrying={isFetching} />;
   if (isLoading || !data) {
     return (
       <div className="flex flex-col gap-4 p-4" aria-busy>
@@ -155,7 +156,7 @@ export function CheckDetail({ check, period, onAsk }: { check: CheckId; period?:
         <Panel key={fd.id} padded>
           <h2 className="text-base font-semibold text-text-strong">{t.check.finding_title}</h2>
           <p className="mt-1 text-sm text-text">{pick(fd.text)}</p>
-          {fd.since && <p className="mt-1 font-mono text-2xs text-text-muted">{fmt(t.check.finding_meta, { source: fd.source, date: f.since(fd.since), release: "v4.12" })}</p>}
+          {fd.since && <p className="mt-1 font-mono text-2xs text-text-muted">{fd.release ? fmt(t.check.finding_meta, { source: fd.source, date: f.since(fd.since), release: fd.release }) : fmt(t.check.finding_meta_no_release, { source: fd.source, date: f.since(fd.since) })}</p>}
           {fd.confirmed && (
             <p className="mt-2 flex flex-wrap items-center gap-x-2 text-[13px] text-text">
               <ScanSearchIcon size={14} strokeWidth={1.75} aria-hidden className="text-text-muted" />

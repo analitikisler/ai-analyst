@@ -1,5 +1,5 @@
 // The tables the agent may read (design: multi-table queries, 25 Oct 2026). The person chooses them in Settings ›
-// Data source; AI_ANALYST_EXPLORE_ALLOW sets them on the server and locks the list. The mart is always on it, and an
+// Sources; AI_ANALYST_EXPLORE_ALLOW sets them on the server and locks the list. The mart is always on it, and an
 // empty list (the default) means the mart alone. An entry is a dataset (every table in it, also ones added later)
 // or one table. The demo has its own list over its shop tables, so switching sources never widens the other.
 //

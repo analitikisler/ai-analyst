@@ -6,20 +6,65 @@
 //
 // route() reads the question and returns what to do, without touching the warehouse; execute() does it.
 // Follow-ups use route() too, to skip a question that would repeat an answer already given.
-import { addDays, f, monthStart, trAt } from "../format.js";
+import { addDays, f, isISODate, trAt } from "../format.js";
 import { resolveQuery } from "../metrics/compile.js";
 import { lastCompleteWeek, resolvePeriod, runQuery, runReconcile } from "../engine.js";
 import { MART_COLUMNS } from "../explore/run.js";
-import { both, dimName, enShort, EXPLORE_Q, FOLLOW, GROUPING, NEAR, PLANNER_LABEL, READ_AS, REFUSAL, STEP, T, trFrom, trLong, WHY_NEXT } from "../text.js";
+import { both, dimName, enShort, EXPLORE_Q, FOLLOW, GROUPING, NEAR, READ_AS, REFUSAL, STEP, T, trFrom, trLong, WHY_NEXT } from "../text.js";
 
 /** The demo's planted release: the day the GA4 gap starts. */
 export const RELEASE = { date: "2026-10-09", label: T("v4.12 release", "v4.12 sürümü") };
+/** The demo's seeded finding for it (src/demo/seed.js). What is known about it is said only when it is the finding. */
+const DEMO_GA4_FINDING = "f_ga4_mobile_safari";
 
 const norm = (s) => s.toLocaleLowerCase("tr").replace(/[’'`]/g, "'");
 const has = (s, ...res) => res.some((r) => r.test(s));
 const range2 = (from, to) => ({ en: f.en.range(from, to), tr: f.tr.range(from, to) });
 
 // ---------------------------------------------------------------- reading the question
+
+const MONTH_NAMES = [
+  ["jan", "january", "oca", "ocak"],
+  ["feb", "february", "şub", "şubat"],
+  ["mar", "march", "mart"],
+  ["apr", "april", "nis", "nisan"],
+  ["may", "mayıs"],
+  ["jun", "june", "haz", "haziran"],
+  ["jul", "july", "tem", "temmuz"],
+  ["aug", "august", "ağu", "ağustos"],
+  ["sep", "sept", "september", "eyl", "eylül"],
+  ["oct", "october", "eki", "ekim"],
+  ["nov", "november", "kas", "kasım"],
+  ["dec", "december", "ara", "aralık"],
+];
+const EN_MONTH = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+const TR_MONTH = ["Oca", "Şub", "Mar", "Nis", "May", "Haz", "Tem", "Ağu", "Eyl", "Eki", "Kas", "Ara"];
+// A month as written, whole: "mar" but not "market". A Turkish name may carry its ending (ekimde, ekim'de).
+const MONTH_WORD = `(${MONTH_NAMES.flat().sort((a, b) => b.length - a.length).join("|")})(?:'?(?:d[ae]n?|t[ae]n?))?(?![a-zçğıöşü])`;
+const monthOf = (word) => MONTH_NAMES.findIndex((names) => names.includes(word));
+const SAME_MONTH = new RegExp(`(\\d{1,2})\\s*[–-]\\s*(\\d{1,2})\\s+${MONTH_WORD}`);
+const TWO_MONTHS = new RegExp(`(\\d{1,2})\\s+${MONTH_WORD}\\s*[–-]\\s*(\\d{1,2})\\s+${MONTH_WORD}`);
+
+/**
+ * A range the question names by its days: "9–22 Oct", "3–9 kasım", "28 Sep – 4 Oct", in the year of the data (the
+ * year before when that would be after the data ends). Null when the question names none, or the days are no dates.
+ * @returns {{ from: string, to: string, label: {en, tr}, outside: boolean } | null} outside: no day of it has data
+ */
+export function namedRange(s, data) {
+  const two = TWO_MONTHS.exec(s);
+  const one = two ? null : SAME_MONTH.exec(s);
+  if (!two && !one) return null;
+  const [d1, m1, d2, m2] = two ? [two[1], monthOf(two[2]), two[3], monthOf(two[4])] : [one[1], monthOf(one[3]), one[2], monthOf(one[3])];
+  const day = (y, m, d) => `${y}-${String(m + 1).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
+  let y = Number(data.to.slice(0, 4));
+  if (day(y, m1, d1) > data.to) y -= 1;
+  const from = day(y, m1, d1);
+  // 28 Dec – 3 Jan ends in the next year.
+  const to = day(y, m2, d2) < from ? day(y + 1, m2, d2) : day(y, m2, d2);
+  if (!isISODate(from) || !isISODate(to)) return null;
+  const label = two ? T(`${Number(d1)} ${EN_MONTH[m1]} – ${Number(d2)} ${EN_MONTH[m2]}`, `${Number(d1)} ${TR_MONTH[m1]} – ${Number(d2)} ${TR_MONTH[m2]}`) : T(`${Number(d1)}–${Number(d2)} ${EN_MONTH[m1]}`, `${Number(d1)}–${Number(d2)} ${TR_MONTH[m1]}`);
+  return { from, to, label, outside: to < data.from || from > data.to };
+}
 
 export function periodOf(s, fallbackDays, data) {
   const last = data.to;
@@ -33,13 +78,10 @@ export function periodOf(s, fallbackDays, data) {
   if (has(s, /last week/, /geçen hafta/)) return { ...lastCompleteWeek(last), key: "last_week", label: T("last complete week", "geçen tam hafta") };
   if (has(s, /this month/, /\bbu ay/)) return { ...resolvePeriod(data, "this_month"), key: "this_month", label: T("this month", "bu ay") };
   if (has(s, /last month/, /geçen ay/)) return { ...resolvePeriod(data, "last_month"), key: "last_month", label: T("last month", "geçen ay") };
-  // "9–22 Oct", the period the follow-up names; also any "D–D Mon" range in the data's year.
-  const named = /(\d{1,2})\s*[–-]\s*(\d{1,2})\s+(oct|eki)/.exec(s);
-  if (named) {
-    const y = last.slice(0, 4);
-    const pad = (d) => String(d).padStart(2, "0");
-    return { from: clamp(`${y}-10-${pad(named[1])}`), to: `${y}-10-${pad(named[2])}` > last ? last : `${y}-10-${pad(named[2])}`, label: T(`${named[1]}–${named[2]} Oct`, `${named[1]}–${named[2]} Eki`) };
-  }
+  // "9–22 Oct", the period the follow-up names, or any range of days in any month. One with no day of data is
+  // refused by route() before a period is read.
+  const named = namedRange(s, data);
+  if (named && !named.outside) return { from: clamp(named.from), to: named.to > last ? last : named.to, label: named.label };
   return { from: clamp(addDays(last, -(fallbackDays - 1))), to: last, label: both((l) => (l === "en" ? `last ${fallbackDays} days` : `son ${fallbackDays} gün`)) };
 }
 
@@ -106,6 +148,11 @@ export function route(question, pc) {
     if (missing === "weekday") return { kind: "refusal", refusal: { code: "planner_unknown", heading: REFUSAL.heading, body: outsideBody(), nearest: [NEAR.revenue_channel_28, NEAR.aov_device_28, NEAR.gads_14] } };
     return { kind: "refusal", refusal: { code: "not_in_data", missing, heading: REFUSAL.no_product.heading, body: REFUSAL.no_product.body, nearest: [NEAR.revenue_channel_28, NEAR.aov_device_28] } };
   }
+
+  // A range of days with no data: said plainly. Answering for the nearest days that have data would answer
+  // another question.
+  const asked = namedRange(s, pc.data);
+  if (asked?.outside) return { kind: "refusal", refusal: { code: "not_in_data", missing: "period", heading: REFUSAL.no_period.heading, body: REFUSAL.no_period.body(asked.label, range2(pc.data.from, pc.data.to)), nearest: [] } };
 
   const contextCheck = pc.context?.kind === "check" && pack.checks[pc.context.id] ? pc.context.id : null;
   const named = checkOf(s);
@@ -195,9 +242,11 @@ export function checkSentence(c, data) {
   }
 }
 
-function deviceSentence(c) {
+function deviceSentence(c, data) {
   const mob = c.breakdown.find((b) => b.key === "mobile");
   const desk = c.breakdown.find((b) => b.key === "desktop");
+  // A source with no device split (Shopify records none) has no mobile and desktop rows: the plain check sentence.
+  if (!mob || !desk) return checkSentence(c, data);
   const t = { en: f.en.pct(c.tolerance, 0), tr: f.tr.pct(c.tolerance, 0) };
   const onlyMobile = mob.verdict === "does_not_add_up" && desk.verdict === "adds_up";
   return {
@@ -206,28 +255,41 @@ function deviceSentence(c) {
   };
 }
 
-function whyText(c, data) {
-  if (c.check === "ga4_vs_orders") {
-    const mob = c.breakdown.find((b) => b.key === "mobile");
-    const desk = c.breakdown.find((b) => b.key === "desktop");
+/** A finding as a clause after the figures; the audit's own words, closed with a full stop. */
+function findingClause(fd) {
+  // The demo's finding has its short form, as the approved prototype wrote it.
+  if (fd.id === DEMO_GA4_FINDING) return { en: ` ai tag debugger found that purchase is not sent on mobile Safari since ${fd.release}.`, tr: ` ai tag debugger, ${fd.release}’den beri mobil Safari’de purchase gönderilmediğini buldu.` };
+  const stop = (x) => (/[.!?…]$/.test(x.trim()) ? x.trim() : `${x.trim()}.`);
+  return { en: ` ai tag debugger found that ${lowerFirst(stop(fd.text.en))}`, tr: ` ai tag debugger şunu buldu: ${stop(fd.text.tr)}` };
+}
+
+/**
+ * Why a check does not add up, from what the data and the audits say and nothing else: the figures, the segment
+ * that carries the difference when exactly one does, the day it started, and a finding when one is attached. With
+ * no finding it says the cause is not known yet.
+ */
+export function whyText(c, data) {
+  const mob = c.breakdown.find((b) => b.key === "mobile");
+  const desk = c.breakdown.find((b) => b.key === "desktop");
+  const fd = c.findings.find((x) => x.since) ?? c.findings[0] ?? null;
+  const starts = c.out_of_tolerance_since;
+  const clause = fd ? findingClause(fd) : T(" No audit finding explains it yet.", " Bunu açıklayan bir denetim bulgusu şimdilik yok.");
+  // GA4 short on mobile alone, desktop inside the tolerance: told by device. Only when the breakdown says so.
+  if (c.check === "ga4_vs_orders" && mob?.verdict === "does_not_add_up" && desk?.verdict === "adds_up" && (c.delta_pct ?? 0) < 0) {
     const r = range2(c.from, c.to);
-    const fd = c.findings.find((x) => x.since) ?? null;
-    // The release and the audit finding are named only when the data says so: the gap starts on the
-    // finding's since-date and a finding is attached.
-    const starts = c.out_of_tolerance_since;
-    const onRelease = fd && starts === fd.since;
+    // A release is named only when a finding carries one and the gap starts on the finding's day.
+    const release = fd?.release && starts === fd.since ? fd.release : null;
     return {
-      en: `GA4 recorded ${pct("en", abs(c.delta_pct))} fewer purchases than the back office for ${r.en}. The gap is on mobile (${pct("en", mob.delta_pct)}); desktop is inside the tolerance (${pct("en", desk.delta_pct)}).${starts ? ` It starts on ${enShort(starts)}${onRelease ? `, the day of release ${fd.release ?? RELEASE.label.en.split(" ")[0]}` : ""}.` : ""}${onRelease ? ` ai tag debugger found that purchase is not sent on mobile Safari since ${fd.release ?? "v4.12"}.` : ""}`,
-      tr: `${r.tr} döneminde GA4 sipariş paneline göre ${pct("tr", abs(c.delta_pct))} daha az satın alma kaydetti. Fark mobilde (${pct("tr", mob.delta_pct)}); masaüstü kabul edilen sapma içinde (${pct("tr", desk.delta_pct)}).${starts ? (onRelease ? ` Fark, ${fd.release ?? "v4.12"} sürümünün yayımlandığı ${trAt(starts)} başlıyor.` : ` Fark ${trLong(starts)} tarihinde başlıyor.`) : ""}${onRelease ? ` ai tag debugger, ${fd.release ?? "v4.12"}’den beri mobil Safari’de purchase gönderilmediğini buldu.` : ""}`,
+      en: `GA4 recorded ${pct("en", abs(c.delta_pct))} fewer purchases than the back office for ${r.en}. The gap is on mobile (${pct("en", mob.delta_pct)}); desktop is inside the tolerance (${pct("en", desk.delta_pct)}).${starts ? ` It starts on ${enShort(starts)}${release ? `, the day of release ${release}` : ""}.` : ""}${starts || fd ? clause.en : ""}`,
+      tr: `${r.tr} döneminde GA4 sipariş paneline göre ${pct("tr", abs(c.delta_pct))} daha az satın alma kaydetti. Fark mobilde (${pct("tr", mob.delta_pct)}); masaüstü kabul edilen sapma içinde (${pct("tr", desk.delta_pct)}).${starts ? (release ? ` Fark, ${release} sürümünün yayımlandığı ${trAt(starts)} başlıyor.` : ` Fark ${trLong(starts)} tarihinde başlıyor.`) : ""}${starts || fd ? clause.tr : ""}`,
     };
   }
-  const fd = c.findings[0];
   const base = checkSentence(c, data);
   const strip = (x) => x.replace(/^(Does not add up|Tutmuyor)\. /, "");
-  return {
-    en: `${strip(base.en)}${fd ? ` ai tag debugger found that ${lowerFirst(fd.text.en)}` : ""}`,
-    tr: `${strip(base.tr)}${fd ? ` ai tag debugger şunu buldu: ${fd.text.tr}` : ""}`,
-  };
+  // The day it started, unless the sentence above already names it (one segment out, or out since the data starts).
+  const said = starts && (new RegExp(`from ${enShort(starts)}`).test(base.en) || starts === data.from);
+  const since = starts && !said ? { en: ` The difference has been outside the tolerance since ${enShort(starts)}.`, tr: ` Fark ${trFrom(starts)} beri kabul edilen sapmanın dışında.` } : { en: "", tr: "" };
+  return { en: `${strip(base.en)}${since.en}${clause.en}`, tr: `${strip(base.tr)}${since.tr}${clause.tr}` };
 }
 
 export function whyDetail(c) {
@@ -237,12 +299,14 @@ export function whyDetail(c) {
   const fd = c.findings.find((x) => x.since) ?? c.findings[0];
   const release = fd?.since && c.out_of_tolerance_since === fd.since ? fd.release ?? null : null;
   const ga4 = c.check === "ga4_vs_orders" || c.check === "ga4_rev_vs_revenue";
+  // The browser and the fix are known for the demo's finding alone; any other gap gets the general next steps.
+  const demoFinding = fd?.id === DEMO_GA4_FINDING;
   return {
     started: c.out_of_tolerance_since,
     release,
     segment: seg ? { key: seg.key, delta_pct: seg.delta_pct, verdict: seg.verdict } : null,
-    narrower: ga4 && fd ? T("mobile Safari", "mobil Safari") : null,
-    next: ga4 ? WHY_NEXT.ga4 : c.check === "meta_vs_orders" ? WHY_NEXT.meta : WHY_NEXT.other,
+    narrower: ga4 && demoFinding ? T("mobile Safari", "mobil Safari") : null,
+    next: ga4 && demoFinding ? WHY_NEXT.ga4 : c.check === "meta_vs_orders" ? WHY_NEXT.meta : WHY_NEXT.other,
   };
 }
 
@@ -419,7 +483,7 @@ export async function execute(ctx, r, pc) {
       // The answer is about the segment: its headline, Δ and tally are mobile's; the whole check moves to one line.
       const mobile = await runReconcile(ctx, { check: r.check, from: r.period.from, to: r.period.to, filters: { device: ["mobile"] } });
       const segment = ctx.store.saveCheck({ ...mobile, label: both((l) => `${pack.checks[r.check].label[l]} · ${l === "en" ? "mobile" : "mobil"}`), breakdown: c.breakdown, breakdown_by: c.breakdown_by });
-      return checkAnswer(ctx, pc, r.check, r.period, { kind: "check_split", sentence: r.check === "ga4_vs_orders" ? deviceSentence(c) : checkSentence(c, pc.data), followups: [FOLLOW.why, FOLLOW.watch_ga4, FOLLOW.meta], check: segment, overall: c });
+      return checkAnswer(ctx, pc, r.check, r.period, { kind: "check_split", sentence: r.check === "ga4_vs_orders" ? deviceSentence(c, pc.data) : checkSentence(c, pc.data), followups: [FOLLOW.why, FOLLOW.watch_ga4, FOLLOW.meta], check: segment, overall: c });
     }
     case "why": {
       const c = await runReconcile(ctx, { check: r.check, from: r.period.from, to: r.period.to });
@@ -478,5 +542,3 @@ export function answerSignature(a) {
   if (c) return `${a.kind}|${c.check}|${c.from}|${c.to}|${JSON.stringify(c.filters?.device ?? null)}`;
   return `${a.kind}|${a.query.metric}|${a.query.group_by}|${a.query.from}|${a.query.to}`;
 }
-
-export { PLANNER_LABEL, monthStart };

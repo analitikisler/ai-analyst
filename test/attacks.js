@@ -110,6 +110,16 @@ export const DUCK_ATTACKS = [
   ["SELECT * FROM daily_channel_device TABLESAMPLE SYSTEM (10)", "sql_forbidden_keyword"],
   ["SELECT repeat('x', 100000000) FROM daily_channel_device", "sql_forbidden_function"],
   ["SELECT * FROM daily_channel_device WHERE current_user = 'x'", "sql_forbidden_keyword"],
+  // A carriage return ends a line comment in the warehouse: what follows it is read by the guard too.
+  [`SELECT 1 AS n FROM ${M} -- x\r UNION ALL SELECT s FROM secret_table`, "sql_table_not_allowed"],
+  // The FROM list goes on after USING (…): a table after its comma is checked.
+  [`SELECT s.s AS v, COUNT(*) AS n FROM ${M} a JOIN ${M} b USING (date), secret_table s GROUP BY 1`, "sql_table_not_allowed"],
+  // Forms the walk does not read: a positional column, a query that starts with FROM, DISTINCT ON, U& names.
+  [`SELECT #2 AS c, COUNT(*) AS n FROM ${M} GROUP BY 1`, "sql_unsupported_syntax"],
+  [`SELECT x AS v FROM (FROM ${M}) x`, "sql_unsupported_syntax"],
+  [`SELECT 1 AS a FROM ${M} UNION ALL BY NAME FROM ${M}`, "sql_unsupported_syntax"],
+  [`SELECT DISTINCT ON (channel) * FROM ${M}`, "sql_unsupported_syntax"],
+  [`SELECT U&"!0064ate" UESCAPE '!' AS d FROM ${M}`, "sql_unsupported_syntax"],
 ];
 
 export const BQ_ATTACKS = [
@@ -154,5 +164,10 @@ export const BQ_ATTACKS = [
   [`SELECT * FROM ${B} FOR SYSTEM_TIME AS OF TIMESTAMP '2026-01-01'`, null], // the mart at an earlier time: still the mart
   ["SELECT * FROM daily_channel_device", "sql_table_not_allowed"], // BigQuery names must be written in full
   ["SELECT * FROM ai_analyst.daily_channel_device", "sql_table_not_allowed"],
+  [`SELECT 1 AS n FROM ${B} -- x\r UNION ALL SELECT salary FROM \`ornek-data.hr.salaries\``, "sql_table_not_allowed"],
+  [`SELECT 1 AS n FROM ${B} # x\r UNION ALL SELECT salary FROM \`ornek-data.hr.salaries\``, "sql_table_not_allowed"],
+  [`SELECT s.salary AS v FROM ${B} a JOIN ${B} b USING (date), \`ornek-data.hr.salaries\` s`, "sql_table_not_allowed"],
+  // Pipe syntax puts expressions where the walk reads table names.
+  [`SELECT e, 1 AS n FROM (FROM ${B} |> AGGREGATE STRING_AGG(channel) AS e)`, "sql_unsupported_syntax"],
 ];
 

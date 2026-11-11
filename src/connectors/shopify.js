@@ -2,11 +2,17 @@
 // own *.myshopify.com domain. Per order only: created time, the test flag, the total, shipping and currency, and the
 // last visit's source and UTM (customerJourneySummary). No names, emails, addresses or phone numbers are requested.
 // Stored as daily aggregates only. Test orders are left out; cancelled orders count, as in the Orders metric (v3).
+// Not run against a live shop yet: the query shape, its cost and the pacing follow Shopify's published rules.
 import { AppError } from "../errors.js";
+import { addDays } from "../format.js";
 import { channelFrom, dateIn } from "./attribution.js";
 import { connectorFetch, jsonOf } from "./net.js";
 
-export const SHOPIFY_API_VERSION = "2025-07";
+export const SHOPIFY_API_VERSION = "2026-10";
+// One query may cost 1,000 points at most, and an order here costs about 8 (the order and the objects under it).
+export const SHOPIFY_PAGE = 100;
+/** Without read_all_orders Shopify gives a token the last 60 days of orders only. */
+export const SHOPIFY_RECENT_DAYS = 59;
 const SHOP = /^[a-z0-9][a-z0-9-]{0,59}\.myshopify\.com$/;
 
 /** "ornek" or "https://ornek.myshopify.com/admin" → "ornek.myshopify.com"; null when it is not a myshopify domain. */
@@ -18,7 +24,7 @@ export function shopDomain(v) {
 }
 
 const ORDERS = `query Orders($cursor: String, $q: String) {
-  orders(first: 250, after: $cursor, query: $q, sortKey: CREATED_AT) {
+  orders(first: ${SHOPIFY_PAGE}, after: $cursor, query: $q, sortKey: CREATED_AT, reverse: true) {
     pageInfo { hasNextPage endCursor }
     nodes {
       createdAt
@@ -31,18 +37,42 @@ const ORDERS = `query Orders($cursor: String, $q: String) {
 }`;
 const SHOP_INFO = `query { shop { ianaTimezone currencyCode } currentAppInstallation { accessScopes { handle } } }`;
 
+const MAX_WAIT_MS = 20_000;
+const THROTTLE_RETRIES = 3;
+
+/**
+ * Shopify meters queries by cost: a bucket of points that refills at a fixed rate. Every answer says how many
+ * points are left and how fast they come back, so the client waits just long enough for the next query of the same
+ * cost, and a throttled query is tried again after that wait instead of failing the sync.
+ */
 export function shopifyClient(app, shop, token) {
   const call = connectorFetch(app, { service: "Shopify", hosts: [shop] });
+  const sleep = app?.connectorSleep ?? ((ms) => new Promise((r) => setTimeout(r, ms)));
+  const limited = () => new AppError("rate_limited", "Shopify is limiting requests. The sync stopped and stored nothing; it tries again later.", { params: { status: 429 } });
+  let wait = 0;
   return async (query, variables = {}) => {
-    const res = await call(`https://${shop}/admin/api/${SHOPIFY_API_VERSION}/graphql.json`, { method: "POST", headers: { "Content-Type": "application/json", "X-Shopify-Access-Token": token }, body: JSON.stringify({ query, variables }) });
-    if (res.status === 401 || res.status === 403) throw new AppError("key_rejected", "Shopify did not accept the access token. Check it in the custom app's API credentials.", { params: { status: res.status } });
-    if (res.status === 404) throw new AppError("shop_unreachable", `No Shopify shop answers at ${shop}.`, { params: { host: shop } });
-    if (res.status === 429) throw new AppError("rate_limited", "Shopify is limiting requests. The sync stopped and stored nothing; it tries again later.", { params: { status: 429 } });
-    if (!res.ok) throw new AppError("shop_unreachable", `Shopify answered ${res.status}.`, { params: { host: shop, status: res.status } });
-    const body = await jsonOf(res);
-    if (body?.errors?.some?.((e) => e?.extensions?.code === "THROTTLED")) throw new AppError("rate_limited", "Shopify is limiting requests. The sync stopped and stored nothing; it tries again later.", { params: { status: 429 } });
-    if (body?.errors?.length) throw new AppError("shop_unreachable", "Shopify refused the query.", { params: { host: shop } });
-    return body?.data ?? {};
+    for (let attempt = 0; ; attempt++) {
+      if (wait > 0) await sleep(wait);
+      wait = 0;
+      const res = await call(`https://${shop}/admin/api/${SHOPIFY_API_VERSION}/graphql.json`, { method: "POST", headers: { "Content-Type": "application/json", "X-Shopify-Access-Token": token }, body: JSON.stringify({ query, variables }) });
+      if (res.status === 401 || res.status === 403) throw new AppError("key_rejected", "Shopify did not accept the access token. Check it in the custom app's API credentials.", { params: { status: res.status } });
+      if (res.status === 404) throw new AppError("shop_unreachable", `No Shopify shop answers at ${shop}.`, { params: { host: shop } });
+      if (res.status === 429) throw limited();
+      if (!res.ok) throw new AppError("shop_unreachable", `Shopify answered ${res.status}.`, { params: { host: shop, status: res.status } });
+      const body = await jsonOf(res);
+      const cost = body?.extensions?.cost;
+      const left = Number(cost?.throttleStatus?.currentlyAvailable);
+      const rate = Number(cost?.throttleStatus?.restoreRate);
+      const need = Number(cost?.requestedQueryCost);
+      if (rate > 0 && need > left) wait = Math.min(MAX_WAIT_MS, Math.ceil(((need - left) / rate) * 1000));
+      if (body?.errors?.some?.((e) => e?.extensions?.code === "THROTTLED")) {
+        if (attempt >= THROTTLE_RETRIES) throw limited();
+        wait = Math.max(wait, 2000);
+        continue;
+      }
+      if (body?.errors?.length) throw new AppError("shop_unreachable", "Shopify refused the query.", { params: { host: shop } });
+      return body?.data ?? {};
+    }
   };
 }
 
@@ -68,22 +98,36 @@ export async function shopifyInfo(client) {
 }
 
 /**
- * Daily aggregates for [from, to] in the shop's time zone, all pages.
- * @returns {Promise<{ rows, currency: string|null, orders: number }>}
+ * When the page cap stops a newest-first fetch, the oldest day read may be cut short: the days after it are whole.
+ * @returns {{ rows: object[], from: string, truncated: boolean }}
  */
-export async function fetchShopifyDays(client, { from, to, timeZone, maxPages = 400 }) {
+export function wholeDays(rows, { from, oldest, complete }) {
+  if (complete || !oldest) return { rows, from, truncated: false };
+  const kept = addDays(oldest, 1) > from ? addDays(oldest, 1) : from;
+  return { rows: rows.filter((r) => r.date >= kept), from: kept, truncated: true };
+}
+
+/**
+ * Daily aggregates for [from, to] in the shop's time zone, newest orders first, so a shop with more orders than
+ * maxPages holds loses its oldest days, never its latest: `from` is then the first whole day read.
+ * @returns {Promise<{ rows, currency: string|null, orders: number, from: string, truncated: boolean }>}
+ */
+export async function fetchShopifyDays(client, { from, to, timeZone, maxPages = 1000 }) {
   const byKey = new Map();
   let cursor = null;
   let currency = null;
-  let n = 0;
-  // Shopify reads these dates in the shop's time zone; the day filter below keeps [from, to] in that zone too.
-  const q = `created_at:>=${from} created_at:<=${to}T23:59:59 status:any`;
+  let oldest = null;
+  let complete = false;
+  // A day wider on each side, in UTC, whatever zone Shopify reads a bare date in; the day filter below keeps
+  // [from, to] in the shop's time zone. No status filter: every order, cancelled and closed ones too.
+  const q = `created_at:>=${addDays(from, -1)}T00:00:00Z created_at:<=${addDays(to, 1)}T23:59:59Z`;
   for (let page = 0; page < maxPages; page++) {
     const d = await client(ORDERS, { cursor, q });
     const conn = d.orders ?? { nodes: [], pageInfo: {} };
     for (const o of conn.nodes ?? []) {
-      if (o.test) continue;
       const date = dateIn(o.createdAt, timeZone);
+      if (date && (!oldest || date < oldest)) oldest = date;
+      if (o.test) continue;
       if (!date || date < from || date > to) continue;
       const total = Number(o.totalPriceSet?.shopMoney?.amount);
       if (!Number.isFinite(total)) continue;
@@ -96,15 +140,18 @@ export async function fetchShopifyDays(client, { from, to, timeZone, maxPages = 
       acc.orders += 1;
       acc.revenue += total - shipping;
       byKey.set(key, acc);
-      n++;
     }
-    if (!conn.pageInfo?.hasNextPage) break;
+    if (!conn.pageInfo?.hasNextPage) {
+      complete = true;
+      break;
+    }
     cursor = conn.pageInfo.endCursor;
   }
-  return { rows: [...byKey.values()], currency, orders: n };
+  const whole = wholeDays([...byKey.values()], { from, oldest, complete });
+  return { rows: whole.rows, currency, orders: whole.rows.reduce((n, r) => n + r.orders, 0), from: whole.from, truncated: whole.truncated };
 }
 
-const RANGE = `query { first: orders(first: 1, sortKey: CREATED_AT, query: "status:any") { nodes { createdAt } } last: orders(first: 1, sortKey: CREATED_AT, reverse: true, query: "status:any") { nodes { createdAt } } }`;
+const RANGE = `query { first: orders(first: 1, sortKey: CREATED_AT) { nodes { createdAt } } last: orders(first: 1, sortKey: CREATED_AT, reverse: true) { nodes { createdAt } } }`;
 
 /** The first and last day with an order, in the shop's time zone. */
 export async function shopifyRange(client, timeZone) {

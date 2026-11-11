@@ -40,7 +40,7 @@ const overrides: Partial<{ [N in keyof Actions]: (input: Actions[N]["input"]) =>
     const s = callAction("get_settings", {}, "en");
     s.server.loopback = LOOPBACK;
     if (!LOOPBACK) s.server.address = "http://192.168.1.20:8788";
-    s.data_source.kind = LOOPBACK ? { value: "bigquery", source: "file", locked: false } : { value: "bigquery", source: "env", locked: true, env: "AI_ANALYST_SOURCE" };
+    s.data_source.kind = LOOPBACK ? { value: "bigquery", source: "file", locked: false } : { value: "bigquery", source: "env", locked: true, env: "AI_ANALYST_WAREHOUSE" };
     s.data_source.max_bytes = { ...s.data_source.max_bytes, source: "env", locked: true, env: "BIGQUERY_MAX_BYTES" };
     s.model.providers = s.model.providers.map((p) => (p.id === "anthropic" ? { ...p, set: true, source: "env", locked: true, env: "ANTHROPIC_API_KEY", hint: "…7f3a", model: "claude-opus-5-5" } : p));
     return json({ ok: true, result: s });
@@ -49,7 +49,7 @@ const overrides: Partial<{ [N in keyof Actions]: (input: Actions[N]["input"]) =>
     const code = ({ anthropic: "key_rejected", openai: "model_not_found", gemini: "rate_limited", openai_compatible: "unreachable" } as const)[input.provider];
     return json({ ok: true, result: { ok: false, provider: input.provider, model: input.model ?? "", error: { code, status: code === "key_rejected" ? 401 : code === "rate_limited" ? 429 : code === "model_not_found" ? 404 : undefined, detail: code === "key_rejected" ? "invalid x-api-key" : undefined } } });
   },
-  save_model_key: (input) => (LOOPBACK ? fail("server_error", "Could not write secrets.json.", 500) : fail("not_loopback", "Settings can be changed only from loopback.", 403)),
+  save_model_key: (input) => (LOOPBACK ? fail("internal", "Could not write secrets.json.", 500) : fail("loopback_only", "Settings can only be changed from this machine.", 403)),
   set_bytes_cap: () => fail("locked", "Set by BIGQUERY_MAX_BYTES.", 409, { env: "BIGQUERY_MAX_BYTES" }),
   test_bigquery: (input) =>
     json({
@@ -69,7 +69,6 @@ const overrides: Partial<{ [N in keyof Actions]: (input: Actions[N]["input"]) =>
         ],
       },
     }),
-  import_gtm_events: () => fail("unavailable", "The GTM import needs Google Tag Manager API access (planned for ai cloud).", 409),
   start_tracking_audit: (input) => {
     const run: AuditRun = { ...callAction("start_tracking_audit", input, "en"), status: "handoff", steps: [], result: null, finished_at: null };
     run.handoff = {

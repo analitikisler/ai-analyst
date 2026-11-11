@@ -4,6 +4,7 @@ import { parseArgs } from "node:util";
 import { callAction } from "./actions/index.js";
 import { runAllChecks } from "./actions/data.js";
 import { runTurn } from "./agent/agent.js";
+import { noCloud } from "./cloud.js";
 import { loadConfig, workspaceName } from "./config.js";
 import { fmtPct } from "./format.js";
 import { startMcp } from "./mcp.js";
@@ -35,7 +36,7 @@ async function main(argv) {
       host: { type: "string" },
       "data-dir": { type: "string" },
       "no-cloud": { type: "boolean" },
-      lang: { type: "string", default: "en" },
+      lang: { type: "string" },
       days: { type: "string", default: "14" },
       help: { type: "boolean", short: "h" },
     },
@@ -49,7 +50,7 @@ async function main(argv) {
   if (values["no-cloud"] && process.env.AI_ANALYST_NO_CLOUD !== "0") process.env.AI_ANALYST_NO_CLOUD = "1";
   const env = { ...process.env, ...(values["data-dir"] ? { AI_ANALYST_DATA_DIR: values["data-dir"] } : {}), ...(values.port ? { PORT: values.port } : {}), ...(values.host ? { HOST: values.host } : {}) };
   const config = loadConfig({ env });
-  const lang = values.lang === "tr" ? "tr" : config.language;
+  const lang = values.lang ? (values.lang === "tr" ? "tr" : "en") : config.language;
   const person = (ws) => ({ actor: "person", lang, app: ws, turn: null });
 
   if (command === "seed-demo") {
@@ -69,7 +70,7 @@ async function main(argv) {
     const server = await startServer(ws);
     const { port } = server.address();
     const mode = ws.config.provider.value === "planner" ? "built-in planner" : `${ws.config.provider.value} · ${ws.config.model}`;
-    if (process.env.AI_ANALYST_NO_CLOUD === "1") console.log("No calls to outside services (AI_ANALYST_NO_CLOUD=1): BigQuery and model providers are refused.");
+    if (noCloud()) console.log("No calls to outside services (AI_ANALYST_NO_CLOUD is set): BigQuery and model providers are refused.");
     console.log(`ai analyst · ${workspaceName(ws.config, ws.warehouse)} · ${ws.warehouse.dialect} · answers: ${mode}`);
     const shown = ["0.0.0.0", "::"].includes(config.host) ? "127.0.0.1" : config.host;
     console.log(`Open http://${shown.includes(":") ? `[${shown}]` : shown}:${port}/${config.token ? "?token=<AI_ANALYST_TOKEN>" : ""}`);

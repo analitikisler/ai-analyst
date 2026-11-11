@@ -12,7 +12,7 @@ const metrics = {
     "unit": "try",
     "version": 1,
     "source": "ads",
-    "owner": "Bahadır Ölez",
+    "owner": "Analitik İşler",
     "description": {
       "en": "Cost reported by Google Ads, Meta Ads and TikTok Ads, converted to TRY at the day’s TCMB rate.",
       "tr": "Google Ads, Meta Ads ve TikTok Ads’in bildirdiği maliyet; günün TCMB kuruyla TRY’ye çevrilir."
@@ -45,7 +45,7 @@ const metrics = {
     "unit": "try",
     "version": 1,
     "source": "backoffice",
-    "owner": "Bahadır Ölez",
+    "owner": "Analitik İşler",
     "description": {
       "en": "Revenue divided by orders, both from the back office.",
       "tr": "Ciro bölü sipariş; ikisi de sipariş panelinden."
@@ -75,7 +75,7 @@ const metrics = {
     "unit": "pct",
     "version": 2,
     "source": "backoffice+ga4",
-    "owner": "Bahadır Ölez",
+    "owner": "Analitik İşler",
     "description": {
       "en": "Back-office orders divided by GA4 sessions. By channel, orders take the channel stored with the order and sessions the GA4 session source.",
       "tr": "Sipariş paneli siparişleri bölü GA4 oturumları. Kanal kırılımında sipariş, siparişle kaydedilen kanala; oturum, GA4 oturum kaynağına göre atanır."
@@ -105,7 +105,7 @@ const metrics = {
     "unit": "try",
     "version": 1,
     "source": "backoffice+ads",
-    "owner": "Bahadır Ölez",
+    "owner": "Analitik İşler",
     "description": {
       "en": "Channel spend divided by back-office orders attributed to that channel (last non-direct click).",
       "tr": "Kanal harcaması bölü o kanala atanan sipariş paneli siparişleri (son doğrudan olmayan tıklama)."
@@ -141,7 +141,7 @@ const metrics = {
     "unit": "count",
     "version": 2,
     "source": "ga4",
-    "owner": "Bahadır Ölez",
+    "owner": "Analitik İşler",
     "description": {
       "en": "Purchase events in the GA4 BigQuery export, counted once per transaction_id.",
       "tr": "GA4 BigQuery dışa aktarımındaki purchase etkinlikleri; her transaction_id bir kez sayılır."
@@ -168,7 +168,7 @@ const metrics = {
     "unit": "try",
     "version": 1,
     "source": "ga4",
-    "owner": "Bahadır Ölez",
+    "owner": "Analitik İşler",
     "description": {
       "en": "Purchase revenue in TRY from GA4 purchase events, counted once per transaction_id.",
       "tr": "GA4 purchase etkinliklerinden TRY satın alma geliri; her transaction_id bir kez sayılır."
@@ -195,7 +195,7 @@ const metrics = {
     "unit": "count",
     "version": 3,
     "source": "backoffice",
-    "owner": "Bahadır Ölez",
+    "owner": "Analitik İşler",
     "description": {
       "en": "Orders placed in the back office, by order date in Europe/Istanbul time. Test orders are excluded; cancelled orders are kept.",
       "tr": "Sipariş panelinde oluşan siparişler, İstanbul saatine göre sipariş tarihinde. Test siparişleri hariç, iptal edilen siparişler dahildir."
@@ -222,7 +222,7 @@ const metrics = {
     "unit": "count",
     "version": 1,
     "source": "ads",
-    "owner": "Bahadır Ölez",
+    "owner": "Analitik İşler",
     "description": {
       "en": "Conversions as Google Ads, Meta Ads and TikTok Ads report them in their own interfaces, each with its own attribution window.",
       "tr": "Google Ads, Meta Ads ve TikTok Ads’in kendi arayüzlerinde, kendi atıf pencereleriyle bildirdiği dönüşümler."
@@ -255,7 +255,7 @@ const metrics = {
     "unit": "try",
     "version": 2,
     "source": "backoffice",
-    "owner": "Bahadır Ölez",
+    "owner": "Analitik İşler",
     "description": {
       "en": "Order value in TRY including VAT, excluding shipping, from the back office. Refunds are not subtracted.",
       "tr": "Sipariş panelinden, KDV dahil ve kargo hariç TRY sipariş tutarı. İadeler düşülmez."
@@ -282,7 +282,7 @@ const metrics = {
     "unit": "ratio",
     "version": 2,
     "source": "backoffice+ads",
-    "owner": "Bahadır Ölez",
+    "owner": "Analitik İşler",
     "description": {
       "en": "Back-office revenue from orders whose last non-direct click came from the channel, divided by that channel’s spend. Platform-reported conversions are not used.",
       "tr": "Son doğrudan olmayan tıklaması kanaldan gelen siparişlerin sipariş paneli cirosu, bölü o kanalın harcaması. Platformların bildirdiği dönüşümler kullanılmaz."
@@ -318,7 +318,7 @@ const metrics = {
     "unit": "count",
     "version": 1,
     "source": "ga4",
-    "owner": "Bahadır Ölez",
+    "owner": "Analitik İşler",
     "description": {
       "en": "GA4 sessions: distinct user_pseudo_id and ga_session_id pairs in the BigQuery export, on the day the session starts.",
       "tr": "GA4 oturumları: BigQuery dışa aktarımındaki benzersiz user_pseudo_id ve ga_session_id çiftleri; oturumun başladığı güne yazılır."

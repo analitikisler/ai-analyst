@@ -8,26 +8,26 @@ import { MessageSquareOffIcon } from "lucide-react";
 import { useConversation } from "@/api/queries";
 import type { Answer, Text } from "@/api/types";
 import { useAskStore } from "@/ask/AskStore";
-import { EmptyState } from "@/components/kit";
+import { EmptyState, ErrorState } from "@/components/kit";
 import { MessageScroller, MessageScrollerButton, MessageScrollerContent, MessageScrollerProvider, MessageScrollerViewport } from "@/components/ui/message-scroller";
 import { Skeleton } from "@/components/ui/skeleton";
 import { fmt, useBilingual, useT } from "@/i18n";
+import { isMissing } from "@/lib/errors";
 import { TurnView, type ThreadActions } from "./Thread";
 
-export function ConversationThread({ conversationId, actions, onNotFound, footer, className, contentClassName }: { conversationId: string | null; actions: ThreadActions; onNotFound?: () => void; footer?: ReactNode; className?: string; contentClassName?: string }) {
+export function ConversationThread({ conversationId, actions, footer, className, contentClassName }: { conversationId: string | null; actions: ThreadActions; footer?: ReactNode; className?: string; contentClassName?: string }) {
   const t = useT();
   const pick = useBilingual();
   const { live, announced } = useAskStore();
-  const { data, isLoading, error } = useConversation(conversationId ?? undefined);
+  const { data, isLoading, isFetching, error, refetch } = useConversation(conversationId ?? undefined);
   const liveHere = live && (live.conversationId === conversationId || (!live.conversationId && !conversationId) || (live.conversationId && !data));
   const freshIds = useRef(new Set<string>());
   if (liveHere && live?.turnId) freshIds.current.add(live.turnId);
   const turns = data?.turn_list.filter((tt) => !(liveHere && tt.id === live?.turnId)) ?? [];
 
-  if (conversationId && error) {
-    onNotFound?.();
-    return <EmptyState icon={MessageSquareOffIcon} title={t.nf.conversation} />;
-  }
+  // "Not here any more" only when the server says so. A failed request can be tried again, and a conversation
+  // already on screen stays there when a later refresh of it fails.
+  if (conversationId && error && !data) return isMissing(error) ? <EmptyState icon={MessageSquareOffIcon} title={t.nf.conversation} /> : <ErrorState error={error} onRetry={() => void refetch()} retrying={isFetching} />;
   const contextName = (c: unknown): Text | null => ((c as { name?: Text } | null)?.name ? (c as { name: Text }).name : null);
   return (
     <MessageScrollerProvider autoScroll defaultScrollPosition="last-anchor">

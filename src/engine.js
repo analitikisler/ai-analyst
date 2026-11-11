@@ -11,6 +11,16 @@ import { newId } from "./store/store.js";
 
 const now = () => new Date().toISOString();
 
+/**
+ * The mart's date range, for anything that reads figures. An empty source (your shop's data before the first sync
+ * landed rows) has no range: that is no_data, which a person can act on, never a crash on a null date.
+ */
+export async function dataRange(warehouse) {
+  const range = await warehouse.range();
+  if (!range?.to) throw new AppError("no_data", "There is no data yet: connect a source or import a file first.");
+  return range;
+}
+
 // ---------------------------------------------------------------- windows and periods
 
 /** The comparison window: the previous period shifted by whole weeks (or a month for month to date), or 364 days.
@@ -98,7 +108,7 @@ async function aggregate(ctx, metric, q) {
  * @param {{ save?: boolean }} [opts] save: store it, so an answer can cite it by id (default true).
  */
 export async function runQuery(ctx, input, { save = true } = {}) {
-  const range = await ctx.warehouse.range();
+  const range = await dataRange(ctx.warehouse);
   const q = resolveQuery(ctx.pack, input, range);
   const metric = ctx.pack.metrics[q.metric];
   const agg = await aggregate(ctx, metric, q);
@@ -158,16 +168,9 @@ export async function runReconcile(ctx, input, { save = true, seriesLead = 14 } 
   return save && ctx.store ? ctx.store.saveCheck(result) : result;
 }
 
-const verdictOf = (expected, measured, tolerance) => {
-  if (!expected) return { delta_pct: null, verdict: "insufficient_data" };
-  const deltaPct = (measured - expected) / expected;
-  return { delta_pct: deltaPct, verdict: Math.abs(deltaPct) <= tolerance + 1e-12 ? "adds_up" : "does_not_add_up" };
-};
-
 /** Complete weeks ending on or before `to`, oldest first. */
 export async function checkHistory(ctx, checkId, weeks = 7) {
-  const range = await ctx.warehouse.range();
-  const check = ctx.pack.checks[checkId];
+  const range = await dataRange(ctx.warehouse);
   const last = lastCompleteWeek(range.to).to;
   const out = [];
   for (let i = weeks - 1; i >= 0; i--) {
@@ -175,7 +178,8 @@ export async function checkHistory(ctx, checkId, weeks = 7) {
     const wFrom = addDays(wTo, -6);
     if (wFrom < range.from) continue;
     const r = await runReconcile(ctx, { check: checkId, from: wFrom, to: wTo }, { save: false, seriesLead: 0 });
-    out.push({ from: wFrom, to: wTo, expected: r.expected.value, measured: r.measured.value, ...verdictOf(r.expected.value, r.measured.value, check.tolerance) });
+    // The tally's own verdict: a week with a side missing is insufficient_data there, never a −100% gap.
+    out.push({ from: wFrom, to: wTo, expected: r.expected.value, measured: r.measured.value, delta_pct: r.delta_pct, verdict: r.verdict });
   }
   return out;
 }

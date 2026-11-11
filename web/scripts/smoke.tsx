@@ -182,8 +182,6 @@ const trf = createFormat("tr");
 check("en formats", en.value(2753, "count") === "2,753" && en.value(1843210, "try") === "1.84M TL" && en.pct(-0.101, 1, true) === "−10.1%");
 check("tr formats", trf.value(2753, "count") === "2.753" && trf.value(1843210, "try") === "1,84 mn TL" && trf.pct(-0.101, 1, true) === "−%10,1");
 
-// `bun run fixtures:handmade` writes the target-behaviour turns (the bugs DECISIONS.md §8 fixes) as fixture
-// files marked handmade, next to the captured ones, so a reviewer can compare them with today's planner.
 // ---------------------------------------------------------------- owner round 4: checks, activity, exploratory
 {
   const nav = MAIN_NAV.map((n) => n.key as string);
@@ -423,40 +421,6 @@ check("tr formats", trf.value(2753, "count") === "2.753" && trf.value(1843210, "
     check("one action back to demo data", (await driver.state()).source.kind === "demo");
   }
   (await driver.reset());
-}
-
-if (process.env.WRITE_HANDMADE) {
-  (await driver.reset());
-  const { mkdir, writeFile } = await import("node:fs/promises");
-  const dir = new URL("../src/api/fixtures/handmade/", import.meta.url);
-  await mkdir(dir, { recursive: true });
-  (await driver.reset());
-  const cases: [string, Lang, string, string?][] = [
-    ["mobile-follow-up.en", "en", "Is the gap only on mobile?", "Do GA4 purchases match orders in the last 14 days?"],
-    ["mobile-follow-up.tr", "tr", "Fark yalnızca mobilde mi?", "Son 14 günde GA4 satın almaları siparişlerle tutuyor mu?"],
-    ["why.en", "en", "Why do GA4 purchases not match back-office orders for 9–22 Oct?"],
-    ["yesterday.en", "en", "How many orders did we get yesterday?"],
-    ["yesterday.tr", "tr", "Dün kaç sipariş geldi?"],
-    ["last-week.en", "en", "Revenue last week against the week before"],
-    ["last-week.tr", "tr", "Geçen hafta ciro, bir önceki haftaya göre"],
-    ["revenue-by-channel.en", "en", "Which channel brings the most revenue?"],
-    ["revenue-by-channel.tr", "tr", "Hangi kanal daha çok ciro getiriyor?"],
-    ["mobile-converting.en", "en", "Is mobile converting worse than desktop?"],
-    ["ad-spend-this-month.tr", "tr", "Bu ay reklama ne kadar harcandı?"],
-    ["refusal-unknown.en", "en", "Compare email and Google Ads last month"],
-    ["refusal-not-in-data.en", "en", "Which products sell most?"],
-    ["watch-proposal.en", "en", "Watch the Meta tracking check"],
-  ];
-  for (const [name, lang, q, before] of cases) {
-    let conv: string | undefined = "new";
-    if (before) {
-      const first = await ask(before, lang, "new");
-      conv = (first.find((e) => e.event === "turn")?.data as { conversation_id: string }).conversation_id;
-    }
-    const events = await ask(q, lang, conv);
-    await writeFile(new URL(`${name}.json`, dir), JSON.stringify({ handmade: true, question: q, lang, after: before ?? null, events }, null, 2) + "\n");
-  }
-  console.log(`wrote ${cases.length} handmade fixtures`);
 }
 
 // Real-connector codes: api_disabled with its console link (only console.cloud.google.com), property_api_denied.

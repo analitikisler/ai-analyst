@@ -40,7 +40,6 @@ export class Store {
   constructor(file) {
     // The data dir holds conversations, figures and keys: only the person's own account may read it.
     if (file !== ":memory:") mkdirSync(path.dirname(file), { recursive: true, mode: 0o700 });
-    this.file = file;
     this.db = new DatabaseSync(file);
     if (file !== ":memory:") chmodSync(file, 0o600);
     this.db.exec("PRAGMA journal_mode = WAL; PRAGMA busy_timeout = 3000;");
@@ -199,6 +198,10 @@ export class Store {
   /** Oldest first. */
   listTurns(conversationId, limit = 1000) {
     return this.list("turns", { where: "conversation_id = ?", args: [conversationId], limit }).reverse();
+  }
+  /** How many turns a conversation holds, without reading them. */
+  countTurns(conversationId) {
+    return this.db.prepare("SELECT COUNT(*) AS n FROM turns WHERE conversation_id = ?").get(conversationId).n;
   }
   /** A turn as the API shows it: answers in full. */
   hydrateTurn(t) {

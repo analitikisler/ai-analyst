@@ -75,7 +75,6 @@ test("config: env first, then the config file, with the CONTRACT defaults", () =
   assert.equal(workspaceName({ ...own, bigquery: { ...own.bigquery, dataset: null } }, { demo: false }), "shop-data-1");
   const named = loadConfig({ env: { AI_ANALYST_WORKSPACE: "Acme", AI_ANALYST_WAREHOUSE: "bigquery", BIGQUERY_PROJECT: "shop-data-1" }, cwd: "/nonexistent" });
   assert.equal(workspaceName(named, { demo: false }), "Acme");
-  assert.equal(c.anthropicApiKey, null);
   const e = loadConfig({ env: { AI_ANALYST_WAREHOUSE: "bigquery", BIGQUERY_PROJECT: "p-12345", AI_ANALYST_MODEL: "claude-sonnet-5-5", PORT: "9000" }, cwd: "/nonexistent" });
   assert.deepEqual([e.warehouse, e.bigquery.project, e.model, e.port], ["bigquery", "p-12345", "claude-sonnet-5-5", 9000]);
   assert.throws(() => loadConfig({ env: { AI_ANALYST_WAREHOUSE: "snowflake" }, cwd: "/nonexistent" }), /duckdb, bigquery or local/);
@@ -107,3 +106,13 @@ test("config: a data project and a separate job project; the file can lower the 
   assert.deepEqual([c.bigquery.project, c.bigquery.jobProject, c.bigquery.ceiling], ["ornek-data", "ornek-jobs", 2 * 1024 ** 3]);
   assert.equal(loadConfig({ env: { BIGQUERY_PROJECT: "ornek-data" }, cwd: "/nonexistent" }).bigquery.jobProject, "ornek-data", "the job project defaults to the data project");
 });
+
+test("an empty mart has no range (figures then answer no_data); the range is read once while it is fresh", async () => {
+  const empty = await openBigQuery(cfg, { client: fakeClient({ rows: [{ data_from: null, data_to: null, n: 0 }] }) });
+  assert.deepEqual(await empty.range(), { from: null, to: null, rows: 0 });
+  const client = fakeClient({ rows: [{ data_from: "2026-07-25", data_to: "2026-10-22", n: 540 }] });
+  const wh = await openBigQuery(cfg, { client });
+  assert.deepEqual([await wh.range(), await wh.range()], [{ from: "2026-07-25", to: "2026-10-22", rows: 540 }, { from: "2026-07-25", to: "2026-10-22", rows: 540 }]);
+  assert.equal(client.calls.filter(([k]) => k === "run").length, 1);
+});
+

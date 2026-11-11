@@ -161,7 +161,7 @@ const status = (err) => err?.code ?? err?.response?.status ?? err?.errors?.[0]?.
 
 defineAction({
   name: "test_bigquery",
-  description: "Tests a BigQuery connection in six steps: credentials, running queries, the dataset, the table, reading it and the cost of a typical question.",
+  description: "Tests a BigQuery connection in seven steps: credentials, running queries, the dataset, the table, reading it, the tables the agent may read and the cost of a typical question.",
   kind: "read",
   settings: true,
   mcp: false,
@@ -465,7 +465,7 @@ defineAction({
   async run(ctx, input) {
     const c = ctx.config;
     const p = input.provider;
-    if (input.key) assertUnlocked(c.providers[p].source === "env", KEY_ENV[p]);
+    if (input.key) assertUnlocked(c.providers[p].source === "env", c.providers[p].env);
     const t = await testModel(ctx.app, input);
     const lastTest = { ok: t.ok, at: new Date().toISOString(), ...(t.ok ? {} : { error: { code: t.error.code } }) };
     if (!t.ok) throw new AppError(t.error.code, "The test did not pass. Nothing was saved.", { params: { ...(t.error.status ? { status: t.error.status } : {}) } });
@@ -491,7 +491,7 @@ defineAction({
   input: z.object({ provider: z.enum(PROVIDERS) }).strict(),
   async run(ctx, { provider }) {
     const c = ctx.config;
-    assertUnlocked(c.providers[provider].source === "env", KEY_ENV[provider]);
+    assertUnlocked(c.providers[provider].source === "env", c.providers[provider].env);
     let next = writeSecret(c, provider, null);
     next = updateConfigFile(next, (file) => {
       if (file.model && typeof file.model === "object") {

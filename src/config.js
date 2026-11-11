@@ -96,11 +96,12 @@ export function loadConfig({ env = process.env, cwd = process.cwd(), file } = {}
   const setting = (name, fileValue, fallback, { detected = false } = {}) =>
     has(name) ? { value: env[name], source: "env", locked: true, env: name } : fileValue != null ? { value: fileValue, source: "file", locked: false } : { value: fallback, source: detected ? "detected" : "default", locked: false };
 
-  const port = Number(pick("PORT", fromFile.port, 8787));
-  if (!Number.isInteger(port) || port < 0 || port > 65535) throw new Error(`PORT must be a port number, not "${port}".`);
+  const portValue = pick("PORT", fromFile.port, 8787);
+  const port = Number(portValue);
+  if (!Number.isInteger(port) || port < 0 || port > 65535) throw new Error(`PORT must be a port number, not "${portValue}".`);
   const dataDir = path.resolve(cwd, pick("AI_ANALYST_DATA_DIR", fromFile.dataDir, "./data"));
 
-  // Data source. The file's "warehouse" is duckdb (the demo) or bigquery.
+  // Data source. The file's "warehouse" is duckdb or demo (the demo), local or bigquery.
   const bq = fromFile.bigquery ?? {};
   const wh = setting("AI_ANALYST_WAREHOUSE", fromFile.warehouse, "duckdb");
   if (!["duckdb", "bigquery", "demo", "local"].includes(wh.value)) throw new Error(`AI_ANALYST_WAREHOUSE must be duckdb, bigquery or local, not "${wh.value}".`);
@@ -112,6 +113,8 @@ export function loadConfig({ env = process.env, cwd = process.cwd(), file } = {}
   const fileCap = bq.maxBytes != null ? Number(bq.maxBytes) : null;
   const maxBytes = has("BIGQUERY_MAX_BYTES") ? ceiling : fileCap && fileCap > 0 ? Math.min(fileCap, ceiling) : ceiling;
   const dataProject = pick("BIGQUERY_PROJECT", bq.project ?? bq.dataProject, null);
+  const jobTimeoutMs = Number(pick("BIGQUERY_JOB_TIMEOUT_MS", bq.jobTimeoutMs, 60000));
+  if (!(jobTimeoutMs >= 0)) throw new Error("BIGQUERY_JOB_TIMEOUT_MS must be a number of milliseconds.");
 
   // Model providers: keys from env or secrets.json, models and base URLs from env or the file.
   const secrets = readJson(secretsFile(dataDir), "secrets.json");
@@ -161,7 +164,6 @@ export function loadConfig({ env = process.env, cwd = process.cwd(), file } = {}
     configFile,
     cwd,
     env,
-    file: fromFile,
     port,
     host: pick("HOST", fromFile.host, "127.0.0.1"),
     allowedHosts: allowed,
@@ -182,7 +184,7 @@ export function loadConfig({ env = process.env, cwd = process.cwd(), file } = {}
       ceiling,
       maxBytesSource: has("BIGQUERY_MAX_BYTES") ? "env" : fileCap ? "file" : "default",
       checkedAt: bq.checkedAt ?? null,
-      jobTimeoutMs: Number(pick("BIGQUERY_JOB_TIMEOUT_MS", bq.jobTimeoutMs, 60000)),
+      jobTimeoutMs,
     },
     // The tables exploratory answers may read (Settings › Sources; AI_ANALYST_EXPLORE_ALLOW locks the list).
     explore: loadExploreConfig(env, fromFile),
@@ -190,8 +192,6 @@ export function loadConfig({ env = process.env, cwd = process.cwd(), file } = {}
     connectors: connectorsConfig(env, fromFile, secrets),
     provider,
     model: has("AI_ANALYST_MODEL") ? env.AI_ANALYST_MODEL : active ? active.model || MODEL_DEFAULT[active.id] : DEFAULT_MODEL,
-    // Kept for the Anthropic path and older callers.
-    anthropicApiKey: provider.value === "anthropic" && providers.anthropic.source && !providers.anthropic.cloud ? providers.anthropic.key : null,
     cloud,
     // null: named after the data (workspaceName). The demo name is only ever used on demo data.
     workspace: pick("AI_ANALYST_WORKSPACE", fromFile.workspace, null) || null,

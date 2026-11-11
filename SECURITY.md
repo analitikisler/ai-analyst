@@ -25,7 +25,7 @@ Only the latest release on `main` gets security fixes while the project is in al
 
 The security design is described in `docs/CONTRACT.md`: the server listens on 127.0.0.1 by default, other
 addresses need a token, requests from other websites are refused, settings change only from the machine running
-the app, and model-written SQL may read only the mart table. A way around any of these is in scope.
+the app, and model-written SQL may read only the tables on the allowlist (the mart alone by default). A way around any of these is in scope.
 
 Out of scope: problems that need someone who already controls the machine, its user account or the warehouse
 credentials, and reports about third-party services (BigQuery, model providers) themselves.

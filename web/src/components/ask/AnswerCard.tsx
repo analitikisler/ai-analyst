@@ -12,7 +12,7 @@ import type { Answer, CheckResult } from "@/api/types";
 import { useOpenMetric, usePin, useWatchToggle } from "@/ask/hooks";
 import { CheckBars, CheckEvidenceChart, DataTable, DiffChart, NoDeviceSplit, SplitBars, TrendChart } from "@/components/charts";
 import { CodeBlock, DeltaBadge, DeltaFigure, Disclosure, Marked, Status } from "@/components/kit";
-import { Hatch, signedValue, Tally } from "@/components/tally/Tally";
+import { signedValue, Tally } from "@/components/tally/Tally";
 import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuGroup, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
@@ -557,5 +557,3 @@ export function MessageActions({ answer: a, question, always, onAsk, onNewDashbo
     </div>
   );
 }
-
-export { Hatch };

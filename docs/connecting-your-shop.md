@@ -11,12 +11,14 @@ feed a local DuckDB file on this machine, `<data_dir>/warehouse.duckdb` (the sou
 | WooCommerce | orders, revenue | the REST API v3, a key with Read permission |
 
 Use **one** orders source: the file, Shopify or WooCommerce. When two cover the same day, the mart adds them up.
-Ad spend and platform conversions have no connector yet (Meta Ads, Google Ads and TikTok Ads are on the Analitik
-İşler Cloud waitlist), so ROAS, CPA, ad spend and the Meta and Google Ads checks say "no data" on this source.
+Ad spend and platform conversions have no connector yet (Meta Ads, Google Ads and TikTok Ads are on the ai cloud
+waitlist), so ROAS, CPA, ad spend and the Meta and Google Ads checks say "no data" on this source.
 
 Everything is set up in **Settings › Sources**, from this machine only. Each connector is tested first (Test), then
 connected (Connect), which fetches 90 days by default (up to 400). While `ai-analyst serve` runs, the connected
-sources sync once a day; **Sync now** fetches them again.
+sources sync once a day: the last three days again and the new ones, and the whole history once a week. **Sync
+now** fetches the whole history again. Each source shows the days it covers and the time zone they are counted in
+(the shop's or the GA4 property's own), with a warning when a sync could not read everything.
 
 Facts Analitik İşler could not confirm from a primary source are marked **(unverified)**.
 
@@ -132,6 +134,8 @@ leave out (test orders are pre-selected; cancelled orders are counted by default
 the time zone of times without an offset (default Europe/Istanbul), and import. Only the date and total columns are
 required. A channel or UTM column splits orders by channel (a channel column may hold GA's "source / medium", such as
 `google / cpc`); a device or user agent column splits them by device.
+A shipping column (`Kargo Ücreti`, `Shipping`) comes off each total, since the Revenue metric leaves shipping out;
+without one the preview says that revenue includes shipping if the file's totals do.
 Without them, the tracking checks run on totals. A currency column must match the workspace currency on every
 order counted.
 
@@ -174,7 +178,10 @@ ai analyst reads orders through a **custom app** in your shop with one scope, `r
    Test and Connect.
 
 Orders older than 60 days need `read_all_orders`, which Shopify grants on request [Shopify access scopes]. With
-`read_orders` alone, a 90-day history may come back short **(unverified for custom apps)**.
+`read_orders` alone the history starts 60 days back, and the source says so; older days read as "no data", not as
+days without orders. Orders are read newest first, 100 at a time, at the pace Shopify's query-cost limit allows, so
+a first sync of a busy shop takes a while. A shop with more than 100,000 orders in the history keeps its latest
+days whole and loses its oldest. **(The Shopify connector has not run against a live shop yet.)**
 
 Per order, only the creation time, the test flag, the total, shipping and currency, and the last visit's source and
 UTM are requested. Test orders are left out, cancelled orders count, and revenue excludes shipping. Shopify does not

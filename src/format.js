@@ -52,7 +52,6 @@ export function fmtMoney(n, lang = "en", currency = current) {
   if (sym && lang !== "tr") return body.startsWith(MINUS) ? `${MINUS}${sym}${body.slice(1)}` : `${sym}${body}`;
   return `${body} ${sym ?? (currency === "TRY" ? "TL" : currency)}`;
 }
-export const fmtTRY = (n, lang = "en") => fmtMoney(n, lang);
 
 /** unit: count | try | pct | ratio */
 export function fmtVal(v, unit, lang = "en") {
@@ -113,11 +112,6 @@ export function addMonths(s, n) {
   const last = parseISO(monthEnd(iso(d))).getUTCDate();
   d.setUTCDate(Math.min(day, last));
   return iso(d);
-}
-export function eachDay(a, b) {
-  const out = [];
-  for (let d = a; d <= b; d = addDays(d, 1)) out.push(d);
-  return out;
 }
 
 /** "9 Oct" or "9 Oct 2026" / "9 Eki 2026". */

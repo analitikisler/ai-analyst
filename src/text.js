@@ -35,10 +35,6 @@ export const STEP = {
   propose_pin: (dash) => ({ en: `Proposed pinning to ${dash.en}`, tr: `${dash.tr} dashboard’una ekleme önerildi` }),
   propose_event: (title, date) => ({ en: `Proposed an event: ${title.en}, ${enShort(date)}`, tr: `Olay önerildi: ${title.tr}, ${trLong(date)}` }),
   propose_metric: T("Proposed a metric from the exploratory answer", "Keşif cevabından metrik önerildi"),
-  dry_run: (bytes) => ({
-    en: `Dry run on daily_channel_device: ${f.en.bytes(bytes)}, under the bytes cap`,
-    tr: `daily_channel_device üzerinde deneme çalıştırması: ${f.tr.bytes(bytes)}, bayt sınırının altında`,
-  }),
   run_sql: (n, tables = []) =>
     tables.length > 1
       ? { en: `Ran one read-only query on ${tables.join(", ")}: ${n} ${n === 1 ? "row" : "rows"}`, tr: `${tables.join(", ")} üzerinde salt okunur tek bir sorgu çalıştırıldı: ${n} satır` }
@@ -91,18 +87,18 @@ export const REFUSAL = {
     "The built-in planner covers orders, revenue, sessions, conversion rate, order value, ad spend, ROAS and the four tracking checks, one question at a time.",
     "Yerleşik planlayıcı sipariş, ciro, oturum, dönüşüm oranı, sepet ortalaması, reklam harcaması, ROAS ve dört ölçüm kontrolü hakkındaki soruları tek tek cevaplar.",
   ),
+  no_period: {
+    heading: T("There is no data for those days", "Bu günler için veri yok"),
+    body: (asked, data) => ({
+      en: `${asked.en} is outside the data, which covers ${data.en}. Ask about days inside it.`,
+      tr: `${asked.tr} verinin dışında; veri ${data.tr} dönemini kapsıyor. Bu dönemin içindeki günler sorulabilir.`,
+    }),
+  },
   no_product: {
     heading: T("This workspace has no product-level data", "Bu çalışma alanında ürün düzeyinde veri yok"),
     body: T(
       "The demo data holds orders, revenue, sessions and ad figures by day, channel and device. Products, returns and customers are not in it, so this cannot be answered here.",
       "Demo veri sipariş, ciro, oturum ve reklam rakamlarını gün, kanal ve cihaz düzeyinde tutar. Ürün, iade ve müşteri verisi yoktur; bu yüzden soru burada cevaplanamaz.",
-    ),
-  },
-  no_weekday: {
-    heading: T("This workspace has no weekday breakdown", "Bu çalışma alanında hafta günü kırılımı yok"),
-    body: T(
-      "The metrics can be split by day, week, month, channel and device. A weekday split is not in the metric pack, so this cannot be answered here.",
-      "Metrikler gün, hafta, ay, kanal ve cihaza göre kırılabilir. Hafta günü kırılımı metrik paketinde yok; bu yüzden soru burada cevaplanamaz.",
     ),
   },
 };
@@ -269,9 +265,7 @@ export const ACT = {
   model_saved: (provider) => ({ en: `Saved a model key for ${provider}`, tr: `${provider} için model anahtarı kaydedildi` }),
   model_removed: (provider) => ({ en: `Removed the model key for ${provider}`, tr: `${provider} model anahtarı kaldırıldı` }),
   model_provider: (provider) => ({ en: `Set ${provider} to answer questions`, tr: `Soruları ${provider} cevaplayacak şekilde ayarlandı` }),
-  cap: (bytes) => ({ en: `Lowered the bytes cap to ${bytes}`, tr: `Bayt sınırı ${bytes} olarak düşürüldü` }),
   demo_rebuilt: T("Rebuilt the demo", "Demo yeniden oluşturuldu"),
-  answered: (q) => ({ en: q, tr: q }),
 };
 
 export const CHART_NAMES = {
@@ -321,10 +315,6 @@ export const NAMES = {
     unknown: T("Unknown", "Bilinmiyor"),
   },
   device: { mobile: T("Mobile", "Mobil"), desktop: T("Desktop", "Masaüstü"), unknown: T("Unknown", "Bilinmiyor") },
-  weekday: {
-    mon: T("Monday", "Pazartesi"), tue: T("Tuesday", "Salı"), wed: T("Wednesday", "Çarşamba"), thu: T("Thursday", "Perşembe"),
-    fri: T("Friday", "Cuma"), sat: T("Saturday", "Cumartesi"), sun: T("Sunday", "Pazar"),
-  },
 };
 export const dimName = (key, lang) => NAMES.channel[key]?.[lang] ?? NAMES.device[key]?.[lang] ?? key;
 

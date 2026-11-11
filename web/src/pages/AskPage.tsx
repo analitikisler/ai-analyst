@@ -20,7 +20,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { fmt, useBilingual, useT } from "@/i18n";
 import { useFormat } from "@/lib/format";
 import { usePref } from "@/lib/prefs";
-import { usePin } from "@/ask/hooks";
+import { useAskFailed, usePin } from "@/ask/hooks";
 
 /** Conversations grouped by Today, Yesterday and Earlier, newest first. */
 function ConversationList({ items, current, onPick }: { items: ConversationSummary[]; current?: string; onPick?: () => void }) {
@@ -83,23 +83,36 @@ export default function AskPage() {
     document.title = fmt(t.app.pageTitle, { page: currentTitle ?? t.ask.title });
   }, [currentTitle, t]);
 
+  const failed = useAskFailed();
   const send = async (question: string) => {
-    const id = await ask(question, { conversationId: conversationId ?? "new" });
-    if (id !== conversationId) navigate(`/ask/${id}`, { replace: !conversationId });
+    try {
+      const id = await ask(question, { conversationId: conversationId ?? "new" });
+      if (id !== conversationId) navigate(`/ask/${id}`, { replace: !conversationId });
+    } catch (err) {
+      failed(err);
+      composer.current?.restore(question);
+    }
   };
 
   // A question passed in the link (the review menu, "Ask again") is sent once.
   const sent = useRef<string | null>(null);
   useEffect(() => {
     const q = params.get("q");
+    // The link no longer carries it: the same question may be passed again later (two review flows share one).
+    if (!q) sent.current = null;
     if (q && sent.current !== q && !running) {
       sent.current = q;
       const next = new URLSearchParams(params);
       next.delete("q");
       setParams(next, { replace: true });
       void (async () => {
-        const id = await ask(q, { conversationId: "new" });
-        navigate(`/ask/${id}`, { replace: true });
+        try {
+          const id = await ask(q, { conversationId: "new" });
+          navigate(`/ask/${id}`, { replace: true });
+        } catch (err) {
+          failed(err);
+          composer.current?.restore(q);
+        }
       })();
     }
   }, [params, setParams, ask, navigate, running]);
