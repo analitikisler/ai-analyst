@@ -155,7 +155,7 @@ export function CheckDetail({ check, period, onAsk }: { check: CheckId; period?:
         <Panel key={fd.id} padded>
           <h2 className="text-base font-semibold text-text-strong">{t.check.finding_title}</h2>
           <p className="mt-1 text-sm text-text">{pick(fd.text)}</p>
-          {fd.since && <p className="mt-1 font-mono text-2xs text-text-muted">{fmt(t.check.finding_meta, { source: fd.source, date: f.since(fd.since), release: "v4.12" })}</p>}
+          {fd.since && <p className="mt-1 font-mono text-2xs text-text-muted">{fd.release ? fmt(t.check.finding_meta, { source: fd.source, date: f.since(fd.since), release: fd.release }) : fmt(t.check.finding_meta_no_release, { source: fd.source, date: f.since(fd.since) })}</p>}
           {fd.confirmed && (
             <p className="mt-2 flex flex-wrap items-center gap-x-2 text-[13px] text-text">
               <ScanSearchIcon size={14} strokeWidth={1.75} aria-hidden className="text-text-muted" />

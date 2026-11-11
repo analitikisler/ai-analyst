@@ -15,9 +15,10 @@ export function NoDeviceSplit({ className }: { className?: string }) {
 
 export function CheckBars({ result: c, className, compact }: { result: CheckResult; className?: string; compact?: boolean }) {
   const t = useT();
-  if (c.breakdown_available === false) return <NoDeviceSplit className={className} />;
   const f = useFormat();
   const pick = useBilingual();
+  // After the hooks: the same tile can get a result with and without a split (a period change, an import).
+  if (c.breakdown_available === false) return <NoDeviceSplit className={className} />;
   const max = Math.max(...c.breakdown.flatMap((b) => [b.expected ?? 0, b.measured ?? 0]), 1);
   return (
     <div className={className}>

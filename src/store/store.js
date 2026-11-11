@@ -200,6 +200,10 @@ export class Store {
   listTurns(conversationId, limit = 1000) {
     return this.list("turns", { where: "conversation_id = ?", args: [conversationId], limit }).reverse();
   }
+  /** How many turns a conversation holds, without reading them. */
+  countTurns(conversationId) {
+    return this.db.prepare("SELECT COUNT(*) AS n FROM turns WHERE conversation_id = ?").get(conversationId).n;
+  }
   /** A turn as the API shows it: answers in full. */
   hydrateTurn(t) {
     if (!t) return null;

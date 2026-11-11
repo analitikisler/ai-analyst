@@ -49,17 +49,22 @@ export function decodeText(buf) {
   }
 }
 
-/** The delimiter of a CSV: the one of , ; tab | found most often outside quotes on the first line. */
+/**
+ * The delimiter of a CSV: the one of , ; tab | found most often outside quotes on the first lines. Several lines,
+ * because a title line above the header ("Sipariş Raporu") has no delimiter at all.
+ */
 function delimiterOf(text) {
   const counts = { ",": 0, ";": 0, "\t": 0, "|": 0 };
   let quoted = false;
-  for (let i = 0; i < text.length && i < 64 * 1024; i++) {
+  let lines = 0;
+  for (let i = 0; i < text.length && i < 64 * 1024 && lines < 10; i++) {
     const ch = text[i];
     if (ch === '"') quoted = !quoted;
-    else if (!quoted && (ch === "\n" || ch === "\r")) break;
+    else if (!quoted && ch === "\n") lines++;
     else if (!quoted && ch in counts) counts[ch]++;
   }
-  return Object.entries(counts).sort((a, b) => b[1] - a[1])[0][1] ? Object.entries(counts).sort((a, b) => b[1] - a[1])[0][0] : ",";
+  const [best, n] = Object.entries(counts).sort((a, b) => b[1] - a[1])[0];
+  return n ? best : ",";
 }
 
 /** RFC 4180 CSV (quotes doubled inside quoted fields, newlines inside quotes), any of four delimiters. */
@@ -165,7 +170,7 @@ const unxml = (s) =>
   });
 const attr = (tag, name) => tag.match(new RegExp(`\\s${name}="([^"]*)"`))?.[1] ?? null;
 /** The text of an <si> or <is>: every <t>, without phonetic runs. */
-const textOf = (xml) => unxml([...xml.replace(/<rPh\b[\s\S]*?<\/rPh>/g, "").matchAll(/<t\b[^>]*>([\s\S]*?)<\/t>|<t\b[^>]*\/>/g)].map((m) => m[1] ?? "").join(""));
+const textOf = (xml) => unxml([...xml.replace(/<rPh\b[\s\S]*?<\/rPh>/g, "").matchAll(/<t\b[^>]*?(?:\/>|>([\s\S]*?)<\/t>)/g)].map((m) => m[1] ?? "").join(""));
 
 const colIndex = (ref) => {
   const letters = String(ref).match(/^[A-Z]+/i)?.[0].toUpperCase() ?? "";
@@ -212,7 +217,7 @@ export function parseXlsx(buf, { maxShared = MAX_SHARED } = {}) {
   if (!sheet) throw unreadable("no worksheet in the XLSX file");
   const sharedXml = zipRead(buf, entries, "xl/sharedStrings.xml", budget) ?? "";
   const shared = [];
-  for (const m of sharedXml.matchAll(/<si\b[^>]*>([\s\S]*?)<\/si>|<si\b[^>]*\/>/g)) {
+  for (const m of sharedXml.matchAll(/<si\b[^>]*?(?:\/>|>([\s\S]*?)<\/si>)/g)) {
     if (shared.length >= maxShared) throw unreadable(`more than ${maxShared.toLocaleString("en")} different texts in the XLSX file`);
     shared.push(textOf(m[1] ?? "").slice(0, 4000));
   }
@@ -351,7 +356,6 @@ export function checkMapping(columns, mapping) {
     out[f] = v === "" ? null : v;
   }
   for (const f of ["created_at", "total"]) if (!out[f]) throw new AppError("mapping_invalid", `Choose the column with the order ${f === "created_at" ? "date" : "total"}.`, { params: { field: f } });
-  out.created_at ??= "";
   return out;
 }
 
@@ -362,6 +366,8 @@ export function amountOf(raw) {
   if (typeof raw === "number") return Number.isFinite(raw) ? raw : null;
   let s = String(raw ?? "").trim();
   if (!s) return null;
+  // Exponent notation (a spreadsheet's 1E3): the number as written, never its digits glued together.
+  if (/^[-+]?\d+(\.\d+)?[eE][-+]?\d+$/.test(s)) return Number.isFinite(Number(s)) ? Number(s) : null;
   const neg = /^-|^\(.*\)$|-$/.test(s.replace(/[^\d.,()-]/g, ""));
   s = s.replace(/[^\d.,]/g, "");
   if (!/\d/.test(s)) return null;

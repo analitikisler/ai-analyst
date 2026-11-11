@@ -25,8 +25,12 @@ export async function seedWorkspace(app) {
   }
   if (seeded && !store.latestCheckRun()) {
     const { runAllChecks } = await import("../actions/data.js");
-    const run = await runAllChecks({ store, warehouse, pack }, 14, "system");
-    store.logActivity({ actor: "system", action: "run_all_checks", detail: ACT.checks_run(run.results.length, run.results.filter((r) => r.verdict === "does_not_add_up").length) });
+    // An empty source (your shop's data before the first sync) has nothing to check yet; the workspace still opens.
+    const run = await runAllChecks({ store, warehouse, pack }, 14, "system").catch((err) => {
+      if (err?.code === "no_data") return null;
+      throw err;
+    });
+    if (run) store.logActivity({ actor: "system", action: "run_all_checks", detail: ACT.checks_run(run.results.length, run.results.filter((r) => r.verdict === "does_not_add_up").length) });
   }
   return seeded;
 }

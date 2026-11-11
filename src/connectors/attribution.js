@@ -1,5 +1,6 @@
 // Channel and device from what a source records about an order or a session: a channel name, UTM source and medium,
 // a device name or a user agent. Every value read here is data from the shop or the file, never an instruction.
+import { isISODate } from "../format.js";
 
 const lower = (v) => (v == null ? "" : String(v).trim().toLowerCase());
 
@@ -72,6 +73,9 @@ export function deviceFrom({ device, userAgent } = {}) {
   return "unknown";
 }
 
+// 2025-02-31 or 2025-25-01 (a month-first date read day-first) has the shape of a date and is not one: no date.
+const realDay = (s) => (isISODate(s) ? s : null);
+
 /** The calendar date of a time in a time zone: an ISO time with an offset is converted, a naive one is local there. */
 export function dateIn(value, timeZone = "Europe/Istanbul") {
   if (value == null || value === "") return null;
@@ -79,10 +83,10 @@ export function dateIn(value, timeZone = "Europe/Istanbul") {
   const s = String(value).trim();
   // A naive date or time (no zone): the day as written.
   const naive = /^(\d{4})-(\d{2})-(\d{2})(?:[ T]\d{1,2}:\d{2}(?::\d{2}(?:\.\d+)?)?)?$/.exec(s);
-  if (naive) return `${naive[1]}-${naive[2]}-${naive[3]}`;
+  if (naive) return realDay(`${naive[1]}-${naive[2]}-${naive[3]}`);
   // dd.mm.yyyy or dd/mm/yyyy (Turkish exports), with an optional time.
   const tr = /^(\d{1,2})[./](\d{1,2})[./](\d{4})(?:[ T]\d{1,2}:\d{2}(?::\d{2})?)?$/.exec(s);
-  if (tr) return `${tr[3]}-${tr[2].padStart(2, "0")}-${tr[1].padStart(2, "0")}`;
+  if (tr) return realDay(`${tr[3]}-${tr[2].padStart(2, "0")}-${tr[1].padStart(2, "0")}`);
   if (/[zZ]$|[+-]\d{2}:?\d{2}$/.test(s)) {
     const d = new Date(s);
     return Number.isNaN(d.getTime()) ? null : fmtDate(d, timeZone);

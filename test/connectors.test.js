@@ -15,7 +15,7 @@ import { fetchShopifyDays, shopDomain, shopifyClient, shopifyInfo } from "../src
 import { fetchWooDays, shopUrl, slimOrder, wooCheckScope, wooClient } from "../src/connectors/woocommerce.js";
 import { buildLocalWarehouse, replaceLanding } from "../src/connectors/local.js";
 import { remoteStates, switchNote } from "../src/connectors/index.js";
-import { channelFrom } from "../src/connectors/attribution.js";
+import { channelFrom, dateIn } from "../src/connectors/attribution.js";
 import { loadConfig } from "../src/config.js";
 import { createServer } from "node:net";
 import { callAction } from "../src/actions/index.js";
@@ -73,6 +73,7 @@ test("host checks: https on the fixed host only; no IP, private, link-local, loc
 
   assert.equal(shopUrl("http://shop.example.com"), null, "plain http is never upgraded silently");
   assert.equal(shopUrl("shop.example.com/"), "https://shop.example.com");
+  assert.equal(shopUrl("https://shop.example.com./"), "https://shop.example.com", "a trailing dot is the same host");
   assert.equal(shopUrl("https://10.0.0.1"), null);
   assert.equal(shopUrl("shop.example.com/wp-json/wc/v3"), "https://shop.example.com");
   assert.equal(shopDomain("Ornek"), "ornek.myshopify.com");
@@ -112,6 +113,12 @@ test("CSV: four delimiters, quotes, newlines in quotes, CRLF and blank lines", (
   }
   assert.deepEqual(parseCsv('id,note\n1,"line one\nline two ""quoted"""\n'), [["id", "note"], ["1", 'line one\nline two "quoted"']]);
   assert.deepEqual(parseCsv("﻿a;b\n1;2"), [["a", "b"], ["1", "2"]]);
+  // A title line above the header has no delimiter: the lines below it decide.
+  assert.deepEqual(parseCsv("Sipariş Raporu\nNo;Tarih;Tutar\n1;01.01.2025;100,50\n"), [["Sipariş Raporu"], ["No", "Tarih", "Tutar"], ["1", "01.01.2025", "100,50"]]);
+  // Only real calendar days are dates: a month-first date read day-first, or 31 February, is no date.
+  assert.deepEqual(["31.01.2025", "01/25/2025", "02/31/2025", "2025-13-45", "2025-02-31"].map((d) => dateIn(d)), ["2025-01-31", null, null, null, null]);
+  // Exponent notation is the number as written.
+  assert.deepEqual([amountOf("1E3"), amountOf("1.5e-2")], [1000, 0.015]);
 });
 
 test("CSV: UTF-8 with and without a BOM, UTF-16 with a BOM, Windows-1254 (Turkish Excel)", () => {

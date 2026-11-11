@@ -111,6 +111,11 @@ test("watch and unwatch log activity, and undo reverses each", async () => {
   const u = await act("unwatch_check", { check: "meta_vs_orders" });
   await act("undo", { activity_id: u.activity_id });
   assert.equal(ws.store.list("watches").some((x) => x.check === "meta_vs_orders"), true);
+  // Unwatched, watched again, then the unwatch undone: still one watch for the check.
+  const u2 = await act("unwatch_check", { check: "meta_vs_orders" });
+  await act("watch_check", { check: "meta_vs_orders" });
+  await act("undo", { activity_id: u2.activity_id });
+  assert.equal(ws.store.list("watches").filter((x) => x.check === "meta_vs_orders").length, 1);
   await act("unwatch_check", { check: "meta_vs_orders" });
 });
 
@@ -197,7 +202,7 @@ test("proposals: the agent proposes a watch, a pin and an event; a person approv
   assert.equal(ev.source, "agent");
 });
 
-test("events: add, edit, delete, each undone; GTM import simulated on demo data, unavailable on own data", async () => {
+test("events: add, edit, delete, each undone; the GTM import action is gone", async () => {
   const added = await act("save_event", { event: { date: "2026-10-05", title: { en: "Newsletter", tr: "Bülten" }, type: "campaign", note: null } });
   const edited = await act("save_event", { event: { id: added.event.id, date: "2026-10-06", title: { en: "Newsletter", tr: "Bülten" }, type: "campaign" } });
   assert.equal(edited.event.date, "2026-10-06");
@@ -209,6 +214,14 @@ test("events: add, edit, delete, each undone; GTM import simulated on demo data,
   await act("undo", { activity_id: added.activity_id });
   assert.equal(ws.store.get("events", added.event.id), null);
   await assert.rejects(act("import_gtm_events"), (e) => e.code === "unknown_action", "the simulated GTM import is removed (GTM is on the waitlist)");
+  // A note can be emptied (null), is kept when the field is left out, and a date must be a real day.
+  const noted = await act("save_event", { event: { date: "2026-10-05", title: { en: "Promo", tr: "Kampanya" }, type: "campaign", note: { en: "Ends Sunday", tr: "Pazar biter" } } });
+  const kept = await act("save_event", { event: { id: noted.event.id, date: "2026-10-05", title: { en: "Promo", tr: "Kampanya" }, type: "campaign" } });
+  assert.deepEqual(kept.event.note, { en: "Ends Sunday", tr: "Pazar biter" });
+  const cleared = await act("save_event", { event: { id: noted.event.id, date: "2026-10-05", title: { en: "Promo", tr: "Kampanya" }, type: "campaign", note: null } });
+  assert.equal(cleared.event.note, null);
+  await assert.rejects(act("save_event", { event: { date: "2026-02-31", title: { en: "No such day", tr: "Olmayan gün" }, type: "other" } }), (e) => e.code === "invalid_input");
+  await act("delete_event", { id: noted.event.id });
 });
 
 test("tracking audit: simulated on demo data; on own data a handoff with the MCP steps, then a finding attached back", async () => {

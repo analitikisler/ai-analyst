@@ -52,7 +52,7 @@ const TYPES = {
 };
 
 const BASE_HEADERS = { "X-Content-Type-Options": "nosniff", "Referrer-Policy": "no-referrer", "X-Frame-Options": "DENY", "Cross-Origin-Opener-Policy": "same-origin", "Cross-Origin-Resource-Policy": "same-origin" };
-const STATUS = { not_found: 404, unknown_action: 404, forbidden: 403, loopback_only: 403, unauthorized: 401, too_large: 413, bad_request: 400, invalid_input: 400, unsupported_media: 415, locked: 409, not_pending: 409, already_undone: 409, undo_gone: 409, only_one: 409, test_required: 409, no_cloud: 503, over_ceiling: 409, no_data: 409, unavailable: 409, source_unavailable: 503, not_undoable: 409, bytes_cap: 422, sql_location_mismatch: 409, sql_table_not_allowed: 409, upload_too_large: 413, upload_kind: 415, file_unreadable: 422, upload_not_found: 404, mapping_invalid: 422, currency_mismatch: 422, connector_not_connected: 409, sync_running: 409, scope_write: 422, api_disabled: 422, property_api_denied: 422, scope_extra: 422, scope_unchecked: 422, property_not_found: 422, host_not_allowed: 422, shop_unreachable: 502, key_rejected: 422, rate_limited: 429 };
+const STATUS = { not_found: 404, unknown_action: 404, forbidden: 403, loopback_only: 403, unauthorized: 401, too_large: 413, bad_request: 400, invalid_input: 400, unsupported_media: 415, locked: 409, not_pending: 409, already_undone: 409, undo_gone: 409, only_one: 409, test_required: 409, no_cloud: 503, over_ceiling: 409, no_data: 409, source_unavailable: 503, not_undoable: 409, bytes_cap: 422, sql_location_mismatch: 409, sql_table_not_allowed: 409, upload_too_large: 413, upload_kind: 415, file_unreadable: 422, upload_not_found: 404, mapping_invalid: 422, currency_mismatch: 422, connector_not_connected: 409, sync_running: 409, scope_write: 422, api_disabled: 422, property_api_denied: 422, scope_extra: 422, scope_unchecked: 422, property_not_found: 422, host_not_allowed: 422, shop_unreachable: 502, key_rejected: 422, rate_limited: 429 };
 
 export const json = (res, status, body, extra = {}) => {
   // The client is gone (or the answer was already sent): nothing to write to.
@@ -104,7 +104,12 @@ const safeEqual = (a, b) => {
 const cookieOf = (req, name) => {
   for (const part of String(req.headers.cookie ?? "").split(";")) {
     const [k, ...v] = part.trim().split("=");
-    if (k === name) return decodeURIComponent(v.join("="));
+    if (k !== name) continue;
+    try {
+      return decodeURIComponent(v.join("="));
+    } catch {
+      return null;
+    }
   }
   return null;
 };
@@ -370,6 +375,8 @@ export function createHandler(app, opts = {}) {
       return fail(res, 405, "bad_request", "Method not allowed.");
     } catch (err) {
       if (res.headersSent) {
+        // The stream has started: it can only end, so the log is the one place the error shows.
+        if (!(err instanceof AppError)) console.error("[ai-analyst]", err?.stack ?? String(err));
         res.end();
         return;
       }
@@ -380,8 +387,6 @@ export function createHandler(app, opts = {}) {
     }
   };
 }
-
-export const isLoopbackHost = (h) => LOOPBACK_HOSTS.has(h);
 
 /** Starts the server; resolves once it listens. A non-loopback address needs AI_ANALYST_TOKEN. */
 export async function startServer(app, opts = {}) {

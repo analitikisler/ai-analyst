@@ -20,7 +20,7 @@ export function describeError(t: Copy, err: unknown, bytes: (n: number) => strin
   if (!isApiError(err)) return err instanceof TypeError ? t.err.network.body : t.err.generic;
   if (err.code === "network") return t.err.network.body;
   if (err.status === 401 || err.code === "unauthorized") return t.err.unauthorized.body;
-  if (err.code === "not_loopback" || err.code === "forbidden") return t.err.not_loopback;
+  if (err.code === "loopback_only" || err.code === "forbidden") return t.err.not_loopback;
   if (err.code === "locked") return fmt(t.err.locked, { variable: String(err.params?.env ?? err.params?.variable ?? "") });
   if (err.code === "undo_gone") return t.err.undo_gone;
   if (err.code === "rate_limited") return t.err.rate_limited;

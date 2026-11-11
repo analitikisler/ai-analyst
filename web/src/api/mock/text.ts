@@ -254,7 +254,6 @@ export const ACT = {
   model_saved: (provider: string): Text => ({ en: `Saved a model key for ${provider}`, tr: `${provider} için model anahtarı kaydedildi` }),
   model_removed: (provider: string): Text => ({ en: `Removed the model key for ${provider}`, tr: `${provider} model anahtarı kaldırıldı` }),
   model_provider: (provider: string): Text => ({ en: `Set ${provider} to answer questions`, tr: `Soruları ${provider} cevaplayacak şekilde ayarlandı` }),
-  cap: (bytes: string): Text => ({ en: `Lowered the bytes cap to ${bytes}`, tr: `Bayt sınırı ${bytes} olarak düşürüldü` }),
   demo_rebuilt: T("Rebuilt the demo", "Demo yeniden oluşturuldu"),
 };
 
@@ -287,7 +286,7 @@ export const COMPARE_NAMES: Record<string, Text> = {
 
 export const SOURCE_LABEL = {
   demo: T("Demo data", "Demo veri"),
-  local: T("Your shop", "Mağaza verisi"),
+  local: T("Your shop’s data", "Mağazanın kendi verisi"),
   bigquery: (project: string): Text => ({ en: `BigQuery · ${project}`, tr: `BigQuery · ${project}` }),
 };
 

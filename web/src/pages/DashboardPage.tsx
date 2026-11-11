@@ -168,8 +168,9 @@ export default function DashboardPage() {
       <Page aria-busy>
         <Skeleton className="h-9 w-64" />
         <div className="grid gap-4 md:auto-rows-[minmax(180px,auto)] md:grid-cols-6 xl:grid-cols-12">
-          {[3, 3, 6, 6, 8, 4].map((w, i) => (
-            <Skeleton key={i} className={`h-[180px] rounded-lg md:h-auto md:col-span-${Math.min(w, 6)} xl:col-span-${w}`} />
+          {/* Whole class names, so Tailwind sees them: one built at run time is never generated. */}
+          {["md:col-span-3 xl:col-span-3", "md:col-span-3 xl:col-span-3", "md:col-span-6 xl:col-span-6", "md:col-span-6 xl:col-span-6", "md:col-span-6 xl:col-span-8", "md:col-span-3 xl:col-span-4"].map((span, i) => (
+            <Skeleton key={i} className={`h-[180px] rounded-lg md:h-auto ${span}`} />
           ))}
         </div>
       </Page>

@@ -70,6 +70,8 @@ export function AskSheet() {
   // A question passed with the link (Ask why, Ask about this tile) is sent at once.
   useEffect(() => {
     const q = params.get("q");
+    // Sent (the link no longer carries it) or closed: the same question may be passed again later.
+    if (!open || !q) sentFor.current = null;
     if (open && q && param === "new" && sentFor.current !== q && context) {
       sentFor.current = q;
       void send(q);

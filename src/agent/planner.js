@@ -6,11 +6,11 @@
 //
 // route() reads the question and returns what to do, without touching the warehouse; execute() does it.
 // Follow-ups use route() too, to skip a question that would repeat an answer already given.
-import { addDays, f, monthStart, trAt } from "../format.js";
+import { addDays, f, trAt } from "../format.js";
 import { resolveQuery } from "../metrics/compile.js";
 import { lastCompleteWeek, resolvePeriod, runQuery, runReconcile } from "../engine.js";
 import { MART_COLUMNS } from "../explore/run.js";
-import { both, dimName, enShort, EXPLORE_Q, FOLLOW, GROUPING, NEAR, PLANNER_LABEL, READ_AS, REFUSAL, STEP, T, trFrom, trLong, WHY_NEXT } from "../text.js";
+import { both, dimName, enShort, EXPLORE_Q, FOLLOW, GROUPING, NEAR, READ_AS, REFUSAL, STEP, T, trFrom, trLong, WHY_NEXT } from "../text.js";
 
 /** The demo's planted release: the day the GA4 gap starts. */
 export const RELEASE = { date: "2026-10-09", label: T("v4.12 release", "v4.12 sürümü") };
@@ -195,9 +195,11 @@ export function checkSentence(c, data) {
   }
 }
 
-function deviceSentence(c) {
+function deviceSentence(c, data) {
   const mob = c.breakdown.find((b) => b.key === "mobile");
   const desk = c.breakdown.find((b) => b.key === "desktop");
+  // A source with no device split (Shopify records none) has no mobile and desktop rows: the plain check sentence.
+  if (!mob || !desk) return checkSentence(c, data);
   const t = { en: f.en.pct(c.tolerance, 0), tr: f.tr.pct(c.tolerance, 0) };
   const onlyMobile = mob.verdict === "does_not_add_up" && desk.verdict === "adds_up";
   return {
@@ -207,9 +209,10 @@ function deviceSentence(c) {
 }
 
 function whyText(c, data) {
-  if (c.check === "ga4_vs_orders") {
-    const mob = c.breakdown.find((b) => b.key === "mobile");
-    const desk = c.breakdown.find((b) => b.key === "desktop");
+  const mob = c.breakdown.find((b) => b.key === "mobile");
+  const desk = c.breakdown.find((b) => b.key === "desktop");
+  // The GA4 story is told by device; without a device split it is told like any other check, below.
+  if (c.check === "ga4_vs_orders" && mob && desk) {
     const r = range2(c.from, c.to);
     const fd = c.findings.find((x) => x.since) ?? null;
     // The release and the audit finding are named only when the data says so: the gap starts on the
@@ -419,7 +422,7 @@ export async function execute(ctx, r, pc) {
       // The answer is about the segment: its headline, Δ and tally are mobile's; the whole check moves to one line.
       const mobile = await runReconcile(ctx, { check: r.check, from: r.period.from, to: r.period.to, filters: { device: ["mobile"] } });
       const segment = ctx.store.saveCheck({ ...mobile, label: both((l) => `${pack.checks[r.check].label[l]} · ${l === "en" ? "mobile" : "mobil"}`), breakdown: c.breakdown, breakdown_by: c.breakdown_by });
-      return checkAnswer(ctx, pc, r.check, r.period, { kind: "check_split", sentence: r.check === "ga4_vs_orders" ? deviceSentence(c) : checkSentence(c, pc.data), followups: [FOLLOW.why, FOLLOW.watch_ga4, FOLLOW.meta], check: segment, overall: c });
+      return checkAnswer(ctx, pc, r.check, r.period, { kind: "check_split", sentence: r.check === "ga4_vs_orders" ? deviceSentence(c, pc.data) : checkSentence(c, pc.data), followups: [FOLLOW.why, FOLLOW.watch_ga4, FOLLOW.meta], check: segment, overall: c });
     }
     case "why": {
       const c = await runReconcile(ctx, { check: r.check, from: r.period.from, to: r.period.to });
@@ -478,5 +481,3 @@ export function answerSignature(a) {
   if (c) return `${a.kind}|${c.check}|${c.from}|${c.to}|${JSON.stringify(c.filters?.device ?? null)}`;
   return `${a.kind}|${a.query.metric}|${a.query.group_by}|${a.query.from}|${a.query.to}`;
 }
-
-export { PLANNER_LABEL, monthStart };

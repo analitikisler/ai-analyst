@@ -11,8 +11,8 @@ feed a local DuckDB file on this machine, `<data_dir>/warehouse.duckdb` (the sou
 | WooCommerce | orders, revenue | the REST API v3, a key with Read permission |
 
 Use **one** orders source: the file, Shopify or WooCommerce. When two cover the same day, the mart adds them up.
-Ad spend and platform conversions have no connector yet (Meta Ads, Google Ads and TikTok Ads are on the Analitik
-İşler Cloud waitlist), so ROAS, CPA, ad spend and the Meta and Google Ads checks say "no data" on this source.
+Ad spend and platform conversions have no connector yet (Meta Ads, Google Ads and TikTok Ads are on the ai cloud
+waitlist), so ROAS, CPA, ad spend and the Meta and Google Ads checks say "no data" on this source.
 
 Everything is set up in **Settings › Sources**, from this machine only. Each connector is tested first (Test), then
 connected (Connect), which fetches 90 days by default (up to 400). While `ai-analyst serve` runs, the connected

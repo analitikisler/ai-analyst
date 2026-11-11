@@ -371,6 +371,7 @@ export const tr: Copy = {
     chart_context: "Dönemden önceki {n} gün bağlam için açık tonda gösterilir.",
     finding_title: "Bağlı bulgu",
     finding_meta: "{source} · {date} beri · {release} sürümü",
+    finding_meta_no_release: "{source} · {date} beri",
     weeks_title: "Haftalara göre",
     weeks_lead: "Tam haftalar, veriden şimdi hesaplandı.",
     weeks_col: { week: "Hafta" },

@@ -41,6 +41,8 @@ src/explore/                  back end   guard.js (the SQL guard), run.js (explo
 src/dashboards.js, state.js   back end   dashboards and tiles; GET /api/state
 src/store/store.js            back end   node:sqlite at <data_dir>/app.db
 src/warehouse/                back end   duckdb.js (demo, read-only, no external access), bigquery.js (dry run, cap, timeout)
+src/connectors/               back end   GA4, the orders file, Shopify, WooCommerce; net.js (the guarded fetch); local.js (warehouse.duckdb)
+src/demo/                     back end   the demo shop's generated data (seed.js) and the seeded workspace (workspace.js)
 src/server.js, mcp.js         back end   HTTP API + web/dist; stdio MCP server
 src/text.js, format.js        back end   bilingual server strings; number and date formats
 test/                         back end   node:test; fixtures/mock-parity.json and mock-explore.json are recorded from the prototype
@@ -134,11 +136,11 @@ device}`, `ai-tag-debugger browser_action …`, `ai-tag-debugger finish_audit`, 
 
 ## HTTP API (src/server.js)
 
-- `GET /api/state?lang=` → `AppState`.
+- `GET /api/state` → `AppState` (both languages in one read; there is no `lang`).
 - `POST /api/actions/:name`, JSON body → `200 { ok: true, result }`, or `{ ok: false, error: { code, message,
   params? } }` with 400 (`invalid_input`, `bad_request`), 401 (`unauthorized`), 403 (`forbidden`,
   `loopback_only`), 404 (`not_found`, `unknown_action`), 409 (`locked`, `not_pending`, `already_undone`,
-  `undo_gone`, `only_one`, `test_required`, `over_ceiling`, `no_data`, `unavailable`, `not_undoable`), 413
+  `undo_gone`, `only_one`, `test_required`, `over_ceiling`, `no_data`, `not_undoable`), 413
   (`too_large`), 415 (`unsupported_media`), 409 (`sql_location_mismatch`, `sql_table_not_allowed` from a settings action), 422 (`bytes_cap`), 500 (`internal`, a fixed sentence, never a stack or
   a path). Actions take the language from `Accept-Language`.
 - `POST /api/ask` `{ question, lang, conversation_id?: string | "new", context? }` → `text/event-stream` of
@@ -164,7 +166,7 @@ Who: P person (web app), A agent tool, M chat app over MCP, S settings (loopback
 
 | name | kind | who | notes |
 |---|---|---|---|
-| `list_sources` | read | P A M | demo: the demo shop's six systems (described, not connected); own data: the mart table and its row count |
+| `list_sources` | read | P A M | demo: the demo shop's six systems (described, not connected); your shop's data: the connected sources (no shop domain, property or file name from another machine); BigQuery: the mart table and its row count |
 | `list_suggestions` | read | P | four planner questions; with a model and exploratory on, the GA4 one plus the four exploratory ones |
 | `list_metrics`, `explain_metric`, `list_checks` | read | P A M | as in 0.1; `list_metrics` adds `definition`; `list_checks` adds findings |
 | `list_metric_entries`, `get_metric` | read | P | the data dictionary; a metric page (definition rows, compiled SQL, 90 days, checks, used in, history, proposal) |
@@ -177,17 +179,16 @@ Who: P person (web app), A agent tool, M chat app over MCP, S settings (loopback
 | `mark_checks_seen` | write | P | |
 | `list_conversations`, `get_conversation` | read | P | |
 | `decide_proposal` | write | P | approve runs the watch, pin or event; Activity row with `proposal_id` |
-| `undo` | write | P | every undo kind of the prototype (tiles, order, period, watch, dashboards, events, GTM import); `undo_gone` when what it changed was removed since |
+| `undo` | write | P | every undo kind of the prototype (tiles, order, period, watch, dashboards, events); `undo_gone` when what it changed was removed since |
 | `list_dashboards`, `get_dashboard` | read | P (`list_dashboards` also A, so `propose_pin` gets a real id) | `get_dashboard` → `DashboardResult` (tiles follow the dashboard period and compare; the strip over the same period) |
 | `create_dashboard`, `rename_dashboard`, `delete_dashboard`, `set_dashboard_period` | write | P | undoable; one dashboard always stays |
 | `pin_answer`, `update_tile`, `move_tile`, `duplicate_tile`, `remove_tile` | write | P | undoable; chart grammar and width rules enforced |
 | `list_events` | read | P A M | sorted by date; the model sees them labelled as data |
 | `save_event`, `delete_event` | write | P | undoable |
-| `import_gtm_events` | write | P | demo: the simulated three GTM versions, undoable; own data: `unavailable` (needs Google Tag Manager API access, planned for ai cloud). No call to Google |
 | `start_tracking_audit` | write | P | demo: the simulated run (`status: "done"`); own data: `status: "handoff"` with the MCP steps, no network call |
 | `get_audit` | read | P M | |
 | `attach_audit_finding` | write | M | `{ audit_id, ok, title, evidence?, fix?, console?, steps? }` from the chat app after the ai tag debugger run; stores the result and, when not ok, a finding on the check |
-| `get_chat_app_setup` | read | P | the real snippet: this Node, this repo's `src/cli.js`, this config file and data dir |
+| `get_chat_app_setup` | read | P S | the real snippet: this Node, this repo's `src/cli.js`, this config file and data dir |
 | `list_chat_app_calls` | read | P | the last 5 MCP calls (client name from the MCP handshake) |
 | `get_settings` | read | P | `Settings`; keys only as `hint` ("…wxyz"), never the key |
 | `test_bigquery` | read | P S | seven steps (credentials, jobs, dataset, table, read, `allowed`: "can read the allowed tables", cost) and `warnings: [{ code: "credential_broader", params: { n, datasets } }]` when the credential sees more datasets in the job project (`INFORMATION_SCHEMA.SCHEMATA`) than the list; one real BigQuery round only when the person presses Test. Errors of the `allowed` step: `allowed_denied`, `allowed_location` |
@@ -195,7 +196,7 @@ Who: P person (web app), A agent tool, M chat app over MCP, S settings (loopback
 | `set_currency` | write | P S | `{ currency }`: an ISO 4217 code Intl knows (case-insensitive), saved as `currency` in `ai-analyst.config.json`; `locked` under `AI_ANALYST_CURRENCY`, `invalid_input` otherwise; Activity row; returns `Settings` |
 | `test_model_key`, `save_model_key`, `remove_model_key`, `set_model_provider` | read (test), write | P S | one small real call only when the person presses Test or Save; keys to `secrets.json` (0600) |
 | `set_preference` | write | P | `make_it_yours`, `not_now`, `exploratory` |
-| `get_workspace` | read | A M | name, demo, data range, rows |
+| `get_workspace` | read | P A M | name, demo, data range, rows |
 | `publish_answer` | write | A | `{ sentence: Text, title?: Text, query_id? , check_id?, explore_id?, kind?: "answer"\|"why", segment?: { dimension: "device"\|"channel", key }, lead?: "metric"\|"check", followups?: Text[] }`; the number-grounding validator checks both languages; refused twice, then published with `validation.ok = false`. `kind: "why"` needs a check that does not add up and fills `why`; `segment` makes a `check_split` with the segment's figures and `overall`; `lead: "metric"` (the default when the query has a comparison or is not one of the check's metrics) leads with the metric and keeps the check below. `explore_id` with `check_id` is refused: exploratory answers never carry a verdict |
 | `decline_question` | write | A | `{ missing?, heading: Text, body: Text, nearest: Text[] }` → the turn's refusal card (`not_in_data`), with the follow-up rule applied to `nearest` |
 | `propose_watch`, `propose_pin`, `propose_event`, `propose_metric` | write | A | a pending `Proposal` (or a proposed metric); nothing changes until a person approves |
@@ -412,7 +413,7 @@ without a date and rows without a readable total. Channel from a channel column 
 source/medium; device from a device column or a user agent; else `unknown`.
 
 **Shopify (Admin GraphQL API, a custom app's Admin API access token with `read_orders`; shop `*.myshopify.com`).**
-Orders by created time; per order only the creation time, test and cancelled flags, total and currency, and the last
+Orders by created time; per order only the creation time, the test flag, total, shipping and currency, and the last
 visit's source and UTM source/medium (`customerJourneySummary`); device is `unknown` (the GraphQL API has no user
 agent). Test orders are left out; cancelled orders are counted, as in Orders v3. Scopes are read from `currentAppInstallation.accessScopes`; a
 `write_*` scope is refused (`scope_write`), and so is any scope beyond `read_orders`, `read_all_orders` and the
@@ -426,7 +427,7 @@ page. The REST API cannot pick meta entries by key, so it **sends every meta ent
 personal data there: a tax id, a phone number, the visitor's user agent). The app reduces each order on arrival to
 those fields and four attribution values (`_wc_order_attribution_utm_source`, `_utm_medium`, `_source_type`,
 `_device_type`) and discards the rest of the meta there: it is never stored, logged or passed on. Channel and device
-come from those four values. Statuses `failed`, `trash` and `checkout-draft` are left
+come from those four values. Statuses `failed`, `trash`, `checkout-draft` and `auto-draft` are left
 out (never placed); `cancelled` and `refunded` are counted, as in Orders v3 (refunds are not deducted). The scope check posts an empty batch (`POST /orders/batch {}`, a write-method call that changes nothing): only
 WordPress's own refusal (401 or 403 with a `woocommerce_rest_*` or `rest_*` error code) counts as read only; a key
 that is accepted is refused as `scope_write`; any other answer (a firewall page, 400, 500) is `scope_unchecked`.
@@ -514,7 +515,7 @@ New error codes: `upload_too_large` (413), `upload_kind`, `file_unreadable`, `up
 ## Settings, secrets and configuration
 
 Order: environment, then `ai-analyst.config.json` (non-secret, safe to commit; unknown keys kept on write), then
-`<data_dir>/secrets.json` (model keys only, written with mode 0600). An environment variable wins and locks the
+`<data_dir>/secrets.json` (model keys and connector secrets, written with mode 0600). An environment variable wins and locks the
 field (`SettingValue.locked`, `env`); writing a locked field is `409 locked`. Keys never leave the server except
 as a four-character hint.
 
@@ -643,8 +644,8 @@ ignored. `test/guard.test.js` checks the four exploratory queries against `fixtu
 Real: every figure (SQL compiled from the pack, run on DuckDB or BigQuery), checks, series and weeks, the planner,
 the model loop (with a key), exploratory SQL through the guard, settings and secrets, dashboards, events,
 proposals, undo, the MCP server and its call log, the chat-app snippets. Simulated, on demo data only: the demo
-shop's source list, the GTM import (three scripted versions), the tracking audit run (scripted to the planted
-bug). On own data the GTM import is unavailable and the audit is a handoff to ai tag debugger in the chat app.
+shop's source list and the tracking audit run (scripted to the planted bug). On own data the audit is a handoff
+to ai tag debugger in the chat app.
 
 ## Exceptions
 

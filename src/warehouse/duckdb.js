@@ -73,7 +73,10 @@ export async function openDuckDB(file, { local = false } = {}) {
   // when the demo file changes.
   const base = file.replace(/\.duckdb$/, "");
   let built = null;
-  async function exploreDb(allowed) {
+  // One build at a time: two first queries at once would write, rename and delete the same files.
+  let building = Promise.resolve();
+  const exploreDb = (allowed) => (building = building.catch(() => {}).then(() => buildExploreDb(allowed)));
+  async function buildExploreDb(allowed) {
     const tables = [...new Set(allowed.map((t) => String(t).toLowerCase()))].filter((t) => present.includes(t)).sort();
     const mtime = statSync(file).mtimeMs;
     const sig = createHash("sha256").update(tables.join(",")).digest("hex").slice(0, 10);

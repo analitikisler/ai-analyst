@@ -371,6 +371,7 @@ export const en = {
     chart_context: "The {n} days before the period are lighter, for context.",
     finding_title: "Linked finding",
     finding_meta: "{source} · since {date} · release {release}",
+    finding_meta_no_release: "{source} · since {date}",
     weeks_title: "By week",
     weeks_lead: "Complete weeks, worked out now from the data.",
     weeks_col: { week: "Week" },

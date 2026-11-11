@@ -1,4 +1,4 @@
-// Bundles scripts/smoke.tsx for Bun (resolves import.meta.glob and the @ alias). Used by `bun run smoke`.
+// Bundles scripts/smoke.tsx for Bun (resolves the @ alias). Used by `bun run smoke`.
 import { fileURLToPath } from "node:url";
 import { defineConfig } from "vite";
 

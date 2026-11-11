@@ -694,3 +694,45 @@ test("a query that uses a protected column cannot contain a CTE or a subquery, o
   assert.equal(refusal(`WITH k AS (SELECT channel FROM ${O}) SELECT COUNT(*) AS n FROM k`, shopWh, { policy: shopPolicy, protectedCols }), null);
   assert.equal(refusal("SELECT COUNT(DISTINCT c.email) AS n FROM customers c JOIN orders o ON o.customer_id = c.customer_id", duck, { policy: duckPolicy, protectedCols: duckProt }), null);
 });
+
+test("protected columns cannot be reached through a hidden clause, a reused alias, a whole row or a STRUCT field, on both dialects", () => {
+  const duckPolicy = { allowed: ["daily_channel_device", "orders", "customers", "products"], entries: [], match: (p) => (p.length === 1 && ["orders", "customers", "products", "daily_channel_device"].includes(p[0].toLowerCase()) ? p[0].toLowerCase() : null) };
+  const duckProt = (k) => (k === "customers" ? new Set(["email", "customer_id", "address"]) : k === "orders" ? new Set(["customer_id"]) : new Set());
+  const duck = { table: "daily_channel_device", dialect: "duckdb" };
+  const d = (sql) => refusal(sql, duck, { policy: duckPolicy, protectedCols: duckProt });
+  const b = (sql) => refusal(sql, shopWh, { policy: shopPolicy, protectedCols });
+  // A carriage return ends a line comment: the rest of the query is read.
+  assert.equal(d("SELECT 'n' AS k, COUNT(*) AS n FROM orders -- x\r WHERE 1=0 UNION ALL SELECT customer_id, 1 FROM orders"), "sql_protected_column");
+  assert.equal(b(`SELECT 'n' AS k, COUNT(*) AS n FROM ${O} -- x\r WHERE 1=0 UNION ALL SELECT email, 1 FROM ${C}`), "sql_protected_column");
+  // A table after USING (…) and a comma is read like any other: its protected columns count.
+  assert.equal(d("SELECT c.email AS e, COUNT(*) AS n FROM orders a JOIN orders b USING (order_id), customers c GROUP BY 1"), "sql_protected_column");
+  assert.equal(b(`SELECT c.email AS e, COUNT(*) AS n FROM ${O} a JOIN ${O} b USING (order_id), ${C} c GROUP BY 1`), "sql_protected_column");
+  // One name, one table: an alias that names another table, or is used again in a subquery, is refused.
+  assert.equal(d("SELECT products.customer_id AS c, COUNT(*) AS n FROM orders products, products p2 GROUP BY 1"), "sql_unsupported_syntax");
+  assert.equal(d("SELECT a.customer_id AS c, COUNT(*) AS n FROM orders a WHERE EXISTS (SELECT 1 FROM products a) GROUP BY 1"), "sql_unsupported_syntax");
+  assert.equal(b(`SELECT orders.email AS e, COUNT(*) AS n FROM ${C} AS orders JOIN ${O} AS o2 ON TRUE GROUP BY 1`), "sql_unsupported_syntax");
+  // The same alias for the same table twice (two branches of a UNION) is still fine.
+  assert.equal(d("SELECT t.channel AS k, SUM(t.revenue) AS v FROM daily_channel_device t GROUP BY 1 UNION ALL SELECT t.device, SUM(t.orders) FROM daily_channel_device t GROUP BY 1"), null);
+  // A positional column, a query that starts with FROM, DISTINCT ON.
+  assert.equal(d("SELECT #2 AS c, COUNT(*) AS n FROM orders GROUP BY 1"), "sql_unsupported_syntax");
+  assert.equal(d("SELECT x AS v, COUNT(*) AS n FROM (FROM orders) x GROUP BY 1"), "sql_unsupported_syntax");
+  assert.equal(d("SELECT 0 AS a FROM orders WHERE 1=0 UNION ALL BY NAME FROM orders"), "sql_unsupported_syntax");
+  assert.equal(d("SELECT 0 AS a, 'x' AS b FROM orders WHERE 1=0 UNION ALL SELECT DISTINCT ON (order_id) * FROM orders"), "sql_unsupported_syntax");
+  // A whole row, in any clause and under any qualifier.
+  for (const sql of [
+    "SELECT COUNT(*) AS n FROM orders o WHERE CAST(o AS VARCHAR) LIKE '%cust_A%'",
+    "SELECT CAST(main.orders AS VARCHAR) AS s, COUNT(*) AS n FROM orders GROUP BY 1",
+    "SELECT COUNT(*) AS n FROM orders o GROUP BY o",
+    "SELECT 1 IS DISTINCT FROM orders AS x FROM orders",
+  ]) assert.equal(d(sql), "sql_protected_column", sql);
+  assert.equal(b(`SELECT COUNT(*) AS n FROM ${C} c WHERE FORMAT('%t', c) LIKE '%a@b.example%'`), "sql_protected_column");
+  // A field of a protected STRUCT column.
+  assert.equal(d("SELECT c.address.street AS s, COUNT(*) AS n FROM customers c GROUP BY 1"), "sql_protected_column");
+  assert.equal(d("SELECT address.street AS s, COUNT(*) AS n FROM customers GROUP BY 1"), "sql_protected_column");
+  // BigQuery's pipe syntax.
+  assert.equal(b(`WITH x AS (FROM ${C} |> EXTEND email AS e |> SELECT e) SELECT e, COUNT(*) AS n FROM x GROUP BY 1`), "sql_unsupported_syntax");
+  // What worked before still works: a join key, COUNT(DISTINCT), CRLF line ends, a join with USING.
+  assert.equal(d("SELECT COUNT(DISTINCT o.customer_id) AS n\r\nFROM orders o -- all orders\r\nJOIN customers c ON c.customer_id = o.customer_id"), null);
+  assert.equal(d("SELECT a.channel, SUM(a.revenue * 2) AS v FROM daily_channel_device a JOIN daily_channel_device b USING (date, channel, device) GROUP BY 1"), null);
+});
+

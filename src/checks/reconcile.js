@@ -42,6 +42,7 @@ export async function reconcile({ pack, warehouse, check: checkId, from, to, fil
     if (v != null && !isISODate(v)) throw new AppError("invalid_date", `${k} must be a date written YYYY-MM-DD, not "${v}".`);
   }
   const range = await warehouse.range();
+  if (!range?.to) throw new AppError("no_data", "There is no data to check yet: connect a source or import a file first.");
   const clamp = (s) => (s < range.from ? range.from : s > range.to ? range.to : s);
   let end = to ? clamp(to) : range.to;
   let start = from ? clamp(from) : clamp(addDays(end, -13));

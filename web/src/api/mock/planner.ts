@@ -13,6 +13,9 @@ import { exploreQuery, MART_COLUMNS, runExplore } from "./explore";
 import type { ChartEvent, ExploreResult, ExploreSpec } from "../types";
 import shop from "../fixtures/shop.json";
 
+/** Lower-cases the first letter of a finding for "found that …", unless it starts a proper noun (Meta, GA4). */
+const lowerFirst = (text: string) => (/^(Meta|GA4|Google|TikTok|AI )/.test(text) ? text : text.charAt(0).toLowerCase() + text.slice(1));
+
 export interface PlanContext {
   /** The last check answered in this conversation, for "Is the gap only on mobile?". */
   lastCheck: CheckResult | null;
@@ -260,7 +263,7 @@ function whyText(c: CheckResult): Text {
   const base = checkSentence(c);
   const strip = (x: string) => x.replace(/^(Does not add up|Tutmuyor)\. /, "");
   return {
-    en: `${strip(base.en)}${fd ? ` ai tag debugger found that ${fd.text.en.charAt(0).toLowerCase()}${fd.text.en.slice(1)}` : ""}`,
+    en: `${strip(base.en)}${fd ? ` ai tag debugger found that ${lowerFirst(fd.text.en)}` : ""}`,
     tr: `${strip(base.tr)}${fd ? ` ai tag debugger şunu buldu: ${fd.text.tr}` : ""}`,
   };
 }
@@ -365,9 +368,10 @@ function seriesSentence(q: QueryResult): Text {
   const max = vals.reduce((a, b) => (b.value > a.value ? b : a), vals[0]!);
   const weeks = q.group_by === "week";
   const totalWord = m.unit === "count" || m.unit === "try";
+  const unitWord = { en: weeks ? "Weekly" : q.group_by === "month" ? "Monthly" : "Daily", tr: weeks ? "Haftalık" : q.group_by === "month" ? "Aylık" : "Günlük" };
   return {
-    en: `${m.label.en} for ${range(q.from, q.to).en}${weeks ? `, ${vals.length} complete weeks` : ""}: ${v("en", q.total)}${totalWord ? " in total" : " overall"}. ${weeks ? "Weekly" : "Daily"} figures ran from ${v("en", min.value)} (${f.en.date(min.key)}) to ${v("en", max.value)} (${f.en.date(max.key)}).`,
-    tr: `${range(q.from, q.to).tr} döneminde${weeks ? `, ${vals.length} tam haftada` : ""} ${mid(m.label.tr, "tr")} ${totalWord ? "toplam " : ""}${v("tr", q.total)}. ${weeks ? "Haftalık" : "Günlük"} değerler ${v("tr", min.value)} (${f.tr.date(min.key)}) ile ${v("tr", max.value)} (${f.tr.date(max.key)}) arasında.`,
+    en: `${m.label.en} for ${range(q.from, q.to).en}${weeks ? `, ${vals.length} complete weeks` : ""}: ${v("en", q.total)}${totalWord ? " in total" : " overall"}. ${unitWord.en} figures ran from ${v("en", min.value)} (${f.en.date(min.key)}) to ${v("en", max.value)} (${f.en.date(max.key)}).`,
+    tr: `${range(q.from, q.to).tr} döneminde${weeks ? `, ${vals.length} tam haftada` : ""} ${mid(m.label.tr, "tr")} ${totalWord ? "toplam " : ""}${v("tr", q.total)}. ${unitWord.tr} değerler ${v("tr", min.value)} (${f.tr.date(min.key)}) ile ${v("tr", max.value)} (${f.tr.date(max.key)}) arasında.`,
   };
 }
 

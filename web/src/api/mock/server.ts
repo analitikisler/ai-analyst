@@ -759,7 +759,7 @@ const handlers: { [N in keyof Actions]: Handler<N> } = {
   get_metric: ({ metric }) => metricPage(metric),
   decide_metric: ({ metric, accept }) => {
     const p = db.metrics_proposed.find((x) => x.id === metric);
-    if (!p || p.status !== "proposed") throw new ApiError("invalid_input", "This metric is not waiting for a decision.", 409);
+    if (!p || p.status !== "proposed") throw new ApiError("not_pending", "This metric is not waiting for a decision.", 409);
     p.status = accept ? "accepted" : "declined";
     if (accept) p.accepted_at = now();
     const act = log("person", "decide_metric", accept ? ACT.metric_accepted(p.label) : ACT.metric_declined(p.label));
@@ -878,7 +878,7 @@ const handlers: { [N in keyof Actions]: Handler<N> } = {
   decide_proposal: ({ proposal_id, approve, where }) => {
     const p = db.proposals.find((x) => x.id === proposal_id);
     if (!p) throw new ApiError("not_found", "Unknown proposal.", 404);
-    if (p.status !== "pending") throw new ApiError("invalid_input", "This was already decided.", 409);
+    if (p.status !== "pending") throw new ApiError("not_pending", "This was already decided.", 409);
     p.status = approve ? "approved" : "declined";
     p.decided_at = now();
     p.decided_in = where;
@@ -1088,7 +1088,7 @@ const handlers: { [N in keyof Actions]: Handler<N> } = {
     if (max_bytes > 2 * 1024 ** 3) throw new ApiError("over_ceiling", "The cap can only be raised with BIGQUERY_MAX_BYTES.", 409);
     if (!(max_bytes > 0)) throw new ApiError("invalid_input", "The cap must be above zero.");
     db.max_bytes = max_bytes;
-    log("person", "set_bytes_cap", ACT.cap(f.en.bytes(max_bytes)));
+    log("person", "set_bytes_cap", { en: `Lowered the bytes cap to ${f.en.bytes(max_bytes)}`, tr: `Bayt sınırı ${f.tr.bytes(max_bytes)} olarak düşürüldü` });
     return settings();
   },
   set_currency: ({ currency }) => {
@@ -1128,7 +1128,7 @@ const handlers: { [N in keyof Actions]: Handler<N> } = {
   set_model_provider: ({ provider }) => {
     if (provider !== "planner" && !db.providers[provider].set) throw new ApiError("invalid_input", "That provider has no key.");
     db.active_provider = provider;
-    log("person", "set_model_provider", ACT.model_provider(provider === "planner" ? "Built-in planner" : PROVIDER_LABEL[provider]));
+    log("person", "set_model_provider", provider === "planner" ? { en: "Set the built-in planner to answer questions", tr: "Soruları yerleşik planlayıcı cevaplayacak şekilde ayarlandı" } : ACT.model_provider(PROVIDER_LABEL[provider]));
     return settings();
   },
   get_chat_app_setup: ({ client }) => chatSetup(client),

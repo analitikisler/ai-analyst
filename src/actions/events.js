@@ -2,12 +2,14 @@
 import { z } from "zod";
 import { ROOT } from "../config.js";
 import { AppError } from "../errors.js";
+import { isISODate } from "../format.js";
 import { newId } from "../store/store.js";
 import { ACT, T } from "../text.js";
 import { defineAction } from "./registry.js";
 
 const text = z.object({ en: z.string().min(1).max(200), tr: z.string().min(1).max(200) }).strict();
-const date = z.string().regex(/^\d{4}-\d{2}-\d{2}$/);
+// A real calendar day: 2026-02-31 has the shape of a date and is not one.
+const date = z.string().regex(/^\d{4}-\d{2}-\d{2}$/).refine(isISODate, "a real date written YYYY-MM-DD");
 const EVENT_TYPES = ["release", "campaign", "tag_change", "price_change", "other"];
 const byDate = (a, b) => a.date.localeCompare(b.date);
 
@@ -63,7 +65,7 @@ defineAction({
     const old = event.id ? ctx.store.get("events", event.id) : null;
     if (event.id && (!old || !listEvents(ctx.store, ctx.app.config).some((e) => e.id === old.id))) throw new AppError("not_found", "Unknown event.");
     if (old) {
-      const next = { ...old, ...event, note: event.note ?? old.note ?? null, id: old.id, source: old.source };
+      const next = { ...old, ...event, note: event.note === undefined ? old.note ?? null : event.note, id: old.id, source: old.source };
       ctx.store.put("events", next);
       const act = ctx.log(ACT.event_edited(next.title), { kind: "event_update", event: old });
       return { event: next, activity_id: act.id };

@@ -20,15 +20,11 @@ const cleanTemp = () => {
 process.once("exit", cleanTemp);
 for (const sig of ["SIGINT", "SIGTERM"]) process.once(sig, () => (cleanTemp(), process.exit(130)));
 
-/** A new empty folder under the system temp dir, removed at exit (or earlier with removeTemp). */
+/** A new empty folder under the system temp dir, removed at exit. */
 export function tempDir(prefix = "ai-analyst-") {
   const d = mkdtempSync(path.join(tmpdir(), prefix));
   TEMP.add(d);
   return d;
-}
-export function removeTemp(d) {
-  rmSync(d, { recursive: true, force: true });
-  TEMP.delete(d);
 }
 
 /** Model keys and settings from the caller's shell must never reach a test: only these variables are seen. */

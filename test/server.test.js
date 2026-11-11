@@ -201,6 +201,7 @@ test("a non-loopback address needs AI_ANALYST_TOKEN; with a token every request 
     assert.match(cookie, /SameSite=Strict/);
     assert.equal((await raw("GET", "/api/state", { srv: p, headers: { ...h, Cookie: cookie.split(";")[0] } })).status, 200);
     assert.equal((await raw("GET", `/api/state?token=${token}`, { srv: p, headers: h })).status, 401, "the query token only works on the page, once");
+    assert.equal((await raw("GET", "/api/state", { srv: p, headers: { ...h, Cookie: "ai_analyst_token=%E0%A4%A" } })).status, 401, "a cookie that cannot be decoded is no session");
   } finally {
     s.close();
   }

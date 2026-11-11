@@ -20,7 +20,7 @@ export function shopUrl(v) {
   if (!/^https?:\/\//i.test(s)) s = `https://${s}`;
   try {
     const u = checkUrl(s, () => true);
-    return `https://${u.host}${u.pathname.replace(/\/+$/, "").replace(/\/wp-json.*$/, "")}`;
+    return `https://${u.host.replace(/\.(?=:\d+$|$)/, "")}${u.pathname.replace(/\/+$/, "").replace(/\/wp-json.*$/, "")}`;
   } catch {
     return null;
   }
@@ -31,8 +31,7 @@ export function wooClient(app, base, key, secret) {
   const call = connectorFetch(app, { service: "WooCommerce", hosts: [host] });
   const auth = `Basic ${Buffer.from(`${key}:${secret}`).toString("base64")}`;
   return async (path, { method = "GET", body } = {}) => {
-    const res = await call(`${base}/wp-json/wc/v3${path}`, { method, headers: { Authorization: auth, Accept: "application/json", ...(body ? { "Content-Type": "application/json" } : {}) }, ...(body ? { body: JSON.stringify(body) } : {}) });
-    return res;
+    return call(`${base}/wp-json/wc/v3${path}`, { method, headers: { Authorization: auth, Accept: "application/json", ...(body ? { "Content-Type": "application/json" } : {}) }, ...(body ? { body: JSON.stringify(body) } : {}) });
   };
 }
 

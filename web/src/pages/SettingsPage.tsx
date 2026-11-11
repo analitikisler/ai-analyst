@@ -196,10 +196,14 @@ function DataSection({ s }: { s: Settings }) {
   const localRange = froms.length && tos.length ? f.range(froms[0]!, tos[tos.length - 1]!) : t.format.dash;
   const rebuild = async () => {
     setRebuilding(true);
-    await call("rebuild_demo", {});
-    setRebuilding(false);
-    setConfirm(false);
-    notify(t.set.data.rebuilt_toast, { type: "success" });
+    try {
+      await call("rebuild_demo", {});
+      notify(t.set.data.rebuilt_toast, { type: "success" });
+    } finally {
+      // Also after a failure, so the button and the dialog do not stay locked until a reload.
+      setRebuilding(false);
+      setConfirm(false);
+    }
   };
   return (
     <Card id="sources" title={t.set.nav.sources} lead={t.sources.lead}>

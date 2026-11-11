@@ -68,9 +68,10 @@ export async function bigQueryClient(cfg) {
 }
 
 /** The region qualifier for INFORMATION_SCHEMA views that span a project: EU → region-eu. */
-export const regionOf = (location) => `region-${String(location || "EU").toLowerCase()}`;
 const BQ_TABLES_LIMIT = 50; // a dry run lists at most 50 referenced tables; a longer list may be incomplete
 const msOrNull = (v) => (v == null || v === "" ? null : new Date(Number(v)).toISOString());
+
+const RANGE_TTL_MS = 5 * 60 * 1000;
 
 /**
  * @param {{ project: string, jobProject?: string, dataset: string, location: string, maxBytes: number, auth?: object, jobTimeoutMs?: number }} cfg
@@ -81,6 +82,7 @@ export async function openBigQuery(cfg, opts = {}) {
   const mart = `${cfg.project}.${cfg.dataset}.${MART.model}`.toLowerCase();
   const client = opts.client ?? (await bigQueryClient(cfg));
   let range = null;
+  let rangeAt = 0;
   let lastRun = null;
 
   const capError = (bytes, maxBytes, question) => {
@@ -232,10 +234,13 @@ export async function openBigQuery(cfg, opts = {}) {
       return { location: cfg.location ?? null, datasets };
     },
     async range() {
-      if (!range) {
+      // Read again after a few minutes (as long as the result cache keeps a query): the mart gets new days while the
+      // server runs, and "the last 14 days" must follow them.
+      if (!range || Date.now() - rangeAt > RANGE_TTL_MS) {
         const [r] = await query(`SELECT CAST(MIN(date) AS STRING) AS data_from, CAST(MAX(date) AS STRING) AS data_to, COUNT(*) AS n FROM ${table}`);
-        if (!r?.data_to) throw new Error(`${table} has no rows.`);
-        range = { from: r.data_from, to: r.data_to, rows: Number(r.n) };
+        // An empty mart has no range (as on your shop's data before the first sync): figures answer no_data.
+        range = { from: r?.data_from ?? null, to: r?.data_to ?? null, rows: Number(r?.n ?? 0) };
+        rangeAt = Date.now();
       }
       return range;
     },

@@ -1,6 +1,6 @@
 // Conversations, proposals (what the agent asks a person to approve), undo, and preferences.
 import { z } from "zod";
-import { findTile, getDashboard, insertDashboard, lastDashboardId, listDashboards, removeDashboard, saveDashboard, tileFromAnswer, touch } from "../dashboards.js";
+import { getDashboard, insertDashboard, lastDashboardId, listDashboards, removeDashboard, saveDashboard, tileFromAnswer, touch } from "../dashboards.js";
 import { AppError } from "../errors.js";
 import { preferences } from "../settings.js";
 import { newId } from "../store/store.js";
@@ -9,7 +9,7 @@ import { addWatch } from "./data.js";
 import { sourceKindOf } from "./events.js";
 import { defineAction } from "./registry.js";
 
-export const conversationSummary = (store, c) => ({ id: c.id, title: c.title ?? "", title_text: c.title_text ?? null, created_at: c.created_at, updated_at: c.updated_at, turns: store.listTurns(c.id).length });
+export const conversationSummary = (store, c) => ({ id: c.id, title: c.title ?? "", title_text: c.title_text ?? null, created_at: c.created_at, updated_at: c.updated_at, turns: store.countTurns(c.id) });
 
 defineAction({
   name: "list_conversations",
@@ -123,6 +123,8 @@ function applyUndo(ctx, entry, rec) {
       if (!store.get("watches", rec.watch_id)) gone();
       return store.remove("watches", rec.watch_id);
     case "unwatch":
+      // Watched again since: the check is already watched, a second row would count twice.
+      if (store.list("watches").some((w) => w.check === rec.watch.check)) return null;
       return store.put("watches", rec.watch);
     case "dashboard_create":
       if (listDashboards(store).length <= 1 || !store.get("dashboards", rec.dashboard_id)) gone();
@@ -194,5 +196,3 @@ defineAction({
     return prefs;
   },
 });
-
-export { findTile };

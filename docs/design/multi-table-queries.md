@@ -26,7 +26,7 @@ Non-goals for this version:
 
 ### 1. An allowlist chosen by the person
 
-Settings › Data source gets a new section, "Tables the agent may read":
+Settings › Sources gets a new section, "Tables the agent may read":
 
 - The person adds datasets (every table in it, including ones added later) or single tables. The mart is always on
   the list.
@@ -102,7 +102,7 @@ on the demo, such as "Which product categories are returned most often?".
 
 ## Settings and screens
 
-- Data source: the new "Tables the agent may read" list with Add dataset, Add table and Remove; protected columns
+- Sources: the new "Tables the agent may read" list with Add dataset, Add table and Remove; protected columns
   per table; the connection test gains a step, "can read the allowed tables", and a warning when the credential can
   read more than the list (detected from `INFORMATION_SCHEMA.SCHEMATA` in the job project).
 - Answer card: the tables read, listed under the SQL.

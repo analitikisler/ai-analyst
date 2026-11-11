@@ -103,7 +103,7 @@ test("end to end on your shop's data: GA4 and an orders file; the check, revenue
   assert.deepEqual(ga4.warnings, [], "from the demo the app switches, so no switch note");
   assert.equal(ws.config.warehouse, "local", "the first connect switched from the demo");
   assert.ok(existsSync(localFile(ws.config)));
-  assert.ok(ws.ga4Transport.calls.filter((b) => b.dimensions.length === 3).every((b) => b.dateRanges[0].endDate <= TO), "the sync ends yesterday");
+  assert.ok(ws.ga4Transport.calls.filter((b) => b.dimensions.length === 4).every((b) => b.dateRanges[0].endDate <= TO), "the sync ends yesterday");
 
   const { up, state } = await importOrders(ws);
   assert.deepEqual([state.id, state.status, state.target, state.last_sync.from, state.last_sync.to], ["orders_file", "connected", "siparisler.csv", FROM, TO]);
@@ -419,4 +419,19 @@ test("the last disconnect on an environment-fixed local source stays, and says w
   const off = await callAction("disconnect_source", { connector: "orders_file" }, ctxFor(ws));
   assert.equal(ws.config.warehouse, "local");
   assert.match(off.warnings.at(-1).en, /AI_ANALYST_WAREHOUSE in the environment fixes the data source/);
+});
+
+test("your shop's data before the first sync: the workspace opens, state answers, and figures say no_data", async () => {
+  const ws = await demoWorkspace({ seed: true, env: { AI_ANALYST_WAREHOUSE: "local" } });
+  open.push(ws);
+  const ctx = ctxFor(ws);
+  assert.equal(ws.store.latestCheckRun(), null, "nothing to check yet");
+  const { buildState } = await import("../src/state.js");
+  assert.equal((await buildState(ws)).workspace.data_to, null);
+  const noData = (e) => e.code === "no_data";
+  await assert.rejects(callAction("get_check", { check: "ga4_vs_orders" }, ctx), noData);
+  await assert.rejects(callAction("run_query", { metric: "revenue" }, ctx), noData);
+  await assert.rejects(callAction("explain_metric", { metric: "revenue" }, ctx), noData);
+  await assert.rejects(callAction("get_metric", { metric: "revenue" }, ctx), noData);
+  await assert.rejects(callAction("get_dashboard", { dashboard_id: "db_example" }, ctx), noData);
 });

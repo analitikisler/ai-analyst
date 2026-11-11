@@ -129,7 +129,8 @@ export async function runExploreSql(ctx, input, pack) {
     if (hit) throw new AppError("sql_protected_column", "The query uses a protected column outside the two places it may appear, so it does not run. A protected column can only be a join key compared with another column (a.col = b.col, or USING) or sit alone inside COUNT(DISTINCT …).", { params: { column: hit } });
   }
   const nd = input.dims.length;
-  if (columns.length < nd + 1) throw new AppError("explore_shape", `The query returned ${columns.length} columns; it needs the ${nd} dimension column(s) first and one value column last.`);
+  // An empty result on BigQuery carries no column names: nothing to check the shape of, and nothing to show.
+  if ((out.rows.length || columns.length) && columns.length < nd + 1) throw new AppError("explore_shape", `The query returned ${columns.length} columns; it needs the ${nd} dimension column(s) first and one value column last.`);
   const valueCol = columns[columns.length - 1];
   let rows = out.rows.map((r) => [...input.dims.map((d, i) => dimKey(d, r[columns[i]])), typeof r[valueCol] === "number" ? r[valueCol] : r[valueCol] == null ? null : Number(r[valueCol])]);
   if (rows.some((r) => r.at(-1) != null && Number.isNaN(r.at(-1)))) throw new AppError("explore_shape", "The last column must be a number.");

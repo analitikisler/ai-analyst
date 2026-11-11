@@ -92,6 +92,8 @@ export default function AskPage() {
   const sent = useRef<string | null>(null);
   useEffect(() => {
     const q = params.get("q");
+    // The link no longer carries it: the same question may be passed again later (two review flows share one).
+    if (!q) sent.current = null;
     if (q && sent.current !== q && !running) {
       sent.current = q;
       const next = new URLSearchParams(params);

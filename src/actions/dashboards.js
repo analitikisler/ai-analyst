@@ -1,7 +1,7 @@
 // Dashboards and tiles. Every change logs Activity with an undo.
 import { z } from "zod";
-import { dashboardResult, findTile, getDashboard, insertDashboard, lastDashboardId, listDashboards, publicDashboard, publicTile, removeDashboard, saveDashboard, touch } from "../dashboards.js";
-import { comparisonWindow, PERIODS, resolvePeriod, validCharts, widthRules, CHART_TYPES } from "../engine.js";
+import { dashboardResult, findTile, getDashboard, insertDashboard, listDashboards, publicDashboard, publicTile, removeDashboard, saveDashboard, touch } from "../dashboards.js";
+import { comparisonWindow, dataRange, PERIODS, resolvePeriod, validCharts, widthRules, CHART_TYPES } from "../engine.js";
 import { AppError } from "../errors.js";
 import { newId } from "../store/store.js";
 import { ACT, CHART_NAMES, COMPARE_NAMES, PERIOD_NAMES, T } from "../text.js";
@@ -97,7 +97,7 @@ defineAction({
   input: z.object({ dashboard_id: id, period: z.enum(PERIODS).optional(), compare: z.enum(["off", "previous_period", "previous_year"]).optional() }).strict(),
   async run(ctx, { dashboard_id, period, compare }) {
     const d = getDashboard(ctx.store, dashboard_id);
-    const range = await ctx.warehouse.range();
+    const range = await dataRange(ctx.warehouse);
     if (compare === "previous_year" && !comparisonWindow(range, resolvePeriod(range, period ?? d.period).from, range.to, "previous_year")) throw new AppError("no_data", "Data starts too late for a year earlier.");
     const before = { period: d.period, compare: d.compare };
     d.period = period ?? d.period;
@@ -209,5 +209,3 @@ defineAction({
     return { removed: true, activity_id: act.id };
   },
 });
-
-export { lastDashboardId };

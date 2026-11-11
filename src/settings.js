@@ -84,7 +84,7 @@ export function settingsView(app) {
   return {
     server: { loopback: hostIsLoopback(c.host), config_file: c.configFile, data_dir: c.dataDir, pack_dir: c.packDir, address, version: VERSION },
     data_source: {
-      kind: { value: c.warehouseSetting.value, source: c.warehouseSetting.source === "default" ? "default" : c.warehouseSetting.source, locked: c.warehouseSetting.locked, ...(c.warehouseSetting.env ? { env: c.warehouseSetting.env } : {}) },
+      kind: { value: c.warehouseSetting.value, source: c.warehouseSetting.source, locked: c.warehouseSetting.locked, ...(c.warehouseSetting.env ? { env: c.warehouseSetting.env } : {}) },
       bigquery: bq.project && bq.dataset
         ? { data_project: bq.project, job_project: bq.jobProject === bq.project ? null : bq.jobProject, dataset: bq.dataset, location: bq.location, auth: { kind: bq.auth?.kind ?? "adc", path: bq.auth?.path ?? null, impersonate: bq.auth?.impersonate ?? null }, max_bytes: bq.maxBytes }
         : null,
@@ -130,5 +130,3 @@ export function exploreView(app) {
 export function preferences(store) {
   return { make_it_yours: "shown", not_now: [], ...(store.getMeta("preferences") ?? {}) };
 }
-
-export { MODEL_DEFAULT };

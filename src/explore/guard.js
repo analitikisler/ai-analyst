@@ -5,17 +5,21 @@
 //
 // The checks:
 //   the query is read the way the warehouse reads it; anything whose reading could differ is refused: block
-//   comments (DuckDB nests them, BigQuery does not), backslash escapes, prefixed, triple-quoted or $ strings, @;
+//   comments (DuckDB nests them, BigQuery does not), backslash escapes, prefixed, triple-quoted or $ strings, @,
+//   DuckDB's positional #n, a query that starts with FROM, DISTINCT ON, BigQuery's pipe |>; a line comment ends at a
+//   line feed or a carriage return, as in both warehouses;
 //   one statement (a single trailing ; is allowed); it starts with SELECT or WITH;
 //   no keyword that writes, loads, changes settings or names another statement form (TABLE, PIVOT) anywhere;
 //   every function called is on an allowlist of aggregate, window, math, date, string and conditional functions
 //   (so no file, URL, system, AI, identity or cost function, in either dialect);
 //   every table after FROM, JOIN, a comma in a FROM list, or an opening parenthesis of a FROM item is on the
 //   allowlist (BigQuery: written in full, project.dataset.table), or a CTE defined in the top-level WITH;
-//   no string literal used as a table (DuckDB reads files that way), no LATERAL or UNNEST;
+//   no string literal used as a table (DuckDB reads files that way), no LATERAL or UNNEST; a name stands for one
+//   table in the whole query (an alias reused for another table is refused);
 //   protected columns (contact data, person ids) never reach the output: not selected, not through *, an alias, a
 //   CTE, a subquery or an expression, not grouped, ordered or filtered by; only a join key (a.col = b.col, USING) or
-//   COUNT(DISTINCT col) may use them.
+//   COUNT(DISTINCT col) may use them. A whole row (a table or its alias alone) and a field of a protected STRUCT
+//   column are refused in every clause.
 // The statement runs wrapped in an outer LIMIT 1000.
 import { AppError } from "../errors.js";
 
@@ -58,7 +62,8 @@ const PAREN_KEYWORDS = new Set([
   "rollup", "cube", "sets", "grouping", "qualify", "having", "union", "except", "intersect", "with", "end", "safe",
 ]);
 const SUBQUERY_START = new Set(["select", "with", "from", "values"]);
-const CLAUSE_END = new Set(["where", "group", "having", "order", "limit", "qualify", "window", "union", "except", "intersect", "select", "on", "using", "offset", "fetch"]);
+// USING is not here: its column list is in parentheses, and after it the FROM list goes on (JOIN b USING (x), c).
+const CLAUSE_END = new Set(["where", "group", "having", "order", "limit", "qualify", "window", "union", "except", "intersect", "select", "on", "offset", "fetch"]);
 /** Clauses that hold one condition: a comma at their own depth is not SQL the guard reads. */
 const CONDITION = new Set(["where", "having", "qualify", "on"]);
 
@@ -74,7 +79,7 @@ export const GUARD_MESSAGES = {
   sql_table_not_allowed: "The query reads a table that is not on the list of tables the agent may read (Settings › Sources). On BigQuery every table is written in full, project.dataset.table.",
   sql_protected_column: "The query uses a protected column outside the two places it may appear, so it does not run. A protected column can only be a join key compared with another column (a.col = b.col, or USING) or sit alone inside COUNT(DISTINCT …).",
   sql_location_mismatch: "The query reads a dataset in another location than the mart. A BigQuery query runs in one location.",
-  sql_unsupported_syntax: "The query uses a form the guard does not read the same way as the warehouse (block comments, backslashes, prefixed or dollar-quoted strings, @ variables), so it does not run.",
+  sql_unsupported_syntax: "The query uses a form the guard does not read the same way as the warehouse (block comments, backslashes, prefixed or dollar-quoted strings, @ variables, #n columns, a query that starts with FROM, DISTINCT ON, |>, one alias for two tables), so it does not run.",
 };
 const refuse = (code, detail, extra = {}) => {
   throw new AppError(code, detail ? `${GUARD_MESSAGES[code]} (${detail})` : GUARD_MESSAGES[code], { params: { ...(detail ? { detail } : {}), ...extra } });
@@ -95,17 +100,21 @@ export function tokenize(sql, dialect = "duckdb") {
     if (/\s/.test(c)) {
       i++;
     } else if (c === "-" && sql[i + 1] === "-") {
-      while (i < n && sql[i] !== "\n") i++;
+      // Both warehouses end a line comment at a line feed or a carriage return: so does the guard, or what follows
+      // a lone \r would run unread.
+      while (i < n && sql[i] !== "\n" && sql[i] !== "\r") i++;
     } else if (c === "#" && dialect === "bigquery") {
-      // A line comment in BigQuery only; in DuckDB # falls through to punctuation.
-      while (i < n && sql[i] !== "\n") i++;
+      // A line comment in BigQuery only; in DuckDB # is a positional column (#2), refused below.
+      while (i < n && sql[i] !== "\n" && sql[i] !== "\r") i++;
     } else if (c === "/" && sql[i + 1] === "*") {
       // DuckDB nests block comments and BigQuery does not: one reading cannot be right for both.
       refuse("sql_unsupported_syntax", "block comment");
     } else if (c === "'" || c === '"' || c === "`") {
       if (sql.startsWith(c.repeat(3), i) && c !== "`") refuse("sql_unsupported_syntax", "triple quotes");
       const prev = tokens.at(-1);
-      if (prev?.type === "word" && /^(e|r|b|rb|br|x|u&)$/i.test(prev.value) && prev.end === i) refuse("sql_unsupported_syntax", `${prev.value}${c}…${c}`);
+      if (prev?.type === "word" && /^(e|r|b|rb|br|x)$/i.test(prev.value) && prev.end === i) refuse("sql_unsupported_syntax", `${prev.value}${c}…${c}`);
+      // U&"…" and U&'…' (Unicode escapes): the name or text the warehouse reads is not the one written here.
+      if (sql[i - 1] === "&" && /[uU]/.test(sql[i - 2] ?? "")) refuse("sql_unsupported_syntax", `U&${c}…${c}`);
       let j = i + 1;
       let text = "";
       for (;;) {
@@ -136,6 +145,8 @@ export function tokenize(sql, dialect = "duckdb") {
       i = j;
     } else {
       if (c === "$" || c === "@" || c === "?") refuse("sql_unsupported_syntax", c);
+      // BigQuery's pipe syntax (FROM t |> EXTEND … |> SELECT …) puts expressions where the walk reads table names.
+      if (c === "|" && sql[i + 1] === ">") refuse("sql_unsupported_syntax", "|>");
       if (c.charCodeAt(0) > 127) refuse("sql_unsupported_syntax", `character ${c}`);
       tokens.push({ type: "punct", value: c });
       i++;
@@ -174,7 +185,7 @@ function martPolicy(warehouse) {
 }
 
 /** Words after a table name that are not its alias. */
-const NOT_ALIAS = new Set([...CLAUSE_END, "join", "inner", "left", "right", "full", "outer", "cross", "natural", "positional", "asof", "anti", "semi", "for", "as", "union", "except", "intersect", "lateral", "unnest", "window"]);
+const NOT_ALIAS = new Set([...CLAUSE_END, "using", "join", "inner", "left", "right", "full", "outer", "cross", "natural", "positional", "asof", "anti", "semi", "for", "as", "union", "except", "intersect", "lateral", "unnest", "window"]);
 /** Clause words that set where a token stands inside one SELECT. */
 const CLAUSES = new Set(["select", "from", "join", "where", "group", "having", "order", "qualify", "window", "on", "limit", "offset", "fetch", "union", "except", "intersect"]);
 /** Words before "*" that make it a star (every column), not a multiplication. */
@@ -234,6 +245,8 @@ export function guardSql(sql, warehouse, opts = {}) {
     const lower = t.type === "word" ? t.value.toLowerCase() : null;
     if (lower && FORBIDDEN_KEYWORDS.has(lower)) refuse("sql_forbidden_keyword", t.value.toUpperCase());
     if (t.type === "quoted" && /information_schema|__tables__/i.test(t.value)) refuseTable(t.value);
+    // DISTINCT ON (…) puts a column list before the select list (DuckDB): the clause walk does not read it.
+    if (lower === "distinct" && tokens[k + 1]?.type === "word" && tokens[k + 1].value.toLowerCase() === "on") refuse("sql_unsupported_syntax", "DISTINCT ON");
     // A function call: a name followed by "(". Only allowlisted names, and only BigQuery's SAFE. prefix.
     if ((t.type === "word" || t.type === "quoted") && tokens[k + 1]?.value === "(") {
       const name = t.value.toLowerCase();
@@ -244,8 +257,15 @@ export function guardSql(sql, warehouse, opts = {}) {
     }
   }
 
+  // DuckDB's #n is the nth column of the FROM list, whatever its name: a protected column without its name. (In
+  // BigQuery # starts a comment, dropped by the tokenizer.)
+  if (tokens.some((t) => t.type === "punct" && t.value === "#")) refuse("sql_unsupported_syntax", "#");
+
   // Tables: walk with a clause state per parenthesis depth.
   const state = [null];
+  // Whether a SELECT was read at this depth since it opened or since the last UNION, EXCEPT or INTERSECT: a FROM
+  // without one is DuckDB's FROM-first query (FROM t is SELECT * FROM t), which returns every column unnamed.
+  const selected = [false];
   let depth = 0;
   let fromParen = false; // the next "(" opens a FROM item: its first token is a table or a subquery
   const tables = [];
@@ -271,12 +291,19 @@ export function guardSql(sql, warehouse, opts = {}) {
     reads++;
     if (key) {
       tables.push(key);
-      aliases.set(parts.at(-1).toLowerCase(), key);
+      // One name, one table, in the whole query: the map has no scopes, so a name bound twice (FROM orders products,
+      // products p2; or an alias reused in a subquery) would be read as the wrong table's column.
+      const bind = (alias) => {
+        const bound = aliases.get(alias);
+        if (bound && bound !== key) refuse("sql_unsupported_syntax", `the name ${alias} stands for two tables`);
+        aliases.set(alias, key);
+      };
+      bind(parts.at(-1).toLowerCase());
       // The alias: AS x, or a bare word that is not a keyword.
       let a = next;
       if (tokens[a]?.type === "word" && tokens[a].value.toLowerCase() === "as") a++;
       const at = tokens[a];
-      if (at && (at.type === "quoted" || (at.type === "word" && !NOT_ALIAS.has(at.value.toLowerCase())))) aliases.set(at.value.toLowerCase(), key);
+      if (at && (at.type === "quoted" || (at.type === "word" && !NOT_ALIAS.has(at.value.toLowerCase())))) bind(at.value.toLowerCase());
     }
     return next - 1;
   };
@@ -286,6 +313,7 @@ export function guardSql(sql, warehouse, opts = {}) {
     if (t.value === "(" && t.type === "punct") {
       depth++;
       state[depth] = null;
+      selected[depth] = false;
       if (fromParen) {
         fromParen = false;
         const next = tokens[k + 1];
@@ -304,8 +332,11 @@ export function guardSql(sql, warehouse, opts = {}) {
     if (lower === "from" || lower === "join") {
       state[depth] = "from";
       k = checkTableAt(k + 1);
+      if (lower === "from" && !selected[depth]) refuse("sql_unsupported_syntax", "a query that starts with FROM");
       continue;
     }
+    if (lower === "select") selected[depth] = true;
+    else if (lower === "union" || lower === "except" || lower === "intersect") selected[depth] = false;
     if (lower && CLAUSE_END.has(lower)) {
       state[depth] = CONDITION.has(lower) ? "condition" : null;
       continue;
@@ -318,13 +349,14 @@ export function guardSql(sql, warehouse, opts = {}) {
   }
   if (!reads) refuseTable("no table");
 
-  if (opts.protectedCols) checkProtected(tokens, [...new Set(tables)], aliases, opts.protectedCols, ctes);
-
   // A WITH name equal to a table the query reads (a dataset entry's tables are only known by being read).
   for (const key of tables) {
     const last = String(key).split(".").at(-1).toLowerCase();
     if (ctes.has(last)) refuse("sql_table_not_allowed", `a WITH name equal to the table ${last}`);
   }
+
+  if (opts.protectedCols) checkProtected(tokens, [...new Set(tables)], aliases, opts.protectedCols, ctes);
+
   const body = sql.trim().replace(/;\s*$/, "");
   const wrapped = `SELECT * FROM (\n${body}\n) AS q\nLIMIT ${ROW_LIMIT}`;
   return { sql: body, wrapped, tables: [...new Set(tables)] };
@@ -434,12 +466,15 @@ function checkProtected(tokens, tables, aliases, protectedCols, ctes = new Set()
       }
       continue;
     }
+    // a IS [NOT] DISTINCT FROM b: a comparison, not a FROM clause; what follows is still read as data.
+    if (lower === "from" && val(tokens[k - 1]) === "distinct" && ["is", "not"].includes(val(tokens[k - 2]))) continue;
     if (lower && CLAUSES.has(lower) && (top.sub || top.fromItem)) {
       top.clause = lower === "join" ? "from" : ["union", "except", "intersect"].includes(lower) ? null : lower;
       continue;
     }
     const prev = tokens[k - 1];
-    if (t.type === "punct" && t.value === "*" && top.clause === "select") {
+    // A star (every column), in whatever clause the walk believes it stands; a multiplication has an operand before it.
+    if (t.type === "punct" && t.value === "*") {
       if ((prev?.type === "word" && STAR_BEFORE.has(prev.value.toLowerCase())) || (prev?.type === "punct" && [",", "."].includes(prev.value))) deny("*");
       continue;
     }
@@ -467,11 +502,21 @@ function checkProtected(tokens, tables, aliases, protectedCols, ctes = new Set()
     const name = parts.at(-1).toLowerCase();
     const start = refStart(k);
     const qualifier = parts.length > 1 ? parts.at(-2).toLowerCase() : start < k ? val(tokens[k - 2]) : null;
-    if (top.clause === "select" && start === k && rowAliases.has(name)) deny(t.value); // a whole row
-    if (top.clause === "select" && parts.length > 1 && rowAliases.has(name)) deny(parts.join("."));
+    // A whole row: a table or its alias alone, or under a name that is not a table of this query (main.orders, a
+    // dataset). Both warehouses return it as a struct, and a cast or a format turns it into text: refused in every
+    // clause, not only the select list.
+    if (rowAliases.has(name) && !(qualifier !== null && aliases.has(qualifier))) deny(start < k ? tokens.slice(start, k + 1).map((x) => x.value).join("") : parts.join("."));
     const key = qualifier !== null ? aliases.get(qualifier) : null;
     const isProtected = key ? byTable.get(key)?.has(name) : any.has(name);
-    if (!isProtected) continue;
+    if (!isProtected) {
+      // A field of a protected STRUCT column (c.address.street, address.street) is that column's data.
+      const ref = [];
+      for (let i = start; i <= k; i += 2) ref.push(...(tokens[i].type === "quoted" ? tokens[i].value.split(".") : [tokens[i].value]).map((p) => p.toLowerCase()));
+      const table = aliases.get(ref[0]);
+      const set = table ? byTable.get(table) : any;
+      if (ref.slice(table ? 1 : 0, -1).some((p) => set?.has(p))) deny(ref.join("."));
+      continue;
+    }
     if ((top.clause === "on" && joinKey(start, k)) || countDistinct(start, k)) {
       allowUse(t.value);
       continue;

@@ -5,6 +5,7 @@ import { metricRef, whyDetail } from "../agent/planner.js";
 import { validateSentence } from "../agent/validate.js";
 import { lastDashboardId, getDashboard, listDashboards, tileFromAnswer } from "../dashboards.js";
 import { AppError } from "../errors.js";
+import { isISODate } from "../format.js";
 import { DIMS, exploreForModel, exploreQuery, MEASURES, runExploreSql } from "../explore/run.js";
 import { newId } from "../store/store.js";
 import { ACT, APPROVAL, CHART_NAMES, dimName, METRIC_PROPOSED, STEP, T } from "../text.js";
@@ -14,7 +15,7 @@ import { defineAction } from "./registry.js";
 export const MAX_FAILED_PUBLISHES = 2;
 
 const text = (max) => z.object({ en: z.string().min(1).max(max), tr: z.string().min(1).max(max) }).strict();
-const date = z.string().regex(/^\d{4}-\d{2}-\d{2}$/);
+const date = z.string().regex(/^\d{4}-\d{2}-\d{2}$/).refine(isISODate, "a real date written YYYY-MM-DD");
 
 /** Which leads the card: the check when the question is whether numbers match, the metric otherwise. */
 export function leadOf(pack, query, check, lead) {

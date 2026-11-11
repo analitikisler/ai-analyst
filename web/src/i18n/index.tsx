@@ -1,6 +1,6 @@
 // Language: the browser decides (tr or en), Settings can override it, one language per screen.
 // `useT()` gives the typed copy object, `useLang()` the code; `fmt` and `plural` fill templates.
-import { createContext, useContext, useEffect, useMemo, type ReactNode } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, type ReactNode } from "react";
 import type { Lang } from "@/api/types";
 import { usePref } from "@/lib/prefs";
 import { en, type Copy } from "./en";
@@ -79,5 +79,6 @@ export const useDetectedLang = () => useLanguage().detected;
 /** Picks the current language from a server-made `{ en, tr }` string. */
 export function useBilingual() {
   const lang = useLang();
-  return (s: { en: string; tr: string } | null | undefined) => (s ? s[lang] : "");
+  // One function per language, so it can sit in a dependency list without re-running the effect every render.
+  return useCallback((s: { en: string; tr: string } | null | undefined) => (s ? s[lang] : ""), [lang]);
 }
