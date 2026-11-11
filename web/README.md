@@ -58,9 +58,9 @@ a 502). Use it with `API_URL=http://127.0.0.1:8790 bun run dev` to look at those
 
 ## Fixtures
 
-The mock serves fixtures in `src/api/fixtures`. `fixtures` captures them from a local server on the demo data
-(loopback only), `fixtures:mart` exports the demo mart from its DuckDB file (default `web/.capture/data/demo.duckdb`),
-and `fixtures:handmade` rewrites the hand-made ones from the smoke run.
+The mock runs the server's rules on two files in `src/api/fixtures`: `mart.json`, the demo mart (`fixtures:mart`
+exports it from the demo's DuckDB file, default `web/.capture/data/demo.duckdb`), and `shop.json`, the demo shop's
+own tables.
 
 ## Brand
 
