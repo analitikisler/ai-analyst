@@ -8,7 +8,7 @@ import { describeAllowed } from "./describe.js";
 import { addMonths } from "../format.js";
 import { newId } from "../store/store.js";
 import { T } from "../text.js";
-import { guardSql, ROW_LIMIT } from "./guard.js";
+import { guardSql, ROW_LIMIT, stripProjections } from "./guard.js";
 
 /** At most this many rows of a result reach the model, and only aggregates. */
 export const MODEL_ROWS = 200;
@@ -86,15 +86,33 @@ async function protectedLookup(ctx, keys, policy) {
     else if (k === policy.mart) out.set(k, new Set());
     else missing.push(k);
   }
+  let described = null;
   if (missing.length) {
-    const described = await describeAllowed({ config, warehouse: ctx.warehouse });
+    described = await describeAllowed({ config, warehouse: ctx.warehouse });
     for (const k of missing) {
       const t = described.find((d) => d.table === k);
       if (!t) throw new AppError("explore_sql_error", `The columns of ${shown(k)} could not be read, so its protected columns cannot be checked. Call describe_tables to see the tables there are.`, { params: { table: shown(k) } });
       out.set(k, new Set(t.protected_columns));
     }
   }
-  return (k) => out.get(k) ?? new Set();
+  // The columns of each table that has protected ones, for the projection that leaves them out. A stored list can
+  // name a column the table no longer has, so the projection is written from the table as it is now. When that
+  // cannot be read the query still runs behind the guard's own checks, as before.
+  const schema = new Map();
+  if ([...out.values()].some((set) => set.size)) {
+    try {
+      described ??= await describeAllowed({ config, warehouse: ctx.warehouse });
+    } catch (err) {
+      console.error(`[ai-analyst] the tables could not be described, so protected columns are not projected out of this query: ${err?.code ?? err?.name ?? "error"}`);
+      described = [];
+    }
+    for (const [k, set] of out) {
+      const t = set.size ? described.find((d) => d.table === k) : null;
+      // An ingestion-time partitioned table is filtered by a pseudo-column, which a projection would hide.
+      if (t && !/^_PARTITION/i.test(t.partitioned_by ?? "")) schema.set(k, t.columns.map((c) => c.name));
+    }
+  }
+  return { protectedCols: (k) => out.get(k) ?? new Set(), columns: (k) => schema.get(k) ?? null };
 }
 
 /**
@@ -108,11 +126,12 @@ export async function runExploreSql(ctx, input, pack) {
   const guardOpts = policy ? { policy } : {};
   // A tile re-runs the SQL it showed, which carries the outer LIMIT wrapper: guard the query inside it.
   const wrappedRe = /^SELECT \* FROM \(\n([\s\S]*)\n\) AS q\nLIMIT \d+$/;
-  const sqlIn = wrappedRe.test(input.sql) ? input.sql.replace(wrappedRe, "$1") : input.sql;
+  const sqlIn = wrappedRe.test(input.sql) ? stripProjections(input.sql.replace(wrappedRe, "$1"), ctx.warehouse.dialect) : input.sql;
   input = { ...input, sql: sqlIn };
   const first = guardSql(input.sql, ctx.warehouse, guardOpts);
-  const protectedCols = policy ? await protectedLookup(ctx, first.tables, policy) : null;
-  const guarded = protectedCols ? guardSql(input.sql, ctx.warehouse, { ...guardOpts, protectedCols }) : first;
+  const lookup = policy ? await protectedLookup(ctx, first.tables, policy) : null;
+  const protectedCols = lookup?.protectedCols ?? null;
+  const guarded = lookup ? guardSql(input.sql, ctx.warehouse, { ...guardOpts, ...lookup }) : first;
   // The per-question cap: what this turn's queries have read so far counts against it (BigQuery).
   const turn = ctx.turn ?? null;
   // Hand-edited config cannot lift it past ten single queries' worth.
@@ -120,7 +139,7 @@ export async function runExploreSql(ctx, input, pack) {
   const left = turn && questionCap && ctx.warehouse.dialect === "bigquery" ? questionCap - (turn.explore_bytes ?? 0) : null;
   if (left != null && left <= 0) throw new AppError("bytes_cap", "This question has used its whole cap for exploratory queries. Answer with what the earlier queries returned.", { params: { bytes: 0, cap: questionCap, question: 1 } });
   // DuckDB is local and not billed: the per-question cap applies on BigQuery only.
-  const out = await ctx.warehouse.explore(guarded.wrapped, { ...(policy ? { policy } : {}), ...(left != null ? { maxBytes: left } : {}), ...(turn ? { onBytes: (b) => (turn.explore_bytes = (turn.explore_bytes ?? 0) + b) } : {}) });
+  const out = await ctx.warehouse.explore(guarded.run, { ...(policy ? { policy } : {}), ...(left != null ? { maxBytes: left } : {}), ...(turn ? { onBytes: (b) => (turn.explore_bytes = (turn.explore_bytes ?? 0) + b) } : {}) });
   const columns = out.columns;
   // A second look at the result: a column named like a protected one never leaves, whatever the SQL did.
   if (protectedCols) {
@@ -150,7 +169,8 @@ export async function runExploreSql(ctx, input, pack) {
     label,
     columns: [...input.dims.map((d, i) => (d === "other" ? input.dim_labels?.[i] ?? T(String(columns[i]), String(columns[i])) : DIM_LABEL[d])), label],
     rows,
-    sql: guarded.wrapped,
+    // The SQL that ran: the query as written, with the projections that keep protected columns out.
+    sql: guarded.run,
     bytes: out.bytes,
     tables,
   };

@@ -271,6 +271,14 @@ unit, label? }`. The model may read the mart and the tables the person allowed (
   bare `COUNT(col)`, any function, any comparison with a constant. What can leave is the number of distinct values.
   A self-join, or a join to any column of an allowed table, is allowed; it tells whether values are equal, never what they are. A query that uses a protected column cannot contain a CTE or a subquery. (security review 2, V2: enforced structurally, any CTE or subquery in such a query is
   `sql_protected_column`.) A tile re-run guards the query inside its outer `LIMIT` wrapper.
+- **The projection** (a second fence for protected columns). The query that runs reads each table that has
+  protected columns through `(SELECT * EXCEPT (…) FROM table)` (`EXCLUDE` on DuckDB), written from the table's
+  columns as they are now, so a use the checks did not see finds no such column. A protected column with an
+  approved use (join key, `COUNT(DISTINCT)`) is kept, in that query alone. The answer's `sql` is this text; a tile
+  re-run takes the projections out, guards the query as written and projects it again. Not projected: a table
+  whose columns cannot be read at that moment, and a table partitioned by ingestion time (its `_PARTITIONTIME`
+  filter would not resolve); those run behind the checks above alone. It rests on the guard's own reading of the
+  table names, so it does not cover a table reference the guard does not see.
 - **The per-question cap.** All exploratory queries of one turn share `explore.maxBytesPerQuestion` (5 GB by
   default; `set_explore_tables`, at most ten times `BIGQUERY_MAX_BYTES`, `over_ceiling` above); on BigQuery a
   query's cap is the lower of `BIGQUERY_MAX_BYTES` and what is left, and its dry-run bytes count before it runs,

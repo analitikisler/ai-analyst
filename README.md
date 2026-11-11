@@ -143,7 +143,9 @@ runs: selected, read through `*`, an alias, a CTE or a subquery, grouped or orde
 `QUALIFY` or a join condition against a value, inside `CASE`, `LIKE`, `IN`, `COUNTIF` or any function. So what can
 leave about a protected column is the number of its distinct values in a group. A self-join, or a join to any
 column of an allowed table, is allowed; it tells whether values are equal, never what they are. A query that uses a
-protected column cannot contain a CTE or a subquery. When you add a table, the server proposes protected columns by
+protected column cannot contain a CTE or a subquery. As a second fence, the query that runs reads each such table
+through a projection without its protected columns (you see it in the answer's SQL), so a use the checks missed
+finds no such column. When you add a table, the server proposes protected columns by
 name, compound names included (`customer_email`, `contact_phone`, `client_ip`, Turkish `eposta`, `telefon`, `ad`,
 `soyad`, `adres`, `dogum_tarihi`): email, phone, names, addresses, postcodes, IP addresses, birth dates, national
 ids, IBAN and card numbers, and precise location. You confirm the list in Settings › Sources. Protection is by

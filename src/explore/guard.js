@@ -20,7 +20,9 @@
 //   CTE, a subquery or an expression, not grouped, ordered or filtered by; only a join key (a.col = b.col, USING) or
 //   COUNT(DISTINCT col) may use them. A whole row (a table or its alias alone) and a field of a protected STRUCT
 //   column are refused in every clause.
-// The statement runs wrapped in an outer LIMIT 1000.
+// The statement runs wrapped in an outer LIMIT 1000, and each table with protected columns is read through a
+// projection without them (SELECT * EXCEPT (…) FROM t), so a use these checks did not see finds no such column. A
+// protected column with an approved use stays readable in that query alone.
 import { AppError } from "../errors.js";
 
 export const MAX_SQL_CHARS = 8000;
@@ -131,24 +133,24 @@ export function tokenize(sql, dialect = "duckdb") {
         text += sql[j++];
       }
       // In BigQuery "…" is a string, not an identifier.
-      tokens.push({ type: c === "'" || (c === '"' && dialect === "bigquery") ? "string" : "quoted", value: text });
+      tokens.push({ type: c === "'" || (c === '"' && dialect === "bigquery") ? "string" : "quoted", value: text, start: i, end: j + 1 });
       i = j + 1;
     } else if (/[A-Za-z_]/.test(c)) {
       let j = i;
       while (j < n && /[A-Za-z0-9_]/.test(sql[j])) j++;
-      tokens.push({ type: "word", value: sql.slice(i, j), end: j });
+      tokens.push({ type: "word", value: sql.slice(i, j), start: i, end: j });
       i = j;
     } else if (/[0-9]/.test(c)) {
       let j = i;
       while (j < n && /[0-9.eE]/.test(sql[j])) j++;
-      tokens.push({ type: "number", value: sql.slice(i, j) });
+      tokens.push({ type: "number", value: sql.slice(i, j), start: i, end: j });
       i = j;
     } else {
       if (c === "$" || c === "@" || c === "?") refuse("sql_unsupported_syntax", c);
       // BigQuery's pipe syntax (FROM t |> EXTEND … |> SELECT …) puts expressions where the walk reads table names.
       if (c === "|" && sql[i + 1] === ">") refuse("sql_unsupported_syntax", "|>");
       if (c.charCodeAt(0) > 127) refuse("sql_unsupported_syntax", `character ${c}`);
-      tokens.push({ type: "punct", value: c });
+      tokens.push({ type: "punct", value: c, start: i, end: i + 1 });
       i++;
     }
   }
@@ -198,7 +200,10 @@ const STAR_BEFORE = new Set(["select", "distinct", "all", "struct", "value"]);
  * @param {{ policy?: { match: (parts: string[]) => string|null }, protectedCols?: (key: string) => Set<string>|null }} [opts]
  *   policy: which tables may be read (src/explore/allow.js policyFor); default: the mart alone.
  *   protectedCols: the protected columns of one allowed table, lower case.
- * @returns {{ sql: string, wrapped: string, tables: string[] }} tables: the allowed tables read, by canonical key.
+ *   columns: with protectedCols, the columns of one allowed table as the warehouse names them (null: not known);
+ *   then `run` reads each table through a projection without its protected columns.
+ * @returns {{ sql: string, wrapped: string, run: string, tables: string[] }} tables: the allowed tables read, by
+ *   canonical key. wrapped: the query as written, in the outer LIMIT. run: the text to run.
  */
 export function guardSql(sql, warehouse, opts = {}) {
   if (typeof sql !== "string" || !sql.trim()) refuse("sql_empty");
@@ -272,6 +277,8 @@ export function guardSql(sql, warehouse, opts = {}) {
   let reads = 0; // tables and CTEs read
   /** Alias (and the table's own names) → canonical key, for qualified column references. */
   const aliases = new Map();
+  /** Every place an allowed table is read: where its name stands in the text, and whether an alias follows. */
+  const refs = [];
   const checkTableAt = (k) => {
     const t = tokens[k];
     if (!t) return k;
@@ -303,7 +310,9 @@ export function guardSql(sql, warehouse, opts = {}) {
       let a = next;
       if (tokens[a]?.type === "word" && tokens[a].value.toLowerCase() === "as") a++;
       const at = tokens[a];
-      if (at && (at.type === "quoted" || (at.type === "word" && !NOT_ALIAS.has(at.value.toLowerCase())))) bind(at.value.toLowerCase());
+      const aliased = Boolean(at && (at.type === "quoted" || (at.type === "word" && !NOT_ALIAS.has(at.value.toLowerCase()))));
+      if (aliased) bind(at.value.toLowerCase());
+      refs.push({ key, start: tokens[k].start, end: tokens[next - 1].end, name: parts.at(-1), aliased });
     }
     return next - 1;
   };
@@ -355,11 +364,54 @@ export function guardSql(sql, warehouse, opts = {}) {
     if (ctes.has(last)) refuse("sql_table_not_allowed", `a WITH name equal to the table ${last}`);
   }
 
-  if (opts.protectedCols) checkProtected(tokens, [...new Set(tables)], aliases, opts.protectedCols, ctes);
+  const used = opts.protectedCols ? checkProtected(tokens, [...new Set(tables)], aliases, opts.protectedCols, ctes) : null;
 
+  const wrap = (text) => `SELECT * FROM (\n${text.trim().replace(/;\s*$/, "")}\n) AS q\nLIMIT ${ROW_LIMIT}`;
   const body = sql.trim().replace(/;\s*$/, "");
-  const wrapped = `SELECT * FROM (\n${body}\n) AS q\nLIMIT ${ROW_LIMIT}`;
-  return { sql: body, wrapped, tables: [...new Set(tables)] };
+  const wrapped = wrap(sql);
+  // The second fence for protected columns: each table is read through a projection without them, so a use the
+  // checks above did not see finds no such column. Only a column with an approved use (a join key, COUNT(DISTINCT))
+  // stays readable, in that query alone.
+  let run = wrapped;
+  if (used && opts.columns) {
+    let text = sql;
+    for (const ref of [...refs].sort((a, b) => b.start - a.start)) {
+      const projection = projectionOf(warehouse.dialect, opts.columns(ref.key), opts.protectedCols(ref.key), used.get(ref.key));
+      if (!projection) continue;
+      const alias = ref.aliased ? "" : ` AS ${quoteName(warehouse.dialect, ref.name)}`;
+      text = `${text.slice(0, ref.start)}(${projection} FROM ${text.slice(ref.start, ref.end)})${alias}${text.slice(ref.end)}`;
+    }
+    run = wrap(text);
+  }
+  return { sql: body, wrapped, run, tables: [...new Set(tables)] };
+}
+
+const PLAIN_NAME = /^[A-Za-z_][A-Za-z0-9_]*$/;
+const quoteName = (dialect, name) => (dialect === "bigquery" ? `\`${name}\`` : `"${String(name).replace(/"/g, '""')}"`);
+const NO_COLUMNS = "SELECT 1 AS aia_no_columns";
+
+/**
+ * SELECT * without the protected columns of one table, or null when there is nothing to leave out.
+ * @param {string[]|null|undefined} columns the table's columns as the warehouse names them; null: not known, no projection
+ * @param {Set<string>|null|undefined} protectedSet lower case
+ * @param {Set<string>|undefined} approved protected columns this query may use
+ */
+function projectionOf(dialect, columns, protectedSet, approved) {
+  if (!columns?.length || !protectedSet?.size) return null;
+  const hidden = columns.filter((c) => PLAIN_NAME.test(c) && protectedSet.has(c.toLowerCase()) && !approved?.has(c.toLowerCase()));
+  if (!hidden.length) return null;
+  // A star cannot leave out every column: the rows are still there to count.
+  if (hidden.length === columns.length) return NO_COLUMNS;
+  return `SELECT * ${dialect === "bigquery" ? "EXCEPT" : "EXCLUDE"} (${hidden.map((c) => quoteName(dialect, c)).join(", ")})`;
+}
+
+/**
+ * Takes the projections out of a query that ran (a tile runs again the SQL it showed), so the guard reads the
+ * query as it was written and puts back the projections that hold now. What comes out is guarded in full.
+ */
+export function stripProjections(sql, dialect) {
+  const list = dialect === "bigquery" ? "EXCEPT \\((?:`[A-Za-z_][A-Za-z0-9_]*`(?:, )?)+\\)" : 'EXCLUDE \\((?:"[A-Za-z_][A-Za-z0-9_]*"(?:, )?)+\\)';
+  return sql.replace(new RegExp(`\\((?:SELECT \\* ${list}|${NO_COLUMNS}) FROM ([^()]+?)\\)`, "g"), "$1");
 }
 
 /**
@@ -376,7 +428,13 @@ export function guardSql(sql, warehouse, opts = {}) {
 function checkProtected(tokens, tables, aliases, protectedCols, ctes = new Set()) {
   const byTable = new Map(tables.map((k) => [k, protectedCols(k) ?? new Set()]));
   const any = new Set([...byTable.values()].flatMap((s) => [...s]));
-  if (!any.size) return;
+  /** Table → its protected columns with an approved use in this query. */
+  const used = new Map();
+  if (!any.size) return used;
+  // An unqualified name counts for every table that protects it.
+  const approve = (name, key = null) => {
+    for (const [k, set] of byTable) if ((key === null || k === key) && set.has(name)) used.set(k, (used.get(k) ?? new Set()).add(name));
+  };
   const rowAliases = new Set([...aliases].filter(([, key]) => byTable.get(key)?.size).map(([a]) => a));
   const frames = [{ sub: true, clause: null, using: false, fromItem: false }];
   // Names that stand for rows the query computes (a CTE, a derived table, and their aliases): a protected join key
@@ -484,6 +542,7 @@ function checkProtected(tokens, tables, aliases, protectedCols, ctes = new Set()
       if (any.has(val(t))) {
         if (derived.size) deny(t.value);
         allowUse(t.value);
+        approve(val(t));
       }
       continue;
     }
@@ -519,8 +578,10 @@ function checkProtected(tokens, tables, aliases, protectedCols, ctes = new Set()
     }
     if ((top.clause === "on" && joinKey(start, k)) || countDistinct(start, k)) {
       allowUse(t.value);
+      approve(name, key ?? null);
       continue;
     }
     deny(parts.length > 1 || start === k ? (start < k ? tokens.slice(start, k + 1).map((x) => x.value).join("") : t.value) : t.value);
   }
+  return used;
 }
