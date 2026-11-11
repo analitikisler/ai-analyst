@@ -9,10 +9,16 @@ import { ArrowUpIcon, SquareIcon, XIcon } from "lucide-react";
 import { useAppState } from "@/api/queries";
 import { InputGroup, InputGroupAddon, InputGroupButton, InputGroupTextarea } from "@/components/ui/input-group";
 import { fmt, useT } from "@/i18n";
+import { useFormat } from "@/lib/format";
 
 export interface ComposerHandle {
   focus: () => void;
+  /** Puts a question that could not be sent back in the box, unless something was typed since. */
+  restore: (question: string) => void;
 }
+
+/** The server takes a question of up to this many characters. */
+export const MAX_QUESTION = 2000;
 
 export interface ComposerProps {
   onSubmit: (question: string) => void;
@@ -49,10 +55,19 @@ const writeDraft = (k: string | undefined, v: string) => {
 
 export const Composer = forwardRef<ComposerHandle, ComposerProps>(function Composer({ onSubmit, onStop, running, context, onRemoveContext, draftKey, className, escStops, modelLine = true }, ref) {
   const t = useT();
+  const f = useFormat();
   const { data, isError } = useAppState();
   const [value, setValue] = useState(() => readDraft(draftKey));
   const area = useRef<HTMLTextAreaElement>(null);
-  useImperativeHandle(ref, () => ({ focus: () => area.current?.focus() }));
+  useImperativeHandle(ref, () => ({
+    focus: () => area.current?.focus(),
+    restore: (question) =>
+      setValue((v) => {
+        if (v) return v;
+        writeDraft(draftKey, question);
+        return question;
+      }),
+  }));
   useEffect(() => setValue(readDraft(draftKey)), [draftKey]);
   useEffect(() => {
     const el = area.current;
@@ -61,9 +76,10 @@ export const Composer = forwardRef<ComposerHandle, ComposerProps>(function Compo
     el.style.height = `${Math.min(el.scrollHeight, 6 * 22 + 16)}px`;
   }, [value]);
   const offline = isError;
+  const over = value.trim().length - MAX_QUESTION;
   const submit = () => {
     const q = value.trim();
-    if (!q || running || offline) return;
+    if (!q || running || offline || over > 0) return;
     onSubmit(q);
     setValue("");
     writeDraft(draftKey, "");
@@ -126,7 +142,7 @@ export const Composer = forwardRef<ComposerHandle, ComposerProps>(function Compo
                 <SquareIcon strokeWidth={1.75} className="fill-current" />
               </InputGroupButton>
             ) : (
-              <InputGroupButton type="submit" variant="default" size="icon-sm" disabled={!value.trim() || offline} aria-label={t.ask.composer.send} title={t.ask.composer.send} className="pointer-coarse:size-10">
+              <InputGroupButton type="submit" variant="default" size="icon-sm" disabled={!value.trim() || offline || over > 0} aria-label={t.ask.composer.send} title={t.ask.composer.send} className="pointer-coarse:size-10">
                 <ArrowUpIcon strokeWidth={2} />
               </InputGroupButton>
             )}
@@ -136,6 +152,11 @@ export const Composer = forwardRef<ComposerHandle, ComposerProps>(function Compo
       <span id={`${id}-hint`} className="sr-only">
         {t.ask.composer.hint}
       </span>
+      {over > 0 && (
+        <p role="status" className="mt-1.5 text-2xs text-warning">
+          {fmt(t.ask.composer.too_long, { n: f.int(over), max: f.int(MAX_QUESTION) })}
+        </p>
+      )}
       {modelLine && model && (
         <p className={cn("mt-2 text-center text-2xs text-text-subtle")}>
           <Link to="/settings/model" className="rounded-sm hover:text-text-muted hover:underline">

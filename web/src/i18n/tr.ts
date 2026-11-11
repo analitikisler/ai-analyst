@@ -116,6 +116,7 @@ export const tr: Copy = {
       send: "Sor",
       stop: "Durdur",
       hint: "Enter gönderir. Shift ve Enter yeni satır ekler.",
+      too_long: "Soru {max} karakter sınırını {n} karakter aşıyor. Gönderilebilmesi için kısaltılmalı.",
       offline: "ai analyst cevap vermiyor; soru gönderilemiyor.",
     },
     context_chip: "Bağlam: {name}",
@@ -695,6 +696,7 @@ export const tr: Copy = {
     source_unavailable: "{service} kayıtlı bağlantıyla erişilemedi ({reason}). Ayarlar › Kaynaklar bölümünden kontrol edilebilir.",
     source_open: "Ayarlar › Kaynaklar’ı aç",
     action_failed: "Bu işlem yapılamadı: {message}",
+    turn_running: "Bir cevap hâlâ yazılıyor. Durdurulduktan ya da bittikten sonra yeniden sorulabilir.",
   },
 
   format: {

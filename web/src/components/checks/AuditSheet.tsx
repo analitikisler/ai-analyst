@@ -8,13 +8,14 @@ import { useAppState, useAudit, useCall } from "@/api/queries";
 import type { AuditPlatform, AuditRun, CheckId } from "@/api/types";
 import { useWatchToggle } from "@/ask/hooks";
 import { CHECK_LABELS } from "@/ask/labels";
-import { CodeBlock, CopyButton, Status } from "@/components/kit";
+import { CodeBlock, CopyButton, ErrorState, Status } from "@/components/kit";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Spinner } from "@/components/ui/spinner";
 import { useBilingual, useT } from "@/i18n";
+import { Skeleton } from "@/components/ui/skeleton";
 import { useFormat } from "@/lib/format";
 import { notify } from "@/lib/notify";
 
@@ -44,7 +45,7 @@ export function AuditSheet() {
   const isNew = !!param?.startsWith("new:");
   const check = (isNew ? param!.slice(4) : null) as CheckId | null;
   const runId = param && !isNew ? param : null;
-  const { data: run } = useAudit(runId);
+  const { data: run, error, refetch, isFetching } = useAudit(runId);
   const close = () => {
     const next = new URLSearchParams(params);
     next.delete("audit");
@@ -61,7 +62,7 @@ export function AuditSheet() {
           <SheetDescription>{checkId ? pick(CHECK_LABELS[checkId]) : ""}</SheetDescription>
         </SheetHeader>
         <div className="min-h-0 flex-1 overflow-y-auto p-4">
-          {isNew && check ? <AuditForm check={check} onStarted={(id) => setParams((p) => { const n = new URLSearchParams(p); n.set("audit", id); return n; }, { replace: true })} /> : run ? <AuditResult run={run} /> : null}
+          {isNew && check ? <AuditForm check={check} onStarted={(id) => setParams((p) => { const n = new URLSearchParams(p); n.set("audit", id); return n; }, { replace: true })} /> : run ? <AuditResult run={run} /> : error ? <ErrorState size="sm" error={error} onRetry={() => void refetch()} retrying={isFetching} /> : runId ? <Skeleton className="h-64 w-full rounded-lg" /> : null}
         </div>
         {demo && !(run && run.status === "handoff") && (
           <SheetFooter className="border-t border-border">

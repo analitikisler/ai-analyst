@@ -116,6 +116,7 @@ export const en = {
       send: "Ask",
       stop: "Stop",
       hint: "Enter sends. Shift and Enter add a line.",
+      too_long: "The question is {n} over the {max}-character limit. Shorten it to send it.",
       offline: "ai analyst is not answering, so questions cannot be sent.",
     },
     context_chip: "About: {name}",
@@ -695,6 +696,7 @@ export const en = {
     source_unavailable: "{service} could not be reached with the saved connection ({reason}). Check it in Settings › Sources.",
     source_open: "Open Settings › Sources",
     action_failed: "That did not work: {message}",
+    turn_running: "An answer is still being written. Stop it or wait for it, then ask again.",
   },
 
   format: {

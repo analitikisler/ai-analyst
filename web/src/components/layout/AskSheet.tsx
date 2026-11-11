@@ -8,6 +8,7 @@ import { Maximize2Icon, XIcon } from "lucide-react";
 import { useAppState } from "@/api/queries";
 import type { AskContext, CheckId, Text } from "@/api/types";
 import { useAskStore } from "@/ask/AskStore";
+import { useAskFailed } from "@/ask/hooks";
 import { CHECK_LABELS } from "@/ask/labels";
 import { METRIC_LABELS } from "@/components/dashboard/metricLabels";
 import { Composer, type ComposerHandle } from "@/components/ask/Composer";
@@ -59,12 +60,18 @@ export function AskSheet() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
 
+  const failed = useAskFailed();
   const send = async (question: string) => {
-    const conv = await ask(question, { conversationId: conversationId ?? "new", context: conversationId ? null : context });
-    const next = new URLSearchParams(params);
-    next.set("ask", conv);
-    next.delete("q");
-    setParams(next, { replace: true });
+    try {
+      const conv = await ask(question, { conversationId: conversationId ?? "new", context: conversationId ? null : context });
+      const next = new URLSearchParams(params);
+      next.set("ask", conv);
+      next.delete("q");
+      setParams(next, { replace: true });
+    } catch (err) {
+      failed(err);
+      composer.current?.restore(question);
+    }
   };
 
   // A question passed with the link (Ask why, Ask about this tile) is sent at once.

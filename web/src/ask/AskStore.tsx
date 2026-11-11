@@ -3,7 +3,7 @@
 // truth once a turn is done; while it streams, the live copy here is drawn after the stored turns.
 import { useQueryClient } from "@tanstack/react-query";
 import { createContext, useCallback, useContext, useMemo, useRef, useState, type ReactNode } from "react";
-import { api } from "@/api";
+import { api, ApiError } from "@/api";
 import type { Answer, AskContext, AskEvent, Proposal, Refusal, Step, Text, Turn } from "@/api/types";
 import { useLang } from "@/i18n";
 
@@ -26,7 +26,11 @@ export interface LiveTurn {
 interface AskValue {
   live: LiveTurn | null;
   running: boolean;
-  /** Starts a turn; resolves with the conversation id once the server has created it. */
+  /**
+   * Starts a turn; resolves with the conversation id once the server has created it. Rejects with an ApiError when
+   * no turn starts: `turn_running` while another answer is being written, or the server's own refusal (a question
+   * that is too long, a lost connection), which never reaches the conversation.
+   */
   ask: (question: string, opts?: { conversationId?: string | "new"; context?: AskContext | null }) => Promise<string>;
   stop: () => Promise<void>;
   /** The last answer that arrived, for the polite live region (5.4); its text is built in the UI language. */
@@ -42,21 +46,30 @@ export function AskProvider({ children }: { children: ReactNode }) {
   const [live, setLive] = useState<LiveTurn | null>(null);
   const [announced, setAnnounced] = useState<Answer | null>(null);
   const handle = useRef<ReturnType<typeof api.ask> | null>(null);
+  // Which stream the live turn belongs to: an event or an ending of an earlier one must not touch it.
+  const run = useRef(0);
 
   const ask = useCallback<AskValue["ask"]>(
     (question, opts = {}) =>
       new Promise<string>((resolve, reject) => {
-        const turn: LiveTurn = { turnId: null, conversationId: null, question, question_text: null, context: opts.context ?? null, steps: [], answers: [], proposals: [], refusal: null, text: null, error: null, status: "running", startedAt: Date.now() };
+        // One turn at a time: a second stream would write its events into the first one's turn and take its Stop.
+        if (handle.current) {
+          reject(new ApiError("turn_running", "An answer is still being written."));
+          return;
+        }
+        const id = ++run.current;
+        const turn: LiveTurn = { turnId: null, conversationId: opts.conversationId && opts.conversationId !== "new" ? opts.conversationId : null, question, question_text: null, context: opts.context ?? null, steps: [], answers: [], proposals: [], refusal: null, text: null, error: null, status: "running", startedAt: Date.now() };
         setLive(turn);
         let resolved = false;
         const apply = (e: AskEvent) => {
+          if (run.current !== id) return;
           if (e.event === "turn" && !resolved) {
             resolved = true;
             resolve(e.data.conversation_id);
           }
           if (e.event === "error" && !resolved) {
             resolved = true;
-            reject(new Error(e.data.code));
+            reject(new ApiError(e.data.code, e.data.message ?? e.data.code, 0, e.data.params ?? {}));
           }
           setLive((t) => {
             if (!t) return t;
@@ -81,10 +94,17 @@ export function AskProvider({ children }: { children: ReactNode }) {
           });
         };
         handle.current = api.ask({ question, lang, conversation_id: opts.conversationId, context: opts.context ?? undefined }, apply);
-        void handle.current.done.finally(async () => {
-          handle.current = null;
+        const mine = handle.current;
+        void mine.done.finally(async () => {
+          if (handle.current === mine) handle.current = null;
+          // A stream that ended without a turn or an error (the connection dropped) still answers the caller.
+          if (!resolved) {
+            resolved = true;
+            reject(new ApiError("network", "The answer stream ended before it started."));
+          }
           await qc.invalidateQueries();
-          setLive(null);
+          // The next question may have started while the lists were read again: its live turn stays.
+          if (run.current === id) setLive(null);
         });
       }),
     [lang, qc],

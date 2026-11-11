@@ -8,7 +8,8 @@ import { createQueryClient, keys } from "../src/api/queries";
 import type { ActionName } from "../src/api/types";
 import { AskProvider } from "../src/ask/AskStore";
 import { TooltipProvider } from "../src/components/ui/tooltip";
-import { LanguageProvider } from "../src/i18n";
+import { ApiError } from "../src/api/client";
+import { COPY, fmt, LanguageProvider } from "../src/i18n";
 import { routes } from "../src/routes";
 
 const PATHS = ["/ask", "/dashboards/db_example", "/dashboards/db_example?edit=1", "/dashboards/db_example?check=ga4_vs_orders", "/dashboards/db_example?check=nope", "/settings/activity", "/settings/events", "/metrics", "/metrics/orders", "/settings/sources", "/settings/data", "/settings/sources?connect=orders", "/settings/sources?connect=ga4", "/settings/sources?connect=shopify", "/settings/model", "/settings/chat-apps/claude-desktop", "/settings/language", "/tour", "/nowhere"];
@@ -26,6 +27,13 @@ async function resolveLazy(list: typeof routes): Promise<typeof routes> {
 const ENGLISH_CHROME = />(Dashboards|Checks|Activity|Settings|Metrics|Events|Tracking health|Demo data|Built-in planner|Ask about|Make it yours|Run all checks|Edit dashboard)</g;
 /** "check" or "kontrol" as the feature's name, where "Tracking health" / "Ölçüm sağlığı" applies (ids and URLs allowed). */
 const OLD_NAME = { en: /(?<![Tt]racking |ai-analyst |update |-)\b[Cc]hecks?\b(?![-_])/g, tr: /(?<![Öö]lçüm )\b[Kk]ontrol(?:ler|leri|lerin|ü|ün|ünü|e|de)?\b(?! edil)/g };
+
+/** A cache in which a failed query stays failed when a screen mounts (a browser would try it once more first). */
+function failedClient() {
+  const qc = createQueryClient();
+  qc.setDefaultOptions({ queries: { ...qc.getDefaultOptions().queries, retryOnMount: false } });
+  return qc;
+}
 
 export async function renderSmoke(check: (name: string, ok: boolean, detail?: unknown) => void) {
   const resolved = await resolveLazy(routes);
@@ -116,6 +124,73 @@ export async function renderSmoke(check: (name: string, ok: boolean, detail?: un
       } catch (err) {
         check(`render ${lang} ${path} with source.error`, false, String(err));
       }
+    }
+  }
+  // A request that fails: the screen says what happened and offers Try again, never an endless skeleton, and "not
+  // here any more" only when the server says the thing is missing.
+  for (const lang of ["en", "tr"] as const) {
+    const copy = COPY[lang];
+    const failing = async (path: string, name: ActionName, input: unknown, err: ApiError) => {
+      const qc = failedClient();
+      qc.setQueryData(keys.state(), getState());
+      qc.setQueryData(keys.action("get_settings", {}), callAction("get_settings", {}, lang));
+      await qc.prefetchQuery({ queryKey: keys.action(name, input as never), queryFn: () => Promise.reject(err), retry: false });
+      const router = createMemoryRouter(resolved, { initialEntries: [path] });
+      const html = renderToString(
+        <QueryClientProvider client={qc}>
+          <LanguageProvider lang={lang}>
+            <TooltipProvider>
+              <AskProvider>
+                <RouterProvider router={router} />
+              </AskProvider>
+            </TooltipProvider>
+          </LanguageProvider>
+        </QueryClientProvider>,
+      );
+      return html.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").replace(/&#x27;/g, "'");
+    };
+    const offline = new ApiError("network", "fetch failed");
+    const down = new ApiError("internal", "boom", 500);
+    const cases: [string, string, ActionName, unknown, ApiError, string[], string[]][] = [
+      ["the metric list offline", "/metrics", "list_metric_entries", {}, offline, [copy.err.network.body, copy.common.try_again], []],
+      ["a metric when the server fails", "/metrics/orders", "get_metric", { metric: "orders" }, down, [copy.err.server.body, copy.common.try_again], [fmt(copy.metrics.not_found, { id: "orders" })]],
+      ["an unknown metric", "/metrics/nope", "get_metric", { metric: "nope" }, new ApiError("invalid_input", "Unknown metric.", 400), [fmt(copy.metrics.not_found, { id: "nope" })], [copy.common.try_again]],
+      ["a dashboard offline", "/dashboards/db_example", "get_dashboard", { dashboard_id: "db_example" }, offline, [copy.err.network.body, copy.common.try_again], [copy.nf.dashboard]],
+      ["a deleted dashboard", "/dashboards/db_gone", "get_dashboard", { dashboard_id: "db_gone" }, new ApiError("not_found", "Unknown dashboard.", 404), [copy.nf.dashboard], [copy.common.try_again]],
+      ["a conversation offline", "/ask/conv_1", "get_conversation", { conversation_id: "conv_1" }, offline, [copy.err.network.body, copy.common.try_again], [copy.nf.conversation]],
+      ["a deleted conversation", "/ask/conv_1", "get_conversation", { conversation_id: "conv_1" }, new ApiError("not_found", "This conversation is not here any more.", 404), [copy.nf.conversation], [copy.common.try_again]],
+    ];
+    for (const [what, path, name, input, err, want, never] of cases) {
+      try {
+        const text = await failing(path, name, input, err);
+        const missing = want.filter((w) => !text.includes(w));
+        const extra = never.filter((w) => text.includes(w));
+        check(`render ${lang} ${what}: ${want.length > 1 ? "what happened and Try again" : "not found"}`, !missing.length && !extra.length && !/\{[a-z_]+\}/.test(text), missing.length ? `missing: ${missing.join(" | ")}` : extra.length ? `should not say: ${extra.join(" | ")}` : text.slice(0, 200));
+      } catch (e) {
+        check(`render ${lang} ${what}`, false, String(e));
+      }
+    }
+    // Settings off this machine: the server refuses to list them, and the page says why.
+    try {
+      const qc = failedClient();
+      qc.setQueryData(keys.state(), getState());
+      await qc.prefetchQuery({ queryKey: keys.action("get_settings", {}), queryFn: () => Promise.reject(new ApiError("loopback_only", "Settings are read on this machine only.", 403)), retry: false });
+      const router = createMemoryRouter(resolved, { initialEntries: ["/settings/sources"] });
+      const html = renderToString(
+        <QueryClientProvider client={qc}>
+          <LanguageProvider lang={lang}>
+            <TooltipProvider>
+              <AskProvider>
+                <RouterProvider router={router} />
+              </AskProvider>
+            </TooltipProvider>
+          </LanguageProvider>
+        </QueryClientProvider>,
+      );
+      const text = html.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ");
+      check(`render ${lang} Settings when the request is refused: the reason, not a skeleton`, text.includes(copy.err.not_loopback) && text.includes(copy.common.try_again), text.slice(0, 200));
+    } catch (e) {
+      check(`render ${lang} Settings when the request is refused`, false, String(e));
     }
   }
 }

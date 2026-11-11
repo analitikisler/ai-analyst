@@ -3,6 +3,8 @@ import { useNavigate, useSearchParams } from "react-router";
 import { useAppState, useCall } from "@/api/queries";
 import type { CheckId } from "@/api/types";
 import { fmt, useBilingual, useLang, useT } from "@/i18n";
+import { describeError } from "@/lib/errors";
+import { useFormat } from "@/lib/format";
 import { notify } from "@/lib/notify";
 import { CHECK_LABELS } from "./labels";
 
@@ -60,6 +62,13 @@ export function useWatchToggle() {
       notify(t.err.invalid_input, { type: "error" });
     }
   };
+}
+
+/** Says why a question could not be sent: another answer is still running, or the server refused it before a turn started. */
+export function useAskFailed() {
+  const t = useT();
+  const f = useFormat();
+  return (err: unknown) => notify(describeError(t, err, f.bytes), { type: "error" });
 }
 
 /** Opens the Ask sheet on any page (09-ux.md §1.2: `?ask=new&about=kind:id`), optionally sending a question at once. */

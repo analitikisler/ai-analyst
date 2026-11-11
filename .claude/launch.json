@@ -2,6 +2,7 @@
   "version": "0.0.1",
   "configurations": [
     { "name": "ai-analyst", "runtimeExecutable": "node", "runtimeArgs": ["src/cli.js", "serve", "--port", "8788"], "port": 8788 },
-    { "name": "ai-analyst-8790", "runtimeExecutable": "node", "runtimeArgs": ["src/cli.js", "serve", "--port", "8790"], "port": 8790 }
+    { "name": "ai-analyst-8790", "runtimeExecutable": "node", "runtimeArgs": ["src/cli.js", "serve", "--port", "8790"], "port": 8790 },
+    { "name": "web-demo", "runtimeExecutable": "bun", "runtimeArgs": ["--cwd=web", "run", "dev:demo"], "port": 5190 }
   ]
 }

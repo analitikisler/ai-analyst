@@ -2,11 +2,11 @@
 import type { ReactNode } from "react";
 import { cn } from "cn";
 import { RotateCcwIcon, TriangleAlertIcon, type LucideIcon } from "lucide-react";
-import { isApiError } from "@/api";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
 import { useT } from "@/i18n";
-import { sourceUnavailableSentence } from "@/lib/errors";
+import { knownSentence } from "@/lib/errors";
+import { useFormat } from "@/lib/format";
 
 export interface EmptyStateProps {
   title: ReactNode;
@@ -72,11 +72,9 @@ export interface ErrorStateProps {
 /** What happened in plain words, the server's message as a detail line, and the way out. */
 export function ErrorState({ title, error, detail, onRetry, retrying, size = "md", bordered, className }: ErrorStateProps) {
   const t = useT();
-  const message =
-    detail ??
-    (isApiError(error) && error.code === "source_unavailable"
-      ? sourceUnavailableSentence(t, error)!
-      : error instanceof TypeError ? t.err.network.body : error instanceof Error ? error.message : t.err.generic);
+  const f = useFormat();
+  // The UI's own words where it has them (off this machine, no connection, the source, a limit); else the server's.
+  const message = detail ?? knownSentence(t, error, f.bytes) ?? (error instanceof Error ? error.message : t.err.generic);
   return (
     <div role="alert" className={cn("flex flex-col items-center justify-center gap-3 text-center", size === "sm" ? "px-4 py-6" : "px-6 py-10", bordered && "rounded-lg border border-border bg-surface", className)}>
       <div className="flex size-10 items-center justify-center rounded-lg bg-warning-soft text-warning">
