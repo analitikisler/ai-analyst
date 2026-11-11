@@ -800,6 +800,8 @@ export interface ConnectorSecret { set: boolean; source: "env" | "saved" | null;
 export interface ConnectorState {
   id: ConnectorId; name: Text; fills: MartColumn[]; status: ConnectorStatus; target: string | null;
   last_sync: { at: string; from: string | null; to: string | null; days: number; ok: boolean } | null;
+  /** The time zone its days are counted in. */
+  time_zone?: string | null;
   error: ApiErrorBody | null; warnings: Text[]; secret: ConnectorSecret | null;
 }
 export type WaitlistId = "meta_ads" | "google_ads" | "tiktok_ads" | "ikas" | "ticimax" | "search_console" | "gtm";
@@ -807,7 +809,7 @@ export interface WaitlistItem { id: WaitlistId; name: Text; mailto: string }
 export interface ConnStep { id: string; status: "ok" | "failed" | "skipped" | "warning"; detail?: Record<string, string | number>; error?: { code: string; params: Record<string, string | number> } }
 export interface ConnectorTest { test_id: string; connector: ConnectorId; ok: boolean; steps: ConnStep[]; warnings: Text[] }
 export interface OrdersMapping {
-  order_id: string | null; created_at: string; status: string | null; total: string; currency: string | null;
+  order_id: string | null; created_at: string; status: string | null; total: string; shipping?: string | null; currency: string | null;
   channel: string | null; utm_source: string | null; utm_medium: string | null; device: string | null; user_agent: string | null;
   exclude_statuses: string[];
 }

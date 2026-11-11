@@ -357,6 +357,8 @@ const mapping = z
     created_at: z.string().max(200),
     status: z.string().max(200).nullable(),
     total: z.string().max(200),
+    // Optional: a mapping saved before shipping could be chosen has none.
+    shipping: z.string().max(200).nullable().optional(),
     currency: z.string().max(200).nullable(),
     channel: z.string().max(200).nullable(),
     utm_source: z.string().max(200).nullable(),

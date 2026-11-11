@@ -7,8 +7,10 @@
 // passed on. Stored as daily aggregates only.
 // Never-placed orders (failed, draft, trash) are left out; cancelled and refunded count, as in Orders v3.
 import { AppError } from "../errors.js";
-import { channelFrom, dateIn, deviceFrom } from "./attribution.js";
+import { addDays } from "../format.js";
+import { channelFrom, dateIn, deviceFrom, validTimeZone } from "./attribution.js";
 import { checkUrl, connectorFetch, jsonOf } from "./net.js";
+import { wholeDays } from "./shopify.js";
 
 const SKIP = new Set(["failed", "trash", "checkout-draft", "auto-draft"]);
 const FIELDS = "id,status,date_created_gmt,total,shipping_total,currency,meta_data";
@@ -76,18 +78,23 @@ export function slimOrder(o) {
 }
 
 /**
- * Daily aggregates for [from, to] in the given time zone, all pages.
- * @returns {Promise<{ rows, currency: string|null, orders: number }>}
+ * Daily aggregates for [from, to] in the given time zone, newest orders first, so a shop with more orders than
+ * maxPages holds loses its oldest days, never its latest: `from` is then the first whole day read.
+ * @param {{ currency?: string }} o currency: the workspace's; orders in another one are left out and counted.
+ * @returns {Promise<{ rows, currency: string|null, orders: number, otherCurrency: number, from: string, truncated: boolean }>}
  */
-export async function fetchWooDays(client, { from, to, timeZone, maxPages = 500 }) {
+export async function fetchWooDays(client, { from, to, timeZone, currency: want = null, maxPages = 500 }) {
   const byKey = new Map();
   let currency = null;
-  let n = 0;
-  // GMT bounds a day wider than [from, to], so no order near midnight is lost; the day filter keeps [from, to].
-  const after = `${from}T00:00:00`;
-  const before = `${to}T23:59:59`;
+  let otherCurrency = 0;
+  let oldest = null;
+  let complete = false;
+  // The site's own clock (dates_are_gmt=false), a day wider on each side in case the site's zone is not the one
+  // given here; the day filter below keeps [from, to].
+  const after = `${addDays(from, -1)}T00:00:00`;
+  const before = `${addDays(to, 1)}T23:59:59`;
   for (let page = 1; page <= maxPages; page++) {
-    const res = await client(`/orders?per_page=100&page=${page}&after=${encodeURIComponent(after)}&before=${encodeURIComponent(before)}&dates_are_gmt=false&orderby=date&order=asc&_fields=${FIELDS}`);
+    const res = await client(`/orders?per_page=100&page=${page}&after=${encodeURIComponent(after)}&before=${encodeURIComponent(before)}&dates_are_gmt=false&orderby=date&order=desc&_fields=${FIELDS}`);
     if (!res.ok) await fail(res);
     const list = (await jsonOf(res)) ?? [];
     if (!Array.isArray(list)) throw new AppError("shop_unreachable", "The shop sent something other than a list of orders.");
@@ -96,12 +103,20 @@ export async function fetchWooDays(client, { from, to, timeZone, maxPages = 500 
     const orders = list.map(slimOrder);
     list.length = 0;
     for (const o of orders) {
-      if (SKIP.has(String(o.status))) continue;
       const date = dateIn(o.date_created_gmt ? `${o.date_created_gmt}Z` : null, timeZone);
+      if (date && (!oldest || date < oldest)) oldest = date;
+      if (SKIP.has(String(o.status))) continue;
       if (!date || date < from || date > to) continue;
       const total = Number(o.total);
       if (!Number.isFinite(total)) continue;
-      currency ??= o.currency ?? null;
+      // A shop that sells in several currencies: amounts in another one cannot be added to these.
+      if (want && o.currency && o.currency !== want) {
+        currency ??= o.currency;
+        otherCurrency++;
+        continue;
+      }
+      if (want) currency = want;
+      else currency ??= o.currency ?? null;
       const channel = channelFrom({ source: o.source, medium: o.medium, sourceType: o.sourceType });
       const device = deviceFrom({ device: o.device });
       const key = `${date}|${channel}|${device}`;
@@ -109,12 +124,23 @@ export async function fetchWooDays(client, { from, to, timeZone, maxPages = 500 
       acc.orders += 1;
       acc.revenue += total - (Number(o.shipping_total) || 0);
       byKey.set(key, acc);
-      n++;
     }
     const pages = Number(res.headers?.get?.("x-wp-totalpages") ?? 0);
-    if (count < 100 || (pages && page >= pages)) break;
+    if (count < 100 || (pages && page >= pages)) {
+      complete = true;
+      break;
+    }
   }
-  return { rows: [...byKey.values()], currency, orders: n };
+  const whole = wholeDays([...byKey.values()], { from, oldest, complete });
+  return { rows: whole.rows, currency, orders: whole.rows.reduce((n, r) => n + r.orders, 0), otherCurrency, from: whole.from, truncated: whole.truncated };
+}
+
+/** WordPress's gmt_offset (hours, 5.5 for +05:30) as a fixed-offset time zone, or null. */
+export function offsetZone(hours) {
+  const h = Number(hours);
+  if (hours === null || hours === undefined || hours === "" || !Number.isFinite(h) || Math.abs(h) > 14) return null;
+  const minutes = Math.round(Math.abs(h) * 60);
+  return validTimeZone(`${h < 0 ? "-" : "+"}${String(Math.floor(minutes / 60)).padStart(2, "0")}:${String(minutes % 60).padStart(2, "0")}`);
 }
 
 /** Reads one order to see the key works; returns only how many came back (nothing of the order). */
@@ -125,14 +151,15 @@ export async function wooProbe(client) {
   return Array.isArray(list) ? list.length : 0;
 }
 
-/** The site's time zone from the WordPress REST index (no key needed); null when it does not say. */
+/** The site's time zone from the WordPress REST index (no key needed): its city, else its fixed offset; null when it says neither. */
 export async function wooSite(app, base) {
   const host = new URL(base).hostname.toLowerCase();
   const res = await connectorFetch(app, { service: "WooCommerce", hosts: [host] })(`${base}/wp-json/`, { headers: { Accept: "application/json" } });
   if (res.status === 404) throw new AppError("shop_unreachable", "This address has no WordPress REST API (wp-json). Check the address.", { params: { host, status: 404 } });
   if (!res.ok && res.status !== 401) throw new AppError("shop_unreachable", `The shop answered ${res.status}.`, { params: { host, status: res.status } });
   const body = res.ok ? await jsonOf(res) : null;
-  const tz = typeof body?.timezone_string === "string" && body.timezone_string ? body.timezone_string : null;
+  // A site set to a city has timezone_string; one set to a manual offset ("UTC+3") has only gmt_offset.
+  const tz = typeof body?.timezone_string === "string" && body.timezone_string ? body.timezone_string : offsetZone(body?.gmt_offset);
   return { timeZone: tz, name: typeof body?.name === "string" ? body.name.slice(0, 120) : null };
 }
 

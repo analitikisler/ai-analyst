@@ -475,7 +475,8 @@ export type MartColumn = "sessions" | "ga4_purchases" | "ga4_revenue" | "orders"
 export interface ConnectorSecret { set: boolean; source: "env" | "saved" | null; locked: boolean; env?: string; hint?: string }
 export interface ConnectorState {
   id: ConnectorId; name: Text; fills: MartColumn[]; status: ConnectorStatus; target: string | null;
-  last_sync: { at: string; from: string | null; to: string | null; days: number; ok: boolean } | null;
+  last_sync: { at: string; from: string | null; to: string | null; days: number; ok: boolean } | null; // from, to, days: what the source covers
+  time_zone?: string | null; // the zone its days are counted in: the shop's or the property's own, the file's choice
   error: ApiErrorBody | null; warnings: Text[]; secret: ConnectorSecret | null;
 }
 export type WaitlistId = "meta_ads" | "google_ads" | "tiktok_ads" | "ikas" | "ticimax" | "search_console" | "gtm";
@@ -483,7 +484,7 @@ export interface WaitlistItem { id: WaitlistId; name: Text; mailto: string }
 export interface ConnStep { id: string; status: "ok" | "failed" | "skipped" | "warning"; detail?: Record<string, string | number>; error?: { code: string; params: Record<string, string | number> } }
 export interface ConnectorTest { test_id: string; connector: ConnectorId; ok: boolean; steps: ConnStep[]; warnings: Text[] }
 export interface OrdersMapping {
-  order_id: string | null; created_at: string; status: string | null; total: string; currency: string | null;
+  order_id: string | null; created_at: string; status: string | null; total: string; shipping?: string | null; currency: string | null;
   channel: string | null; utm_source: string | null; utm_medium: string | null; device: string | null; user_agent: string | null;
   exclude_statuses: string[];
 }
@@ -515,6 +516,14 @@ disconnect it reads `not_connected`; `list_connectors` gives all four); `preview
 `POST /api/uploads/orders`. Upload content types: `text/csv`, `application/vnd.ms-excel` (what browsers on Windows
 send for a .csv when Excel is installed; read as CSV, a real .xls file is refused as `upload_kind`), the XLSX type
 and `application/octet-stream` (kind from the name and the first bytes).
+Syncing. A connect and Sync now read the whole history; the daily sync reads the last three days again plus the
+new ones, and the whole history once a week (or after a failed sync, or a new history length). Shop orders are
+read newest first, so a shop with more orders than one sync reads (Shopify 100,000, WooCommerce 50,000) keeps its
+latest days whole and loses its oldest: `last_sync.from` is the first whole day, and a warning says so. Other
+warnings a sync can carry: Shopify without `read_all_orders` (the last 60 days only), WooCommerce orders in another
+currency (left out), a WooCommerce site that does not say its time zone. GA4 days are the property's own
+(`metadata.timeZone`); a WooCommerce site set to a manual UTC offset is read as that offset (`+05:30`). The orders
+file takes an optional `shipping` column, which comes off the total as in the Revenue metric.
 Action names are lower case with digits and underscores (`/^[a-z][a-z0-9_]*$/`: `test_ga4`, `connect_ga4`).
 New error codes: `upload_too_large` (413), `upload_kind`, `file_unreadable`, `upload_not_found`, `mapping_invalid`,
 `currency_mismatch`, `connector_not_connected`, `sync_running`, `scope_write`, `scope_extra`, `scope_unchecked`, `api_disabled` (params `service`, `project`, `link`: a console.cloud.google.com page that enables the Data API), `property_api_denied`, `property_not_found`,

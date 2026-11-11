@@ -9,13 +9,14 @@ import { createDeflateRaw, deflateRawSync } from "node:zlib";
 import { writeFileSync } from "node:fs";
 import path from "node:path";
 import { checkUrl, connectorFetch, embeddedV4, isPrivateAddress, pinnedRequest } from "../src/connectors/net.js";
-import { amountOf, decodeText, fileKind, guessMapping, aggregate, parseCsv, readTable, checkMapping, CANCELLED_NOTE, inflateBudget, MAX_INFLATED } from "../src/connectors/orders-file.js";
+import { amountOf, decodeText, fileKind, guessMapping, aggregate, parseCsv, readTable, checkMapping, CANCELLED_NOTE, SHIPPING_NOTE, inflateBudget, MAX_INFLATED } from "../src/connectors/orders-file.js";
 import { channelOfGroup, deviceOfCategory, fetchGa4Days, ga4Error, ga4Transport, propertyId } from "../src/connectors/ga4.js";
 import { fetchShopifyDays, shopDomain, shopifyClient, shopifyInfo } from "../src/connectors/shopify.js";
-import { fetchWooDays, shopUrl, slimOrder, wooCheckScope, wooClient } from "../src/connectors/woocommerce.js";
+import { fetchWooDays, offsetZone, shopUrl, slimOrder, wooCheckScope, wooClient, wooSite } from "../src/connectors/woocommerce.js";
 import { buildLocalWarehouse, replaceLanding } from "../src/connectors/local.js";
-import { remoteStates, switchNote } from "../src/connectors/index.js";
-import { channelFrom, dateIn } from "../src/connectors/attribution.js";
+import { incrementalFrom, remoteStates, switchNote, syncSources } from "../src/connectors/index.js";
+import { channelFrom, dateIn, todayIn } from "../src/connectors/attribution.js";
+import { addDays } from "../src/format.js";
 import { loadConfig } from "../src/config.js";
 import { createServer } from "node:net";
 import { callAction } from "../src/actions/index.js";
@@ -368,6 +369,25 @@ test("GA4: groups and devices mapped, every page read, warnings, currency, and G
   assert.equal(ga4Error(Object.assign(new Error("x"), { response: { status: 403 } })).code, "property_not_found");
 });
 
+test("the orders file: a shipping column comes off the total, as in the Revenue metric; without one the preview says so; a mapping saved before has none", () => {
+  const cols = ["Sipariş No", "Sipariş Tarihi", "Toplam Tutar (TL)", "Kargo Ücreti"];
+  const rows = [["1", "20.10.2026 10:00", "150,00", "30,00"], ["2", "20.10.2026 11:00", "100,00", ""], ["3", "20.10.2026 12:00", "80,00", "ücretsiz"]];
+  const guessed = guessMapping(cols, rows);
+  assert.deepEqual([guessed.total, guessed.shipping], ["Toplam Tutar (TL)", "Kargo Ücreti"]);
+  const withShipping = aggregate({ columns: cols, rows }, checkMapping(cols, guessed), { timeZone: "Europe/Istanbul", currency: "TRY" });
+  assert.deepEqual(withShipping.preview.daily, [{ date: "2026-10-20", orders: 3, revenue: 300 }], "150 - 30, 100 and 80: an empty or unreadable shipping cell is no shipping");
+  assert.ok(!withShipping.preview.warnings.some((w) => w.en === SHIPPING_NOTE.en));
+  // The person can unset it, and an older saved mapping has no such key: the totals count whole, and the preview says what that means.
+  for (const mapping of [{ ...guessed, shipping: null }, Object.fromEntries(Object.entries(guessed).filter(([k]) => k !== "shipping"))]) {
+    const whole = aggregate({ columns: cols, rows }, checkMapping(cols, mapping), { timeZone: "Europe/Istanbul", currency: "TRY" });
+    assert.deepEqual([whole.preview.revenue, whole.preview.warnings.some((w) => w.en === SHIPPING_NOTE.en)], [330, true]);
+  }
+  assert.throws(() => checkMapping(cols, { ...guessed, shipping: "Kargo" }), codeIs("mapping_invalid"));
+  // "Kargo Firması" (the carrier) is not a shipping amount.
+  for (const other of ["Kargo Firması", "Kargo Takip No", "Shipping Method", "Shipping Name"]) assert.equal(guessMapping(["Tarih", "Tutar", other], []).shipping, null, other);
+  assert.equal(guessMapping(["Created at", "Total", "Shipping", "Shipping Method"], []).shipping, "Shipping", "Shopify's export: Shipping is the amount");
+});
+
 // ---------------------------------------------------------------- Shopify
 
 const SHOP = "ornek.myshopify.com";
@@ -411,7 +431,7 @@ test("Shopify: read_orders only, every page, test orders out, shipping off, chan
   assert.equal(r.orders, 3);
   const orderCalls = stub.seen.filter((s) => s.query.includes("query Orders"));
   assert.deepEqual(orderCalls.map((s) => s.variables.cursor), [null, "1"]);
-  assert.ok(stub.seen.every((s) => s.url === `https://${SHOP}/admin/api/2025-07/graphql.json` && s.token === "shpat_test_token"));
+  assert.ok(stub.seen.every((s) => s.url === `https://${SHOP}/admin/api/2026-10/graphql.json` && s.token === "shpat_test_token"));
   for (const s of stub.seen) assert.doesNotMatch(s.query, /\b(email|phone|firstName|lastName|displayName|billingAddress|shippingAddress|lineItems|note)\b/);
 
   // A write scope is refused, and so is a token that cannot read orders.
@@ -427,8 +447,44 @@ test("Shopify: read_orders only, every page, test orders out, shipping off, chan
   // HTTP errors and GraphQL throttling.
   const withStatus = (status) => shopifyClient({ connectorFetch: async () => new Response("{}", { status }) }, SHOP, "t");
   for (const [status, code] of [[401, "key_rejected"], [403, "key_rejected"], [404, "shop_unreachable"], [429, "rate_limited"], [500, "shop_unreachable"]]) await assert.rejects(shopifyInfo(withStatus(status)), codeIs(code), String(status));
-  const throttled = shopifyClient({ connectorFetch: async () => json({ errors: [{ message: "Throttled", extensions: { code: "THROTTLED" } }] }) }, SHOP, "t");
+  const waits = [];
+  const throttled = shopifyClient({ connectorSleep: async (ms) => void waits.push(ms), connectorFetch: async () => json({ errors: [{ message: "Throttled", extensions: { code: "THROTTLED" } }] }) }, SHOP, "t");
   await assert.rejects(shopifyInfo(throttled), codeIs("rate_limited"));
+  assert.deepEqual(waits, [2000, 2000, 2000], "a throttled query is tried three more times before the sync gives up");
+});
+
+test("Shopify: a query under the 1,000-point limit, newest first, paced by the points left; a shop with more orders than one sync reads keeps its latest days whole", async () => {
+  // The query: 100 orders a page (about 8 points each), newest first, every status, bounds a day wider in UTC.
+  const stub = shopifyStub({ pages: [[sOrder("2026-10-21T10:00:00Z", 80)], [sOrder("2026-10-20T07:00:00Z", 150)]] });
+  await fetchShopifyDays(shopifyClient({ connectorFetch: stub.fetch }, SHOP, "t"), { from: "2026-10-20", to: "2026-10-21", timeZone: "Europe/Istanbul" });
+  const call = stub.seen.find((x) => x.query.includes("query Orders"));
+  assert.match(call.query, /orders\(first: 100, after: \$cursor, query: \$q, sortKey: CREATED_AT, reverse: true\)/);
+  assert.equal(call.variables.q, "created_at:>=2026-10-19T00:00:00Z created_at:<=2026-10-22T23:59:59Z");
+  assert.doesNotMatch(JSON.stringify(stub.seen), /status:any/);
+
+  // The page cap: three days newest first, the cap falls inside the 19th. The 20th and 21st are whole; the 19th is not stored.
+  const pages = [[sOrder("2026-10-21T10:00:00Z", 80), sOrder("2026-10-20T12:00:00Z", 50)], [sOrder("2026-10-20T07:00:00Z", 150), sOrder("2026-10-19T15:00:00Z", 10)], [sOrder("2026-10-19T09:00:00Z", 10)]];
+  const cut = await fetchShopifyDays(shopifyClient({ connectorFetch: shopifyStub({ pages }).fetch }, SHOP, "t"), { from: "2026-10-01", to: "2026-10-21", timeZone: "Europe/Istanbul", maxPages: 2 });
+  assert.deepEqual([cut.truncated, cut.from, cut.orders], [true, "2026-10-20", 3]);
+  assert.deepEqual(cut.rows.map((r) => [r.date, r.orders, r.revenue]).sort(), [["2026-10-20", 2, 200], ["2026-10-21", 1, 80]]);
+  const whole = await fetchShopifyDays(shopifyClient({ connectorFetch: shopifyStub({ pages }).fetch }, SHOP, "t"), { from: "2026-10-01", to: "2026-10-21", timeZone: "Europe/Istanbul" });
+  assert.deepEqual([whole.truncated, whole.from, whole.orders], [false, "2026-10-01", 5]);
+
+  // Pacing: 100 points left, the next page asks 802, 100 come back a second: wait 7.02 s, then go on. A throttled
+  // answer is tried again.
+  const waits = [];
+  let n = 0;
+  const paced = shopifyClient({
+    connectorSleep: async (ms) => void waits.push(ms),
+    connectorFetch: async () => {
+      n++;
+      const cost = { requestedQueryCost: 802, actualQueryCost: 700, throttleStatus: { maximumAvailable: 2000, currentlyAvailable: n === 1 ? 100 : 1500, restoreRate: 100 } };
+      if (n === 2) return json({ errors: [{ message: "Throttled", extensions: { code: "THROTTLED" } }], extensions: { cost: { ...cost, throttleStatus: { ...cost.throttleStatus, currentlyAvailable: 500 } } } });
+      return json({ data: { orders: { pageInfo: { hasNextPage: n < 3, endCursor: String(n) }, nodes: [sOrder("2026-10-20T07:00:00Z", 10)] } }, extensions: { cost } });
+    },
+  }, SHOP, "t");
+  const r = await fetchShopifyDays(paced, { from: "2026-10-20", to: "2026-10-20", timeZone: "Europe/Istanbul" });
+  assert.deepEqual([r.orders, n, waits], [2, 3, [7020, 3020]]);
 });
 
 test("Shopify through the actions: a write token fails the scope step; a sync that hits a limit stores nothing", async () => {
@@ -534,6 +590,109 @@ test("WooCommerce through the actions: http refused, a write key fails the scope
   assert.deepEqual(write.steps.map((s) => [s.id, s.status]), [["reach", "ok"], ["scope", "failed"], ["orders", "skipped"], ["range", "skipped"]]);
   assert.equal(write.steps[1].error.code, "scope_write");
   await assert.rejects(callAction("connect_woocommerce", { test_id: write.test_id }, ctxFor(ws)), codeIs("test_required"));
+});
+
+test("WooCommerce: newest first with whole days at the page cap; orders in another currency are left out and counted; a manual UTC offset is the site's time zone", async () => {
+  const p1 = Array.from({ length: 100 }, (_, i) => wOrder(i + 1, i < 60 ? "2026-10-21T09:00:00" : "2026-10-20T09:00:00", 10));
+  const p2 = Array.from({ length: 100 }, (_, i) => wOrder(i + 101, i < 30 ? "2026-10-20T08:00:00" : "2026-10-19T08:00:00", 10));
+  const p3 = [wOrder(201, "2026-10-19T07:00:00", 10)];
+  const stub = wooStub({ pages: [p1, p2, p3] });
+  const cut = await fetchWooDays(wooClient({ connectorFetch: stub.fetch }, BASE, "k", "s"), { from: "2026-10-01", to: "2026-10-21", timeZone: "Europe/Istanbul", maxPages: 2 });
+  assert.deepEqual([cut.truncated, cut.from, cut.orders], [true, "2026-10-20", 130], "the 19th was cut by the cap, so it is not stored");
+  const first = stub.seen.find((x) => x.url.pathname.endsWith("/orders")).url.searchParams;
+  assert.deepEqual([first.get("order"), first.get("after"), first.get("before"), first.get("dates_are_gmt")], ["desc", "2026-09-30T00:00:00", "2026-10-22T23:59:59", "false"]);
+  const whole = await fetchWooDays(wooClient({ connectorFetch: wooStub({ pages: [p1, p2, p3] }).fetch }, BASE, "k", "s"), { from: "2026-10-01", to: "2026-10-21", timeZone: "Europe/Istanbul" });
+  assert.deepEqual([whole.truncated, whole.from, whole.orders], [false, "2026-10-01", 201]);
+
+  // Two currencies in one shop: only the workspace's are added up.
+  const mixed = [wOrder(1, "2026-10-20T09:00:00", 100), { ...wOrder(2, "2026-10-20T09:00:00", 40), currency: "USD" }, { ...wOrder(3, "2026-10-20T10:00:00", 60), currency: "EUR" }];
+  const m = await fetchWooDays(wooClient({ connectorFetch: wooStub({ pages: [mixed] }).fetch }, BASE, "k", "s"), { from: "2026-10-20", to: "2026-10-20", timeZone: "Europe/Istanbul", currency: "TRY" });
+  assert.deepEqual([m.orders, m.otherCurrency, m.currency, m.rows[0].revenue], [1, 2, "TRY", 100]);
+  const usd = await fetchWooDays(wooClient({ connectorFetch: wooStub({ pages: [mixed.slice(1, 2)] }).fetch }, BASE, "k", "s"), { from: "2026-10-20", to: "2026-10-20", timeZone: "Europe/Istanbul", currency: "TRY" });
+  assert.deepEqual([usd.orders, usd.otherCurrency, usd.currency], [0, 1, "USD"], "a shop wholly in another currency is a mismatch for the caller");
+
+  // WordPress set to "UTC+5:30": no city, only the offset. 21:00 UTC on the 20th is the 21st there.
+  assert.deepEqual([5.5, "3", -3, 0, 99, null, "", "x"].map(offsetZone), ["+05:30", "+03:00", "-03:00", "+00:00", null, null, null, null]);
+  const site = async (index) => wooSite({ connectorFetch: async () => json(index) }, BASE);
+  assert.equal((await site({ name: "x", timezone_string: "", gmt_offset: 5.5 })).timeZone, "+05:30");
+  assert.equal((await site({ name: "x", timezone_string: "Europe/Berlin", gmt_offset: 2 })).timeZone, "Europe/Berlin");
+  assert.equal((await site({ name: "x" })).timeZone, null);
+  assert.equal(dateIn("2026-10-20T21:00:00Z", "+05:30"), "2026-10-21");
+});
+
+test("a sync says what it could not read: 60 days on a Shopify token without read_all_orders, and GA4 days in the property's own time zone", async () => {
+  const ws = await demoWorkspace({ seed: false, env: { AI_ANALYST_SHOPIFY_SHOP: SHOP, AI_ANALYST_SHOPIFY_TOKEN: "shpat_env_token_0000", AI_ANALYST_GA4_PROPERTY: "123456789" } });
+  open.push(ws);
+  const today = todayIn("Europe/Istanbul");
+  const yesterday = addDays(today, -1);
+  const stub = shopifyStub({ pages: [[sOrder(`${yesterday}T09:00:00Z`, 100)]] });
+  ws.connectorFetch = stub.fetch;
+  const s = (await callAction("sync_sources", { connector: "shopify", history_days: 90 }, ctxFor(ws))).find((x) => x.id === "shopify");
+  assert.deepEqual([s.last_sync.from, s.last_sync.to, s.last_sync.days], [addDays(yesterday, -58), yesterday, 59], "59 days ending yesterday: the 60 days Shopify gives");
+  assert.equal(s.time_zone, "Europe/Istanbul");
+  assert.match(s.warnings.at(-1).en, /last 60 days of orders, so the history starts on .*read_all_orders/);
+  assert.match(s.warnings.at(-1).tr, /son 60 günün/);
+  assert.equal(ws.store.getMeta("landing_days:orders:shopify").length, 59, "older days are not marked as covered, so they read as no data, not as zero orders");
+  // With read_all_orders the whole history is asked for and nothing is said.
+  ws.connectorFetch = shopifyStub({ scopes: ["read_orders", "read_all_orders"], pages: [[sOrder(`${yesterday}T09:00:00Z`, 100)]] }).fetch;
+  const all = (await callAction("sync_sources", { connector: "shopify", history_days: 90 }, ctxFor(ws))).find((x) => x.id === "shopify");
+  assert.deepEqual([all.last_sync.from, all.warnings.length], [addDays(yesterday, -89), 1]);
+
+  // GA4: the property reports in Auckland time, where yesterday is another day than in Istanbul for part of the day.
+  const zone = "Pacific/Auckland";
+  const nzYesterday = addDays(todayIn(zone), -1);
+  const calls = [];
+  ws.ga4Transport = {
+    identity: async () => "r@p.iam.gserviceaccount.com",
+    runReport: async (property, body) => {
+      calls.push(body.dateRanges[0]);
+      const d = body.dateRanges[0].endDate.replace(/-/g, "");
+      return { rows: [{ dimensionValues: [{ value: d }, { value: "Direct" }, { value: "mobile" }, { value: "(direct)" }], metricValues: [{ value: "5" }, { value: "1" }, { value: "10" }] }], rowCount: 1, metadata: { currencyCode: "TRY", timeZone: zone } };
+    },
+  };
+  const g = (await callAction("sync_sources", { connector: "ga4", history_days: 7 }, ctxFor(ws))).find((x) => x.id === "ga4");
+  assert.deepEqual([g.status, g.last_sync.to, g.last_sync.from], ["connected", nzYesterday, addDays(nzYesterday, -6)]);
+  assert.equal(ws.store.getMeta("connector:ga4").time_zone, zone);
+  assert.equal(calls.length, nzYesterday === yesterday ? 1 : 2, "fetched again only when the property's yesterday is another day");
+  // The next sync starts from the stored zone: one fetch.
+  calls.length = 0;
+  await callAction("sync_sources", { connector: "ga4", history_days: 7 }, ctxFor(ws));
+  assert.deepEqual(calls, [{ startDate: addDays(nzYesterday, -6), endDate: nzYesterday }]);
+});
+
+test("the daily sync reads the last three days and the new ones; the whole history after a week, a failure or a new history length", async () => {
+  const ws = await demoWorkspace({ seed: false, env: { AI_ANALYST_SHOPIFY_SHOP: SHOP, AI_ANALYST_SHOPIFY_TOKEN: "shpat_env_token_0000" } });
+  open.push(ws);
+  const yesterday = addDays(todayIn("Europe/Istanbul"), -1);
+  const whole = addDays(yesterday, -29);
+  const orders = (amount) => [[sOrder(`${yesterday}T09:00:00Z`, amount), sOrder(`${addDays(yesterday, -10)}T09:00:00Z`, 70)]];
+  const run = async (opts, amount = 100) => {
+    const stub = shopifyStub({ scopes: ["read_orders", "read_all_orders"], pages: orders(amount) });
+    ws.connectorFetch = stub.fetch;
+    const state = (await syncSources(ws, { connector: "shopify", ...opts })).find((x) => x.id === "shopify");
+    return { state, q: stub.seen.find((x) => x.query.includes("query Orders")).variables.q };
+  };
+  const revenue = () => ws.store.list("landing", { limit: 100 }).reduce((sum, r) => sum + r.revenue, 0);
+  // A connect, or Sync now: the whole history.
+  const first = await run({ historyDays: 30 });
+  assert.equal(first.q, `created_at:>=${addDays(whole, -1)}T00:00:00Z created_at:<=${addDays(yesterday, 1)}T23:59:59Z`);
+  assert.deepEqual([first.state.last_sync.from, first.state.last_sync.to, revenue()], [whole, yesterday, 170]);
+  // The daily sync: three days back from the last day read. Yesterday's order changed; the one ten days back is kept as stored.
+  const daily = await run({ incremental: true }, 120);
+  assert.equal(daily.q, `created_at:>=${addDays(yesterday, -3)}T00:00:00Z created_at:<=${addDays(yesterday, 1)}T23:59:59Z`);
+  assert.deepEqual([daily.state.last_sync.from, daily.state.last_sync.to, daily.state.last_sync.days, revenue()], [whole, yesterday, 30, 190], "the source still covers the whole history");
+  assert.equal(ws.store.getMeta("landing_days:orders:shopify").length, 30);
+  assert.equal(incrementalFrom(ws.store.getMeta("connector:shopify"), 30), addDays(yesterday, -2));
+  // A week after the last whole read, a new history length, or a failed sync: the whole history again.
+  const state = ws.store.getMeta("connector:shopify");
+  assert.equal(incrementalFrom(state, 30, Date.parse(state.last_full_at) + 8 * 86_400_000), null);
+  assert.equal(incrementalFrom(state, 60), null);
+  assert.equal(incrementalFrom({ ...state, last_sync: { ...state.last_sync, ok: false } }, 30), null);
+  assert.equal(incrementalFrom({ ...state, last_full_at: undefined }, 30), null, "a state written before incremental syncs existed");
+  ws.store.setMeta("connector:shopify", { ...state, last_full_at: new Date(Date.now() - 8 * 86_400_000).toISOString() });
+  const weekly = await run({ incremental: true });
+  assert.equal(weekly.q, first.q);
+  assert.equal(revenue(), 170);
 });
 
 // ---------------------------------------------------------------- the local mart

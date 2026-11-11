@@ -182,7 +182,7 @@ function ConnectorCard({ c, title, lead, onOpen }: { c: ConnectorState; title: s
       <p className="text-2xs text-text-subtle">{fmt(t.sources.fills, { columns: c.fills.map((x) => t.sources.col[x]).join(", ") })}</p>
       {c.target && <p className="truncate font-mono text-2xs text-text" title={c.target}>{c.target}</p>}
       {c.last_sync && (
-        <p className="font-mono text-2xs text-text-muted tnum">{fmt(file ? t.sources.imported_at : t.sources.last_sync, { time: f.whenMid(c.last_sync.at), range })}</p>
+        <p className="font-mono text-2xs text-text-muted tnum">{fmt(file ? t.sources.imported_at : t.sources.last_sync, { time: f.whenMid(c.last_sync.at), range })}{c.time_zone ? ` · ${fmt(t.sources.zone, { zone: c.time_zone })}` : ""}</p>
       )}
       {c.last_sync && !c.last_sync.ok && <p className="text-2xs text-warning">{t.sources.sync_failed}</p>}
       {status === "syncing" && (

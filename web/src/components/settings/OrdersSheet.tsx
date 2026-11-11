@@ -20,7 +20,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { connErrText, useConnectedToast, useConnectParam, useOnOpen } from "./Connectors";
 
 const REQUIRED: (keyof OrdersMapping)[] = ["created_at", "total"];
-const OPTIONAL: (keyof OrdersMapping)[] = ["order_id", "status", "currency", "channel", "utm_source", "utm_medium", "device", "user_agent"];
+const OPTIONAL: (keyof OrdersMapping)[] = ["order_id", "status", "shipping", "currency", "channel", "utm_source", "utm_medium", "device", "user_agent"];
 const ZONES = ["Europe/Istanbul", "UTC", "Europe/London", "Europe/Berlin", "Europe/Amsterdam", "America/New_York", "Asia/Dubai"];
 const MAX = 25 * 1024 * 1024;
 
