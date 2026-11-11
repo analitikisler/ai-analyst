@@ -66,22 +66,22 @@ export function ExploreTables({ s }: { s: Settings }) {
     return (
       <div className="flex flex-col gap-2">
         <p className="font-mono text-[13px] text-text">daily_channel_device</p>
-        <p className="text-[13px] text-text-muted">{c.local_only}</p>
+        <p className="text-[13px] text-subtle">{c.local_only}</p>
       </div>
     );
   return (
     <div className="flex flex-col gap-3">
       {locked && (
-        <p className="flex items-start gap-1.5 text-2xs text-text-muted">
+        <p className="flex items-start gap-1.5 text-2xs text-subtle">
           <LockIcon size={12} strokeWidth={1.75} aria-hidden className="mt-0.5 shrink-0" />
           <span>{fmt(t.set.env_lock, { variable: ex.allow_setting.env ?? "AI_ANALYST_EXPLORE_ALLOW" })}</span>
         </p>
       )}
-      {demo && ex.demo_tables && ex.demo_tables.length <= 1 && <p className="text-[13px] text-text-muted">{c.demo_old}</p>}
+      {demo && ex.demo_tables && ex.demo_tables.length <= 1 && <p className="text-[13px] text-subtle">{c.demo_old}</p>}
       <ul className="flex flex-col divide-y divide-border rounded-md border border-border" aria-label={c.title}>
         <li className="flex flex-wrap items-center gap-2 px-3 py-2">
           <span className="font-mono text-[13px] break-all text-text">{ex.mart ?? "daily_channel_device"}</span>
-          <span className="inline-flex h-5 items-center rounded-sm border border-border bg-surface-2 px-1.5 text-2xs text-text-muted">
+          <span className="inline-flex h-5 items-center rounded-sm border border-border bg-surface-2 px-1.5 text-2xs text-subtle">
             {c.mart} · {c.always}
           </span>
         </li>
@@ -93,9 +93,9 @@ export function ExploreTables({ s }: { s: Settings }) {
               <div className="min-w-0 flex-1">
                 <p className="font-mono text-[13px] break-all text-text">
                   {name}
-                  {!e.table && <span className="font-sans text-2xs text-text-muted"> · {c.dataset_all}</span>}
+                  {!e.table && <span className="font-sans text-2xs text-subtle"> · {c.dataset_all}</span>}
                 </p>
-                {meta && <p className="mt-0.5 font-mono text-2xs text-text-muted tnum">{meta}</p>}
+                {meta && <p className="mt-0.5 font-mono text-2xs text-subtle tnum">{meta}</p>}
               </div>
               <Button variant="ghost" size="sm" disabled={locked || busy} aria-label={fmt(c.remove_label, { name })} onClick={() => void save(list.filter((x) => !same(x, e)), fmt(c.removed, { name }))}>
                 {c.remove}
@@ -104,7 +104,7 @@ export function ExploreTables({ s }: { s: Settings }) {
           );
         })}
       </ul>
-      {!ex.allow.length && <p className="text-[13px] text-text-muted">{c.only_mart}</p>}
+      {!ex.allow.length && <p className="text-[13px] text-subtle">{c.only_mart}</p>}
       <div className="flex flex-wrap items-center gap-2">
         {showOneClick && (
           <Button size="sm" variant="outline" disabled={locked || busy} onClick={() => void save([...list, oneClick!], fmt(c.added, { name: keyOf(oneClick!) }))}>
@@ -119,7 +119,7 @@ export function ExploreTables({ s }: { s: Settings }) {
           {c.add_table}
         </Button>
       </div>
-      {!demo && <p className="text-2xs text-text-muted">{c.breadth}</p>}
+      {!demo && <p className="text-2xs text-subtle">{c.breadth}</p>}
       {!demo && (
         <label className="flex flex-wrap items-center gap-2 text-[13px] text-text">
           <span className="font-medium">{c.question_cap}</span>
@@ -142,7 +142,7 @@ export function ExploreTables({ s }: { s: Settings }) {
               </NativeSelectOption>
             ))}
           </NativeSelect>
-          <span className="basis-full text-2xs text-text-subtle">{c.question_cap_hint}</span>
+          <span className="basis-full text-2xs text-subtle">{c.question_cap_hint}</span>
         </label>
       )}
       <TableDetails s={s} />
@@ -168,12 +168,12 @@ function Picker({ mode, onClose, list, mart, onAdd }: { mode: "dataset" | "table
           <DialogDescription>{c.picker_lead}</DialogDescription>
         </DialogHeader>
         {q.isLoading && (
-          <p className="flex items-center gap-2 text-[13px] text-text-muted">
+          <p className="flex items-center gap-2 text-[13px] text-subtle">
             <Spinner /> {c.picker_loading}
           </p>
         )}
-        {q.isError && <p className="text-[13px] text-danger">{describeError(t, q.error, f.bytes)}</p>}
-        {q.data && !q.data.datasets.length && <p className="text-[13px] text-text-muted">{c.picker_empty}</p>}
+        {q.isError && <p className="text-[13px] text-bad">{describeError(t, q.error, f.bytes)}</p>}
+        {q.data && !q.data.datasets.length && <p className="text-[13px] text-subtle">{c.picker_empty}</p>}
         <ul className="flex flex-col gap-3">
           {q.data?.datasets.map((d) => {
             const name = d.project ? `${d.project}.${d.dataset}` : d.dataset;
@@ -183,7 +183,7 @@ function Picker({ mode, onClose, list, mart, onAdd }: { mode: "dataset" | "table
                 <div className="flex flex-wrap items-center gap-2 px-3 py-2">
                   <div className="min-w-0 flex-1">
                     <p className="font-mono text-[13px] break-all text-text">{name}</p>
-                    <p className="text-2xs text-text-muted">
+                    <p className="text-2xs text-subtle">
                       {plural(lang, d.tables.length, c.tables_n, { n: f.int(d.tables.length) })}
                       {d.location ? ` · ${d.location}` : ""}
                       {!d.same_location && ` · ${fmt(c.other_location, { location: d.location ?? "–", mart: martLoc })}`}
@@ -191,7 +191,7 @@ function Picker({ mode, onClose, list, mart, onAdd }: { mode: "dataset" | "table
                   </div>
                   {mode === "dataset" &&
                     (on ? (
-                      <span className="text-2xs text-text-muted">{c.on_list}</span>
+                      <span className="text-2xs text-subtle">{c.on_list}</span>
                     ) : (
                       <Button size="sm" variant="outline" disabled={!d.same_location} onClick={() => (onAdd({ project: d.project, dataset: d.dataset, table: null }), onClose())}>
                         {c.add_dataset}
@@ -208,10 +208,10 @@ function Picker({ mode, onClose, list, mart, onAdd }: { mode: "dataset" | "table
                         return (
                           <li key={x.table} className="flex items-center gap-2 px-3 py-1.5">
                             <span className="min-w-0 flex-1 font-mono text-2xs break-all text-text">
-                              {x.table} <span className="text-text-muted">· {plural(lang, x.rows, c.rows_n, { n: f.int(x.rows) })}</span>
+                              {x.table} <span className="text-subtle">· {plural(lang, x.rows, c.rows_n, { n: f.int(x.rows) })}</span>
                             </span>
                             {listed ? (
-                              <span className="text-2xs text-text-muted">{c.on_list}</span>
+                              <span className="text-2xs text-subtle">{c.on_list}</span>
                             ) : (
                               <Button size="sm" variant="ghost" onClick={() => (onAdd(e), onClose())}>
                                 {c.add_table}
@@ -246,11 +246,11 @@ function TableDetails({ s }: { s: Settings }) {
     <p className="text-[13px] leading-[18px] text-text">{c.readable_note}</p>
     <Disclosure label={c.columns} onToggle={setOpen}>
       {q.isLoading && (
-        <p className="flex items-center gap-2 text-[13px] text-text-muted">
+        <p className="flex items-center gap-2 text-[13px] text-subtle">
           <Spinner /> {c.columns_loading}
         </p>
       )}
-      {q.isError && <p className="text-[13px] text-danger">{describeError(t, q.error, f.bytes)}</p>}
+      {q.isError && <p className="text-[13px] text-bad">{describeError(t, q.error, f.bytes)}</p>}
       <div className="flex flex-col gap-4">
         {q.data?.tables.map((x) => <TableDetail key={x.table + JSON.stringify(x.protected_columns)} x={x} />)}
       </div>
@@ -278,15 +278,15 @@ function TableDetail({ x }: { x: DescribedTable }) {
   };
   return (
     <section aria-labelledby={id} className="rounded-md border border-border p-3">
-      <h4 id={id} className="font-mono text-[13px] font-medium break-all text-text-strong">
+      <h4 id={id} className="font-mono text-[13px] font-medium break-all text-strong">
         {x.table}
       </h4>
-      <p className="mt-0.5 text-2xs text-text-muted tnum">
+      <p className="mt-0.5 text-2xs text-subtle tnum">
         {x.rows != null ? plural(lang, x.rows, c.rows_n, { n: f.int(x.rows) }) : "–"}
         {x.partitioned_by ? ` · ${fmt(c.partitioned, { column: x.partitioned_by })}` : ""}
       </p>
       <div className="mt-3 flex flex-col gap-1">
-        <label htmlFor={`${id}-desc`} className="text-2xs font-medium text-text-muted">
+        <label htmlFor={`${id}-desc`} className="text-2xs font-medium text-subtle">
           {c.describe}
         </label>
         <div className="flex flex-wrap gap-2">
@@ -295,20 +295,20 @@ function TableDetail({ x }: { x: DescribedTable }) {
             {c.describe_save}
           </Button>
         </div>
-        <p className="text-2xs text-text-subtle">{c.describe_hint}</p>
+        <p className="text-2xs text-subtle">{c.describe_hint}</p>
       </div>
       {!x.mart && (
         <fieldset className="mt-3">
-          <legend className="text-2xs font-medium text-text-muted">{c.protected}</legend>
-          <p className="text-2xs text-text-subtle">{c.protected_hint}</p>
-          <p className="mt-1 text-2xs text-text-muted">{x.protected_confirmed ? c.confirmed : c.proposed}</p>
+          <legend className="text-2xs font-medium text-subtle">{c.protected}</legend>
+          <p className="text-2xs text-subtle">{c.protected_hint}</p>
+          <p className="mt-1 text-2xs text-subtle">{x.protected_confirmed ? c.confirmed : c.proposed}</p>
           <ul className="mt-2 grid gap-x-4 gap-y-1.5 sm:grid-cols-2">
             {x.columns.map((col) => (
               <li key={col.name}>
                 <label className="flex items-center gap-2 font-mono text-2xs text-text">
                   <Checkbox checked={cols.includes(col.name.toLowerCase())} onCheckedChange={(v) => setCols((p) => (v ? [...p, col.name.toLowerCase()] : p.filter((n) => n !== col.name.toLowerCase())))} />
                   <span className="break-all">
-                    {col.name} <span className="text-text-muted">{col.type}</span>
+                    {col.name} <span className="text-subtle">{col.type}</span>
                   </span>
                 </label>
               </li>

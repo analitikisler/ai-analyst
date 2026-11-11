@@ -142,7 +142,7 @@ function ToastIcon({ type }: { type: string | undefined }) {
 
   if (type === "success") {
     icon = (
-      <CircleCheckIcon className="text-success" aria-hidden="true" />
+      <CircleCheckIcon className="text-ok" aria-hidden="true" />
     )
   }
 
@@ -160,7 +160,7 @@ function ToastIcon({ type }: { type: string | undefined }) {
 
   if (type === "error") {
     icon = (
-      <OctagonXIcon className="text-danger" aria-hidden="true" />
+      <OctagonXIcon className="text-bad" aria-hidden="true" />
     )
   }
 

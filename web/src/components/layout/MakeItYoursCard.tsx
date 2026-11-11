@@ -29,21 +29,21 @@ export function MakeItYoursCard({ onNavigate }: { onNavigate?: () => void }) {
       <Button variant="ghost" size="icon-xs" className="absolute top-2 right-2" aria-label={t.miy.dismiss} title={t.miy.dismiss} onClick={() => void hide()}>
         <XIcon strokeWidth={1.75} />
       </Button>
-      <h2 id="miy-title" className="pr-7 text-[13px] leading-[18px] font-semibold text-text-strong">
+      <h2 id="miy-title" className="pr-7 text-[13px] leading-[18px] font-semibold text-strong">
         {t.miy.title}
       </h2>
-      <p className="mt-1 text-2xs text-text-muted">{t.miy.lead}</p>
+      <p className="mt-1 text-2xs text-subtle">{t.miy.lead}</p>
       <ul className="mt-2 flex flex-col">
         {steps.map((s) => {
           const Icon = s.done ? CheckIcon : s.icon;
           const body = (
             <>
-              <Icon size={16} strokeWidth={1.75} aria-hidden className={s.done ? "text-success" : "text-text-muted"} />
+              <Icon size={16} strokeWidth={1.75} aria-hidden className={s.done ? "text-ok" : "text-subtle"} />
               <span className="min-w-0 flex-1">
                 <span className="block text-[13px] leading-[18px] font-medium text-text">{s.done ? `${s.label} · ${t.miy.done}` : s.label}</span>
-                {!s.done && <span className="block text-2xs text-text-muted">{s.hint}</span>}
+                {!s.done && <span className="block text-2xs text-subtle">{s.hint}</span>}
               </span>
-              {!s.done && <ChevronRightIcon size={14} strokeWidth={1.75} aria-hidden className="text-text-subtle" />}
+              {!s.done && <ChevronRightIcon size={14} strokeWidth={1.75} aria-hidden className="text-subtle" />}
             </>
           );
           return (

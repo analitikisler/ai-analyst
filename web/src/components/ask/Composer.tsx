@@ -82,7 +82,7 @@ export const Composer = forwardRef<ComposerHandle, ComposerProps>(function Compo
         <InputGroup className="rounded-lg border-border-strong bg-surface">
           {context && (
             <InputGroupAddon align="block-start">
-              <span className="inline-flex h-6 max-w-full items-center gap-1 rounded-sm border border-border bg-surface-2 pr-0.5 pl-2 text-xs font-normal text-text-muted">
+              <span className="inline-flex h-6 max-w-full items-center gap-1 rounded-sm border border-border bg-surface-2 pr-0.5 pl-2 text-xs font-normal text-subtle">
                 <span className="truncate">{fmt(t.ask.context_chip, { name: context })}</span>
                 {onRemoveContext && (
                   <button type="button" onClick={onRemoveContext} aria-label={t.ask.context_remove} className="inline-flex size-5 items-center justify-center rounded-xs hover:bg-surface hover:text-text">
@@ -118,7 +118,7 @@ export const Composer = forwardRef<ComposerHandle, ComposerProps>(function Compo
             placeholder={offline ? t.ask.composer.offline : t.ask.composer.placeholder}
             aria-describedby={`${id}-hint`}
             aria-keyshortcuts="Meta+K Control+K"
-            className="min-h-11 px-3 pt-3 text-base leading-[22px] text-text placeholder:text-text-subtle sm:text-[15px]"
+            className="min-h-11 px-3 pt-3 text-base leading-[22px] text-text placeholder:text-subtle sm:text-[15px]"
           />
           <InputGroupAddon align="block-end" className="justify-end">
             {running ? (
@@ -137,8 +137,8 @@ export const Composer = forwardRef<ComposerHandle, ComposerProps>(function Compo
         {t.ask.composer.hint}
       </span>
       {modelLine && model && (
-        <p className={cn("mt-2 text-center text-2xs text-text-subtle")}>
-          <Link to="/settings/model" className="rounded-sm hover:text-text-muted hover:underline">
+        <p className={cn("mt-2 text-center text-2xs text-subtle")}>
+          <Link to="/settings/model" className="rounded-sm hover:text-subtle hover:underline">
             {model}
           </Link>
         </p>

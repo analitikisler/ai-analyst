@@ -87,7 +87,7 @@ export function AskSheet() {
     <Sheet open={open} onOpenChange={(o) => !o && close()}>
       <SheetContent side="right" showCloseButton={false} className="w-full gap-0 p-0 data-[side=right]:w-full data-[side=right]:sm:max-w-[560px]">
         <div className="flex h-14 shrink-0 items-center gap-2 border-b border-border px-4">
-          <SheetTitle className="flex-1 text-base font-semibold text-text-strong">{t.sheet.title}</SheetTitle>
+          <SheetTitle className="flex-1 text-base font-semibold text-strong">{t.sheet.title}</SheetTitle>
           <SheetDescription className="sr-only">{context?.name ? pick(context.name) : t.sheet.title}</SheetDescription>
           <Button variant="ghost" size="icon" aria-label={t.sheet.full_page} title={t.sheet.full_page} disabled={!conversationId} onClick={() => conversationId && navigate(`/ask/${conversationId}`)}>
             <Maximize2Icon strokeWidth={1.75} />

@@ -59,7 +59,7 @@ export function SegmentedControl<T extends string | number>({ options, value, on
             className={cn(
               "inline-flex items-center justify-center gap-1 rounded-sm font-medium transition-colors duration-160 disabled:opacity-50",
               size === "sm" ? "h-6 min-w-7 px-2 text-xs" : "h-7 min-w-8 px-2.5 text-sm",
-              active ? "bg-surface text-text-strong ring-1 ring-border-strong ring-inset" : "text-text-muted hover:text-text",
+              active ? "bg-surface text-strong ring-1 ring-border-strong ring-inset" : "text-subtle hover:text-text",
             )}
           >
             {Icon && <Icon size={14} strokeWidth={1.75} aria-hidden />}

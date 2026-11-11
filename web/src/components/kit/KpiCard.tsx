@@ -35,7 +35,7 @@ export interface KpiCardProps {
 
 const isGlossary = (v: unknown): v is GlossaryTerm => !!v && typeof v === "object" && "term" in v && "short" in v;
 
-export function KpiCard({ label, value, unit, delta, comparison, info, trend, trendColor = "var(--color-chart-1)", trendArea, size = "default", loading, to, className }: KpiCardProps) {
+export function KpiCard({ label, value, unit, delta, comparison, info, trend, trendColor = "var(--color-data-cat-1)", trendArea, size = "default", loading, to, className }: KpiCardProps) {
   const body = (
     <>
       <div className="flex items-center gap-1">
@@ -51,8 +51,8 @@ export function KpiCard({ label, value, unit, delta, comparison, info, trend, tr
         <>
           <div className="mt-2 flex items-end justify-between gap-3">
             <div className="flex min-w-0 items-baseline gap-1">
-              <span className={cn("font-display font-heading tracking-[-0.012em] text-text-strong tnum", size === "hero" ? "text-4xl leading-10" : "text-2xl leading-8")}>{value}</span>
-              {unit && <span className={cn("text-text-muted tnum", size === "hero" ? "text-xl" : "text-sm")}>{unit}</span>}
+              <span className={cn("font-display font-heading tracking-[-0.012em] text-strong tnum", size === "hero" ? "text-4xl leading-10" : "text-2xl leading-8")}>{value}</span>
+              {unit && <span className={cn("text-subtle tnum", size === "hero" ? "text-xl" : "text-sm")}>{unit}</span>}
             </div>
             {trend && trend.length > 1 && (
               <Sparkline values={trend} color={trendColor} area={trendArea} width={72} height={32} className="mb-1 hidden shrink-0 @[13rem]:block" />
@@ -61,7 +61,7 @@ export function KpiCard({ label, value, unit, delta, comparison, info, trend, tr
           {(delta || comparison) && (
             <div className="mt-2 flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
               {delta && <DeltaBadge current={delta.current} previous={delta.previous} unit={delta.unit} />}
-              {comparison && <span className="min-w-0 text-xs text-text-subtle">{comparison}</span>}
+              {comparison && <span className="min-w-0 text-xs text-subtle">{comparison}</span>}
             </div>
           )}
         </>

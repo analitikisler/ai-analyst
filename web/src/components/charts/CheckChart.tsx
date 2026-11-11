@@ -1,6 +1,6 @@
 // Both sides of a check by day (07-creative.md §3 D, 08-art.md §5.3 "check variant"): the period plus the 14 days
 // before it, the lead-in on `well` so the day it broke is visible; the owner system as a recessive line, the
-// measured side in the data blue; red hatching between them only on days outside tolerance (and only when the
+// measured side in teal (`measured`); wine hatching between them only on days outside tolerance (and only when the
 // verdict is bad); the release as a dashed marker; the last 3 days dashed and labelled "may change".
 import { useId, useMemo, useState, type ReactNode } from "react";
 import { Area, CartesianGrid, ComposedChart, Line, ReferenceArea, ReferenceLine, Tooltip, XAxis, YAxis } from "recharts";
@@ -45,8 +45,8 @@ export function CheckChart({ result: c, height = 220, className }: { result: Che
   const hasLead = (c.series_from ?? c.from) < c.from;
   const anim = !prefersReducedMotion();
   const legend = [
-    { key: "e", name: pick(c.expected.label), color: "var(--color-chart-ref)" },
-    { key: "m", name: pick(c.measured.label), color: "var(--color-chart-1)", emphasis: true },
+    { key: "e", name: pick(c.expected.label), color: "var(--color-muted)" },
+    { key: "m", name: pick(c.measured.label), color: "var(--color-data-measured)", emphasis: true },
   ];
   const summary = `${t.charts.summary_check
     .replace("{expected}", pick(c.expected.label))
@@ -70,11 +70,11 @@ export function CheckChart({ result: c, height = 220, className }: { result: Che
                 fill="var(--color-well)"
                 fillOpacity={1}
                 ifOverflow="hidden"
-                label={{ value: t.ask.before_period, position: "insideTopLeft", fill: "var(--color-text-muted)", fontSize: 12 }}
+                label={{ value: t.ask.before_period, position: "insideTopLeft", fill: "var(--color-muted)", fontSize: 12 }}
               />
             )}
             {prov && (
-              <ReferenceArea x1={prov} x2={series[series.length - 1]?.date} fill={`url(#hatch-prov-${id})`} fillOpacity={1} ifOverflow="hidden" label={{ value: t.ask.may_change, position: "insideTopRight", fill: "var(--color-text-muted)", fontSize: 12 }} />
+              <ReferenceArea x1={prov} x2={series[series.length - 1]?.date} fill={`url(#hatch-prov-${id})`} fillOpacity={1} ifOverflow="hidden" label={{ value: t.ask.may_change, position: "insideTopRight", fill: "var(--color-muted)", fontSize: 12 }} />
             )}
             <XAxis dataKey="date" tickFormatter={(d: string) => f.date(d)} tick={axisTick} axisLine={axisLine} tickLine={false} minTickGap={24} tickMargin={8} />
             <YAxis domain={[0, max]} ticks={evenTicks(max)} tickFormatter={tickFormatter(f, c.unit)} tick={axisTick} axisLine={false} tickLine={false} width={44} />
@@ -89,8 +89,8 @@ export function CheckChart({ result: c, height = 220, className }: { result: Che
                   <ChartTooltipBox
                     title={f.date(row.date, true)}
                     rows={[
-                      { key: "e", name: pick(c.expected.label), color: "var(--color-chart-ref)", value: f.value(row.raw.expected, c.unit) },
-                      { key: "m", name: pick(c.measured.label), color: "var(--color-chart-1)", value: f.value(row.raw.measured, c.unit), emphasis: true },
+                      { key: "e", name: pick(c.expected.label), color: "var(--color-muted)", value: f.value(row.raw.expected, c.unit) },
+                      { key: "m", name: pick(c.measured.label), color: "var(--color-data-measured)", value: f.value(row.raw.measured, c.unit), emphasis: true },
                     ]}
                     footer={prov && row.date >= prov ? t.charts.provisional_tip : undefined}
                   />
@@ -99,10 +99,10 @@ export function CheckChart({ result: c, height = 220, className }: { result: Che
             />
             <Area dataKey="gap" stroke="none" fill={`url(#hatch-gap-${id})`} fillOpacity={1} isAnimationActive={false} connectNulls={false} activeDot={false} />
             {eventLines(ev.groups)}
-            <Line dataKey="expected" stroke="var(--color-chart-ref)" strokeWidth={1.5} dot={false} isAnimationActive={anim} animationDuration={400} connectNulls={false} activeDot={{ r: 3, fill: "var(--color-chart-ref)", stroke: "var(--color-surface)" }} />
-            <Line dataKey="expectedP" stroke="var(--color-chart-ref)" strokeWidth={1.5} strokeDasharray="3 3" dot={false} isAnimationActive={false} connectNulls={false} activeDot={false} />
-            <Line dataKey="measured" stroke="var(--color-chart-1)" strokeWidth={2} dot={false} isAnimationActive={anim} animationDuration={400} connectNulls={false} activeDot={{ r: 4, strokeWidth: 2, stroke: "var(--color-surface)", fill: "var(--color-chart-1)" }} />
-            <Line dataKey="measuredP" stroke="var(--color-chart-1)" strokeWidth={2} strokeDasharray="3 3" dot={false} isAnimationActive={false} connectNulls={false} activeDot={false} />
+            <Line dataKey="expected" stroke="var(--color-muted)" strokeWidth={1.5} dot={false} isAnimationActive={anim} animationDuration={400} connectNulls={false} activeDot={{ r: 3, fill: "var(--color-muted)", stroke: "var(--color-surface)" }} />
+            <Line dataKey="expectedP" stroke="var(--color-muted)" strokeWidth={1.5} strokeDasharray="3 3" dot={false} isAnimationActive={false} connectNulls={false} activeDot={false} />
+            <Line dataKey="measured" stroke="var(--color-data-measured)" strokeWidth={2} dot={false} isAnimationActive={anim} animationDuration={400} connectNulls={false} activeDot={{ r: 4, strokeWidth: 2, stroke: "var(--color-surface)", fill: "var(--color-data-measured)" }} />
+            <Line dataKey="measuredP" stroke="var(--color-data-measured)" strokeWidth={2} strokeDasharray="3 3" dot={false} isAnimationActive={false} connectNulls={false} activeDot={false} />
           </ComposedChart>
         )}
       </div>
@@ -171,9 +171,9 @@ export function DiffChart({ result: c, height = 220, className }: { result: Chec
             <ChartPatterns id={id} />
             <CartesianGrid vertical={false} stroke={gridStroke} />
             {hasLead && (
-              <ReferenceArea x1={c.series_from} x2={leadEnd} fill="var(--color-well)" fillOpacity={1} ifOverflow="hidden" label={{ value: t.ask.before_period, position: "insideTopLeft", fill: "var(--color-text-muted)", fontSize: 12 }} />
+              <ReferenceArea x1={c.series_from} x2={leadEnd} fill="var(--color-well)" fillOpacity={1} ifOverflow="hidden" label={{ value: t.ask.before_period, position: "insideTopLeft", fill: "var(--color-muted)", fontSize: 12 }} />
             )}
-            {prov && <ReferenceArea x1={prov} x2={series[series.length - 1]?.date} fill={`url(#hatch-prov-${id})`} fillOpacity={1} ifOverflow="hidden" label={{ value: t.ask.may_change, position: "insideTopRight", fill: "var(--color-text-muted)", fontSize: 12 }} />}
+            {prov && <ReferenceArea x1={prov} x2={series[series.length - 1]?.date} fill={`url(#hatch-prov-${id})`} fillOpacity={1} ifOverflow="hidden" label={{ value: t.ask.may_change, position: "insideTopRight", fill: "var(--color-muted)", fontSize: 12 }} />}
             <ReferenceArea y1={-tol} y2={tol} fill="var(--color-surface-2)" fillOpacity={0.9} stroke="var(--color-border-strong)" strokeDasharray="3 3" strokeOpacity={0.8} ifOverflow="hidden" />
             <ReferenceLine y={0} stroke="var(--color-border-strong)" />
             <XAxis dataKey="date" tickFormatter={(d: string) => f.date(d)} tick={axisTick} axisLine={axisLine} tickLine={false} minTickGap={24} tickMargin={8} />
@@ -190,8 +190,8 @@ export function DiffChart({ result: c, height = 220, className }: { result: Chec
                     title={f.date(row.date, true)}
                     rows={[
                       { key: "d", name: t.tally.difference, color: "var(--color-text)", value: f.pct(row.diff, 1, true), emphasis: true },
-                      { key: "e", name: pick(c.expected.label), color: "var(--color-chart-ref)", value: f.value(row.raw.expected, c.unit) },
-                      { key: "m", name: pick(c.measured.label), color: "var(--color-chart-1)", value: f.value(row.raw.measured, c.unit) },
+                      { key: "e", name: pick(c.expected.label), color: "var(--color-muted)", value: f.value(row.raw.expected, c.unit) },
+                      { key: "m", name: pick(c.measured.label), color: "var(--color-data-measured)", value: f.value(row.raw.measured, c.unit) },
                     ]}
                     footer={prov && row.date >= prov ? t.charts.provisional_tip : undefined}
                   />

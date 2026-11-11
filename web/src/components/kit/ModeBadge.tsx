@@ -5,7 +5,7 @@ import { DatabaseIcon, FlaskConicalIcon, KeyRoundIcon, WorkflowIcon } from "luci
 import type { AgentMode, AppState } from "@/api/types";
 import { fmt, useT } from "@/i18n";
 
-const chip = "inline-flex h-5 shrink-0 items-center gap-1 rounded-sm border border-border bg-surface-2 px-1.5 text-2xs font-medium whitespace-nowrap text-text-muted";
+const chip = "inline-flex h-5 shrink-0 items-center gap-1 rounded-sm border border-border bg-surface-2 px-1.5 text-2xs font-medium whitespace-nowrap text-subtle";
 
 export function DataSourceBadge({ source, className }: { source: AppState["source"]; className?: string }) {
   const t = useT();

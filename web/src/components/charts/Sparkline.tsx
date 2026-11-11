@@ -22,7 +22,7 @@ export interface SparklineProps {
 /** Tiny inline trend line (pure SVG, cheap enough for table rows). Gaps break the line. */
 export function Sparkline({
   values,
-  color = "var(--color-chart-1)",
+  color = "var(--color-data-cat-1)",
   width = 80,
   height = 24,
   domain,

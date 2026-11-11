@@ -72,7 +72,7 @@ export function TileView(p: TileProps) {
         p.highlight && "outline-2 outline-offset-2 outline-ring motion-safe:animate-[aia-outline_2s_var(--ease-out)_both]",
       )}
     >
-      {p.busy && <span aria-hidden className="absolute inset-x-0 top-0 h-0.5 overflow-hidden rounded-t-lg"><span className="block h-full w-1/3 bg-accent motion-safe:animate-[aia-indeterminate_1.2s_linear_infinite]" /></span>}
+      {p.busy && <span aria-hidden className="absolute inset-x-0 top-0 h-0.5 overflow-hidden rounded-t-lg"><span className="block h-full w-1/3 bg-strong motion-safe:animate-[aia-indeterminate_1.2s_linear_infinite]" /></span>}
       <header className="flex min-h-6 items-center gap-2">
         {edit && (
           <button
@@ -83,17 +83,17 @@ export function TileView(p: TileProps) {
             onKeyDown={p.onHandleKey}
             aria-label={fmt(t.dash.edit.handle, { title })}
             aria-pressed={p.lifted || undefined}
-            className="-ml-1 hidden size-6 cursor-grab items-center justify-center rounded-sm text-text-subtle hover:bg-surface-2 hover:text-text md:inline-flex"
+            className="-ml-1 hidden size-6 cursor-grab items-center justify-center rounded-sm text-subtle hover:bg-surface-2 hover:text-text md:inline-flex"
           >
             <GripVerticalIcon size={16} strokeWidth={1.75} aria-hidden />
           </button>
         )}
         {edit ? (
-          <h3 className="line-clamp-2 min-w-0 flex-1 text-sm font-semibold text-text-strong" title={title}>
+          <h3 className="line-clamp-2 min-w-0 flex-1 text-sm font-semibold text-strong" title={title}>
             {title}
           </h3>
         ) : (
-          <h3 className="line-clamp-2 min-w-0 flex-1 text-sm font-semibold text-text-strong" title={title}>
+          <h3 className="line-clamp-2 min-w-0 flex-1 text-sm font-semibold text-strong" title={title}>
             <button type="button" onClick={p.onOpen} aria-label={fmt(t.dash.tile.open, { title })} aria-description={describe} className="rounded-sm text-left after:absolute after:inset-0 after:rounded-lg after:content-['']">
               {title}
             </button>
@@ -106,7 +106,7 @@ export function TileView(p: TileProps) {
       <div className={cn("mt-2 min-h-0 flex-1", edit && "pointer-events-none")}>
         {!r ? <Skeleton className="h-full min-h-16 w-full" /> : r.error ? <ErrorState size="sm" detail={sourceUnavailableSentence(t, r.error) ?? fmt(t.dash.tile.error, { reason: "" })} onRetry={p.onRetry} /> : <TileBody {...p} />}
       </div>
-      <footer className="mt-3 flex items-start gap-1 text-2xs text-text-muted">
+      <footer className="mt-3 flex items-start gap-1 text-2xs text-subtle">
         <Clock3Icon size={12} strokeWidth={1.75} aria-hidden className="mt-0.5 shrink-0" />
         <span className="min-w-0">{foot}</span>
       </footer>
@@ -154,7 +154,7 @@ function TileBody({ tile, result: r, compare, marked }: TileProps) {
                 {(t.dimensions.device as Record<string, string>)[b.key]} <span className="font-mono tnum">{f.pct(b.delta_pct, 1, true)}</span> <Status verdict={b.verdict} />
               </span>
             ))}
-            {prevLine && <span className="text-2xs text-text-muted">{prevLine}</span>}
+            {prevLine && <span className="text-2xs text-subtle">{prevLine}</span>}
           </div>
         </div>
       );
@@ -162,7 +162,7 @@ function TileBody({ tile, result: r, compare, marked }: TileProps) {
     return (
       <div className="flex h-full flex-col justify-between gap-1">
         <TallyCompact result={c} mark={marked} />
-        {(prevLine || c.findings[0]) && <p className="text-2xs text-text-muted">{prevLine ?? pick(c.findings[0]!.text)}</p>}
+        {(prevLine || c.findings[0]) && <p className="text-2xs text-subtle">{prevLine ?? pick(c.findings[0]!.text)}</p>}
       </div>
     );
   }
@@ -180,11 +180,11 @@ function TileBody({ tile, result: r, compare, marked }: TileProps) {
   if (tile.chart === "number" && q.total == null)
     return (
       <div className="flex h-full flex-col justify-center">
-        <p className="text-[13px] text-text-muted">{t.format.no_data_period}</p>
+        <p className="text-[13px] text-subtle">{t.format.no_data_period}</p>
       </div>
     );
   if (tile.chart === "number") {
-    const value = <span className="font-display text-2xl leading-8 font-heading tracking-[-0.012em] text-text-strong tnum">{q.total == null ? t.format.no_data : f.value(q.total, q.unit)}</span>;
+    const value = <span className="font-display text-2xl leading-8 font-heading tracking-[-0.012em] text-strong tnum">{q.total == null ? t.format.no_data : f.value(q.total, q.unit)}</span>;
     const trend = (r.series ?? q).rows.map((x) => x.value);
     return (
       <div className="@container flex h-full flex-col justify-center">
@@ -195,7 +195,7 @@ function TileBody({ tile, result: r, compare, marked }: TileProps) {
         {cmp && (
           <div className="mt-2 flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
             <DeltaBadge current={q.total} previous={cmp.total} unit={q.unit} />
-            <span className="min-w-0 text-2xs text-text-muted">{fmt(t.dash.tile.against, { value: f.value(cmp.total, q.unit) })}</span>
+            <span className="min-w-0 text-2xs text-subtle">{fmt(t.dash.tile.against, { value: f.value(cmp.total, q.unit) })}</span>
           </div>
         )}
       </div>
@@ -206,11 +206,11 @@ function TileBody({ tile, result: r, compare, marked }: TileProps) {
       <div className="flex h-full flex-col justify-between gap-2 overflow-hidden">
         {q.metric === "roas" && cmp && (
           <p className="text-[13px] text-text">
-            <span className="font-mono tnum">{f.value(q.total, q.unit)}</span> <span className="text-text-muted">{fmt(t.dash.tile.against, { value: f.value(cmp.total, q.unit) })}</span>
+            <span className="font-mono tnum">{f.value(q.total, q.unit)}</span> <span className="text-subtle">{fmt(t.dash.tile.against, { value: f.value(cmp.total, q.unit) })}</span>
           </p>
         )}
         <SplitBars query={cmp ? q : { ...q, comparison: null }} title={title} max={tall ? 8 : 3} />
-        {q.metric === "roas" && tall && <p className="text-2xs text-text-muted">{t.dash.roas_note}</p>}
+        {q.metric === "roas" && tall && <p className="text-2xs text-subtle">{t.dash.roas_note}</p>}
       </div>
     );
   if (tile.chart === "table") {

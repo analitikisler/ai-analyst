@@ -246,7 +246,7 @@ The code is under the MIT licence (`LICENSE`). The Analitik İşler name and log
 analyst, ai tag debugger, ai tagging server, ai cloud and ai visibility are trademarks of Analitik İşler and are not
 covered by the MIT licence: forks and redistributions must not use them in a way that suggests they come from or are
 endorsed by Analitik İşler. The brand files are in `brand/ai/` (see `brand/ai/BRAND.md`); use them only to refer to
-this project. The fonts are under the SIL Open Font License 1.1 (`web/public/fonts/OFL-*.txt`). Security reports: see
+this project. The fonts are under the SIL Open Font License 1.1 (`web/src/cini/fonts/OFL-*.txt`). Security reports: see
 `SECURITY.md`.
 
 “ai” stands for two things: AI, and the initials of analitik işler.

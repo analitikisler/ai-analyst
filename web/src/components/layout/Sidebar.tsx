@@ -17,7 +17,7 @@ import { StatusLine } from "./StatusLine";
 const itemCls = (active: boolean) =>
   cn(
     "flex h-8 items-center gap-2.5 rounded-md px-2 text-sm font-medium outline-offset-[-2px] transition-colors duration-160 pointer-coarse:h-11",
-    active ? "bg-primary-soft text-accent-ink" : "text-text-muted hover:bg-surface-2 hover:text-text",
+    active ? "bg-surface-2 text-strong" : "text-subtle hover:bg-surface-2 hover:text-text",
   );
 
 export function Lockup({ onNavigate }: { onNavigate?: () => void }) {
@@ -25,7 +25,7 @@ export function Lockup({ onNavigate }: { onNavigate?: () => void }) {
   return (
     // The ai analyst lockup (BRAND §6) in the text colour, red point only; 20 px tall keeps the x-height above 9 px,
     // and the padding gives it its clear space (2 stems).
-    <Link to="/ask" onClick={onNavigate} aria-label={t.shell.home} className="flex w-fit items-center rounded-sm p-1.5 text-text-strong">
+    <Link to="/ask" onClick={onNavigate} aria-label={t.shell.home} className="flex w-fit items-center rounded-sm p-1.5 text-strong">
       <AiAnalystLogo height={20} decorative />
     </Link>
   );
@@ -37,12 +37,12 @@ function WorkspaceRow({ onNavigate }: { onNavigate?: () => void }) {
   if (!data) return <Skeleton className="h-12 w-full" />;
   return (
     <Link to="/settings/sources" onClick={onNavigate} className="flex items-center gap-2.5 rounded-md border border-border bg-surface px-2 py-1.5 transition-colors hover:bg-surface-2">
-      <span aria-hidden className="flex size-7 shrink-0 items-center justify-center rounded-md bg-primary-soft font-display text-sm font-semibold text-accent-ink">
+      <span aria-hidden className="flex size-7 shrink-0 items-center justify-center rounded-md bg-surface-2 font-display text-sm font-semibold text-strong">
         {data.workspace.name.slice(0, 1).toLocaleUpperCase("tr")}
       </span>
       <span className="min-w-0 flex-1 truncate text-[13px] font-semibold text-text">{data.workspace.name}</span>
       {data.workspace.demo && (
-        <span className="inline-flex h-5 shrink-0 items-center gap-1 rounded-sm border border-border bg-surface-2 px-1.5 text-2xs font-medium text-text-muted">
+        <span className="inline-flex h-5 shrink-0 items-center gap-1 rounded-sm border border-border bg-surface-2 px-1.5 text-2xs font-medium text-subtle">
           <FlaskConicalIcon size={12} strokeWidth={1.75} aria-hidden />
           {t.shell.demo_badge}
         </span>
@@ -66,7 +66,7 @@ function NavRow({ item, onNavigate }: { item: NavItem; onNavigate?: () => void }
       <span className="truncate">{t.shell.nav[item.key]}</span>
       {item.key === "ask" && running && (
         <>
-          <span aria-hidden className="ml-auto size-1.5 bg-accent" />
+          <span aria-hidden className="ml-auto size-1.5 bg-point" />
           <span className="sr-only">{t.shell.working}</span>
         </>
       )}
@@ -77,7 +77,7 @@ function NavRow({ item, onNavigate }: { item: NavItem; onNavigate?: () => void }
         </span>
       )}
       {waiting > 0 && (
-        <span className="ml-auto inline-flex h-5 min-w-5 items-center justify-center rounded-sm border border-accent/40 bg-accent-soft px-1 font-mono text-2xs text-accent-ink">
+        <span className="ml-auto inline-flex h-5 min-w-5 items-center justify-center rounded-sm border border-border-strong bg-surface-2 px-1 font-mono text-2xs text-strong">
           {waiting}
           <span className="sr-only">{fmt(t.shell.badge.waiting, { n: waiting })}</span>
         </span>
@@ -115,7 +115,7 @@ export function Sidebar({ onNavigate, footer }: { onNavigate?: () => void; foote
           </div>
           {/* Its own line, so the status line keeps the full sidebar width in both languages. */}
           <div className="px-2">
-            <span title={t.app.alpha_hint} className="inline-flex rounded-sm border border-border px-1 font-mono text-2xs leading-4 text-text-muted">{t.app.alpha}</span>
+            <span title={t.app.alpha_hint} className="inline-flex rounded-sm border border-border px-1 font-mono text-2xs leading-4 text-subtle">{t.app.alpha}</span>
           </div>
         </div>
       </div>

@@ -20,7 +20,7 @@ export function ExploreBadge({ className }: { className?: string }) {
         render={
           <span
             tabIndex={0}
-            className={cn("inline-flex h-5 w-fit shrink-0 items-center gap-1 rounded-sm border border-warning/50 bg-warning-soft px-1.5 text-2xs font-medium text-text outline-offset-2", className)}
+            className={cn("inline-flex h-5 w-fit shrink-0 items-center gap-1 rounded-sm border border-warn/50 bg-warn-soft px-1.5 text-2xs font-medium text-text outline-offset-2", className)}
           />
         }
       >
@@ -52,7 +52,7 @@ export function ExploreChart({ x, query, compact, height = 220 }: { x: ExploreRe
   const name = useExploreKey();
   const title = pick(x.label);
   if (x.shape === "number") {
-    return <p className="font-display text-2xl leading-8 font-heading tracking-[-0.012em] text-text-strong tnum">{f.value(query.total, x.unit)}</p>;
+    return <p className="font-display text-2xl leading-8 font-heading tracking-[-0.012em] text-strong tnum">{f.value(query.total, x.unit)}</p>;
   }
   if (x.shape === "series") return <TrendChart query={query} type="column" title={title} height={height} compact={compact} showPrevious={false} />;
   if (x.shape === "category") return <SplitBars query={{ ...query, rows: query.rows.map((r) => ({ ...r, key: r.key })) }} title={title} max={compact ? 4 : undefined} names={(k) => name(x.spec.dims[0] ?? "channel", k)} />;
@@ -85,11 +85,11 @@ export function ExploreWorking({ x, title }: { x: ExploreResult; title: string }
     <div className="flex min-w-0 flex-col gap-2">
       <Disclosure label={t.ask.explore.sql_label} meta={plural(lang, x.rows.length, t.ask.explore.rows, { n: f.int(x.rows.length), bytes: f.bytes(x.bytes) })} defaultOpen>
         <CodeBlock code={x.sql} language="sql" title="1 / 1" maxHeight={260} />
-        {(x.tables ?? []).length > 0 && <p className="mt-1.5 font-mono text-2xs break-all text-text-muted">{fmt(t.ask.explore.tables, { tables: x.tables.join(", ") })}</p>}
+        {(x.tables ?? []).length > 0 && <p className="mt-1.5 font-mono text-2xs break-all text-subtle">{fmt(t.ask.explore.tables, { tables: x.tables.join(", ") })}</p>}
       </Disclosure>
-      <p className="text-[13px] leading-[18px] text-text-muted">
+      <p className="text-[13px] leading-[18px] text-subtle">
         {t.ask.explore.not_metric}{" "}
-        <a href={href} target={demo ? "_blank" : undefined} rel="noreferrer" className="font-medium text-accent hover:underline">
+        <a href={href} target={demo ? "_blank" : undefined} rel="noreferrer" className="font-medium text-link hover:underline">
           {t.ask.explore.add_metric}
         </a>
         {demo && <span className="sr-only"> {t.common.opens_tab}</span>}

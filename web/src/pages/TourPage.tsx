@@ -13,8 +13,8 @@ export default function TourPage() {
   return (
     <div className="mx-auto w-full max-w-3xl">
       <div className="rounded-lg border border-dashed border-border-strong bg-well p-4 sm:p-6">
-        <h1 className="font-display text-2xl leading-8 font-heading text-text-strong">{t.review.title}</h1>
-        <p className="mt-1 text-sm text-text-muted">
+        <h1 className="font-display text-2xl leading-8 font-heading text-strong">{t.review.title}</h1>
+        <p className="mt-1 text-sm text-subtle">
           {t.review.lead} {t.review.shortcut}
         </p>
         <div className="mt-6">

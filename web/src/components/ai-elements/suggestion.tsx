@@ -1,4 +1,4 @@
-// Vercel AI Elements `suggestion` (registry.ai-sdk.dev/suggestion.json, added with shadcn@4.21.4), adapted to Tally:
+// Vercel AI Elements `suggestion` (registry.ai-sdk.dev/suggestion.json, added with shadcn@4.21.4), adapted to the house style:
 // `cn` from the kit, no "use client", 4 px control radius instead of a pill, and a `wrap` layout for the empty state
 // (the registry version only scrolls sideways). `hint` adds a small muted second line inside the chip.
 import type { ComponentProps, ReactNode } from "react";
@@ -34,6 +34,6 @@ export const Suggestion = ({ suggestion, hint, onClick, className, variant = "ou
     {...props}
   >
     {children || suggestion}
-    {hint && <span className="text-2xs font-normal text-text-muted">{hint}</span>}
+    {hint && <span className="text-2xs font-normal text-subtle">{hint}</span>}
   </Button>
 );

@@ -56,11 +56,11 @@ export function EventsToggle({ count, on, onChange }: { count: number; on: boole
       type="button"
       aria-pressed={on}
       onClick={() => onChange(!on)}
-      className={cn("inline-flex h-5 items-center gap-1 rounded-sm border px-1.5 text-2xs transition-colors", on ? "border-border-strong text-text" : "border-dashed border-border text-text-muted")}
+      className={cn("inline-flex h-5 items-center gap-1 rounded-sm border px-1.5 text-2xs transition-colors", on ? "border-border-strong text-text" : "border-dashed border-border text-subtle")}
     >
       <CircleDotIcon size={11} strokeWidth={1.75} aria-hidden />
       {t.charts.events}
-      <span className="font-mono tnum text-text-muted">{count}</span>
+      <span className="font-mono tnum text-subtle">{count}</span>
     </button>
   );
 }
@@ -94,15 +94,15 @@ function EventMarker({ group, viewBox }: { group: EventGroup; viewBox?: { x: num
             const I = EVENT_ICON[e.type];
             return (
               <div key={e.id} className="flex flex-col gap-1 text-[13px] leading-[18px]">
-                <p className="flex items-center gap-1.5 font-medium text-text-strong">
+                <p className="flex items-center gap-1.5 font-medium text-strong">
                   <I size={13} strokeWidth={1.75} aria-hidden />
                   {pick(e.title)}
                 </p>
-                <p className="font-mono text-2xs text-text-muted tnum">
+                <p className="font-mono text-2xs text-subtle tnum">
                   {t.events.types[e.type]} · {f.date(e.date, true)} · {t.events.sources[e.source]}
                 </p>
                 {e.note && <p className="text-text">{pick(e.note)}</p>}
-                <Link to={`/settings/events?edit=${e.id}`} className="w-fit text-2xs font-medium text-accent hover:underline">
+                <Link to={`/settings/events?edit=${e.id}`} className="w-fit text-2xs font-medium text-link hover:underline">
                   {t.events.edit}
                 </Link>
               </div>

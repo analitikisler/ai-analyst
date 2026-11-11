@@ -274,8 +274,8 @@ export default function DashboardPage() {
         <div className="flex flex-wrap items-center gap-2">
           <DropdownMenu>
             <DropdownMenuTrigger render={<button type="button" aria-label={t.dash.switcher} className="group inline-flex min-w-0 items-center gap-1.5 rounded-md text-left" />}>
-              <h1 className="truncate font-display text-2xl leading-8 font-heading tracking-[-0.012em] text-text-strong sm:text-[28px] sm:leading-[34px]">{pick(dash.name)}</h1>
-              <ChevronDownIcon size={20} strokeWidth={1.75} aria-hidden className="shrink-0 text-text-muted group-hover:text-text" />
+              <h1 className="truncate font-display text-2xl leading-8 font-heading tracking-[-0.012em] text-strong sm:text-[28px] sm:leading-[34px]">{pick(dash.name)}</h1>
+              <ChevronDownIcon size={20} strokeWidth={1.75} aria-hidden className="shrink-0 text-subtle group-hover:text-text" />
             </DropdownMenuTrigger>
             <DropdownMenuContent align="start" className="min-w-60">
               <DropdownMenuGroup>
@@ -295,13 +295,13 @@ export default function DashboardPage() {
           </DropdownMenu>
           {dash.example && (
             <Tooltip>
-              <TooltipTrigger render={<span tabIndex={0} className="inline-flex h-5 items-center rounded-sm border border-border bg-surface-2 px-1.5 text-2xs font-medium text-text-muted" />}>{t.dash.example}</TooltipTrigger>
+              <TooltipTrigger render={<span tabIndex={0} className="inline-flex h-5 items-center rounded-sm border border-border bg-surface-2 px-1.5 text-2xs font-medium text-subtle" />}>{t.dash.example}</TooltipTrigger>
               <TooltipContent>{t.dash.example_tip}</TooltipContent>
             </Tooltip>
           )}
         </div>
-        <p className="mt-1 text-[13px] text-text-muted tnum">{periodLine}</p>
-        {edit && <p className="mt-1 text-[13px] text-text-muted">{t.dash.edit.note}</p>}
+        <p className="mt-1 text-[13px] text-subtle tnum">{periodLine}</p>
+        {edit && <p className="mt-1 text-[13px] text-subtle">{t.dash.edit.note}</p>}
       </div>
       <div className="flex shrink-0 flex-wrap items-center gap-2">
         {edit ? (
@@ -312,7 +312,7 @@ export default function DashboardPage() {
             </Button>
             {(state?.dashboards.length ?? 1) <= 1 ? (
               <Tooltip>
-                <TooltipTrigger render={<Button variant="ghost" aria-disabled className="cursor-not-allowed text-text-subtle" />}>{t.dash.edit.delete}</TooltipTrigger>
+                <TooltipTrigger render={<Button variant="ghost" aria-disabled className="cursor-not-allowed text-subtle" />}>{t.dash.edit.delete}</TooltipTrigger>
                 <TooltipContent>{t.dash.delete.only_one}</TooltipContent>
               </Tooltip>
             ) : (
@@ -534,7 +534,7 @@ function DashboardDialogs({
             }}
             className="flex flex-col gap-1.5"
           >
-            <label htmlFor="dash-name" className="text-2xs font-medium text-text-muted">
+            <label htmlFor="dash-name" className="text-2xs font-medium text-subtle">
               {t.dash.rename.label}
             </label>
             <Input id="dash-name" value={name} onChange={(e) => setName(e.target.value)} autoFocus />

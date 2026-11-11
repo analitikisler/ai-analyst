@@ -36,9 +36,9 @@ export function UserMessage({ text, context }: { text: string; context?: Text | 
   return (
     <Message align="end">
       <MessageContent className="items-end gap-1">
-        {context && <p className="text-2xs text-text-muted">{fmt(t.ask.context_chip, { name: pick(context) })}</p>}
+        {context && <p className="text-2xs text-subtle">{fmt(t.ask.context_chip, { name: pick(context) })}</p>}
         <Bubble variant="muted" align="end">
-          <BubbleContent className="rounded-lg px-3.5 py-2.5 text-[15px] leading-[22px] text-text-strong">{text}</BubbleContent>
+          <BubbleContent className="rounded-lg px-3.5 py-2.5 text-[15px] leading-[22px] text-strong">{text}</BubbleContent>
         </Bubble>
       </MessageContent>
     </Message>
@@ -85,13 +85,13 @@ export function StepsTrace({ steps, seconds, running, sources, usage }: { steps:
             {steps.map((s, i) => (
               <li key={i} className="flex flex-wrap items-baseline gap-x-2">
                 <span>{pick(s.summary)}</span>
-                <code className="rounded-sm bg-well px-1 font-mono text-2xs text-text-muted">{s.tool}</code>
+                <code className="rounded-sm bg-well px-1 font-mono text-2xs text-subtle">{s.tool}</code>
               </li>
             ))}
           </ol>
           {/* Model turns: the tokens the turn used, here only, never in the reply itself. */}
           {usage && (
-            <p className="mt-2 font-mono text-2xs text-text-muted tnum">
+            <p className="mt-2 font-mono text-2xs text-subtle tnum">
               {fmt(usage.cache_read > 0 ? t.ask.trace.usage_cache : t.ask.trace.usage, { steps: stepsText, input: f.int(usage.input), output: f.int(usage.output), cache: f.int(usage.cache_read) })}
             </p>
           )}
@@ -125,11 +125,11 @@ export function RefusalMessage({ refusal: r, onAsk }: { refusal: Refusal; onAsk:
   const navigate = useNavigate();
   return (
     <div className="flex min-w-0 flex-col gap-3">
-      <p className="text-[15px] leading-6 font-semibold text-text-strong">{pick(r.heading)}</p>
+      <p className="text-[15px] leading-6 font-semibold text-strong">{pick(r.heading)}</p>
       <p className="max-w-[68ch] text-[15px] leading-6 text-text">{pick(r.body)}</p>
       {r.nearest.length > 0 && (
         <>
-          <p className="text-2xs font-medium text-text-muted">{t.ask.refusal.similar}</p>
+          <p className="text-2xs font-medium text-subtle">{t.ask.refusal.similar}</p>
           <Suggestions wrap className="max-sm:flex-col max-sm:items-stretch">
             {r.nearest.map((q) => (
               <Suggestion key={q.en} suggestion={pick(q)} onClick={onAsk} className="max-sm:justify-start" />
@@ -162,7 +162,7 @@ export function RefusalMessage({ refusal: r, onAsk }: { refusal: Refusal; onAsk:
       )}
       {r.code === "planner_unknown" && (
         <div className="flex flex-col gap-1">
-          <p className="text-[13px] text-text-muted">{t.ask.refusal.routes}</p>
+          <p className="text-[13px] text-subtle">{t.ask.refusal.routes}</p>
           <div className="-ml-2 flex flex-wrap gap-1">
             <Button variant="link" size="sm" onClick={() => navigate("/settings/model")}>
               {t.ask.refusal.add_model}
@@ -198,13 +198,13 @@ export function ApprovalCard({ proposal: p, where = "ask" }: { proposal: Proposa
   };
   if (p.status !== "pending") {
     return (
-      <p tabIndex={-1} className="rounded-lg border border-border bg-surface px-4 py-3 text-[13px] leading-[18px] text-text-muted">
+      <p tabIndex={-1} className="rounded-lg border border-border bg-surface px-4 py-3 text-[13px] leading-[18px] text-subtle">
         {p.status === "approved" ? fmt(t.ask.approval.approved, { time: f.time(p.decided_at), what: pick(p.title) }) : t.ask.approval.declined}
         {p.decided_in === "activity" && where === "ask" ? ` · ${t.ask.approval.elsewhere}` : ""}
         {p.status === "approved" && p.kind === "watch" && p.payload.check && (
           <>
             {" · "}
-            <Link to={`/dashboards?check=${p.payload.check}`} className="font-medium text-accent hover:underline">
+            <Link to={`/dashboards?check=${p.payload.check}`} className="font-medium text-link hover:underline">
               {t.ask.approval.open_check}
             </Link>
           </>
@@ -214,9 +214,9 @@ export function ApprovalCard({ proposal: p, where = "ask" }: { proposal: Proposa
   }
   return (
     <article className="overflow-hidden rounded-lg border border-border-strong bg-surface">
-      <p className="border-b border-border bg-primary-soft px-4 py-2 text-2xs font-medium text-accent-ink">{t.ask.approval.eyebrow}</p>
+      <p className="border-b border-border bg-surface-2 px-4 py-2 text-2xs font-medium text-strong">{t.ask.approval.eyebrow}</p>
       <div className="p-4">
-        <h3 className="text-sm font-semibold text-text-strong">{pick(p.title)}</h3>
+        <h3 className="text-sm font-semibold text-strong">{pick(p.title)}</h3>
         <p className="mt-1 max-w-[66ch] text-sm text-text">{pick(p.body)}</p>
         <div className="mt-3 flex flex-col gap-2 sm:flex-row">
           <Button size="sm" disabled={busy} onClick={() => void decide(true)}>
@@ -226,7 +226,7 @@ export function ApprovalCard({ proposal: p, where = "ask" }: { proposal: Proposa
             {t.ask.approval.decline}
           </Button>
         </div>
-        <p className="mt-3 text-2xs text-text-subtle">{t.ask.approval.undo_note}</p>
+        <p className="mt-3 text-2xs text-subtle">{t.ask.approval.undo_note}</p>
       </div>
     </article>
   );
@@ -293,12 +293,12 @@ export function TurnView({ turn, live, fresh, last, actions, contextName }: { tu
             {proposals.map((p) => (
               <ApprovalCard key={p.id} proposal={p} />
             ))}
-            {proposals.some((p) => p.status === "pending") && turn.text && <p className="text-[13px] text-text-muted">{pick(turn.text)}</p>}
+            {proposals.some((p) => p.status === "pending") && turn.text && <p className="text-[13px] text-subtle">{pick(turn.text)}</p>}
             {turn.text && !proposals.length && !answers.some((a) => a.created_by === "planner") && (
-              <ModelText text={pick(turn.text)} className={answers.length ? "flex max-w-[68ch] flex-col gap-2 text-[13px] leading-[18px] text-text-muted" : undefined} />
+              <ModelText text={pick(turn.text)} className={answers.length ? "flex max-w-[68ch] flex-col gap-2 text-[13px] leading-[18px] text-subtle" : undefined} />
             )}
             {status === "stopped" && (
-              <div className="flex flex-wrap items-center gap-3 text-[13px] text-text-muted">
+              <div className="flex flex-wrap items-center gap-3 text-[13px] text-subtle">
                 <span>{t.err.stopped}</span>
                 <Button variant="outline" size="sm" onClick={() => actions.onAsk(question)}>
                   <RotateCcwIcon strokeWidth={1.75} data-icon="inline-start" />
@@ -310,7 +310,7 @@ export function TurnView({ turn, live, fresh, last, actions, contextName }: { tu
               <div role="alert" className="text-sm text-text">
                 <p>{bytesCapSentence(t, f.bytes, error) ?? sourceUnavailableSentence(t, error) ?? (error.code === "rate_limited" ? t.err.rate_limited : error.code === "network" ? t.err.network.body : error.code === "no_answer" ? t.err.no_answer : error.code === "no_cloud" ? fmt(t.err.no_cloud, { service: String(("params" in error && error.params?.service) || "–") }) : t.err.agent_stop)}</p>
                 <Disclosure label={t.common.details}>
-                  <code className="font-mono text-2xs text-text-muted">{fmt(t.err.details, { code: error.code })}</code>
+                  <code className="font-mono text-2xs text-subtle">{fmt(t.err.details, { code: error.code })}</code>
                 </Disclosure>
                 <Button variant="outline" size="sm" className="mt-2" onClick={() => actions.onAsk(question)}>
                   {t.common.try_again}

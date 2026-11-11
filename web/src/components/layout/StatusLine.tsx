@@ -14,7 +14,7 @@ export function StatusLine({ onNavigate, className }: { onNavigate?: () => void;
   const model = data.agent.mode === "planner" ? t.shell.status.planner : fmt(t.shell.status.model, { provider: data.agent.provider_label ?? "" });
   const link = "rounded-sm hover:text-text hover:underline";
   return (
-    <p className={cn("min-w-0 truncate text-2xs text-text-muted", className)} title={`${source} · ${model}`}>
+    <p className={cn("min-w-0 truncate text-2xs text-subtle", className)} title={`${source} · ${model}`}>
       <Link to="/settings/sources" onClick={onNavigate} className={link} aria-label={`${t.shell.status.open_data}: ${source}`}>
         {source}
       </Link>

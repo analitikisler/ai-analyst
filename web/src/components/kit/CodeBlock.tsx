@@ -51,8 +51,8 @@ export function CopyButton({ text, label, className, showLabel }: CopyButtonProp
       aria-label={showLabel ? undefined : copied ? t.common.copied : name}
       title={copied ? t.common.copied : name}
       className={cn(
-        "inline-flex h-7 items-center gap-1.5 rounded-md border border-border bg-surface px-2 text-xs font-medium text-text-muted transition-colors hover:bg-surface-2 hover:text-text",
-        copied && "text-success hover:text-success",
+        "inline-flex h-7 items-center gap-1.5 rounded-md border border-border bg-surface px-2 text-xs font-medium text-subtle transition-colors hover:bg-surface-2 hover:text-text",
+        copied && "text-ok hover:text-ok",
         className,
       )}
     >
@@ -116,9 +116,9 @@ export function CodeBlock({ code, language, title, maxHeight = 420, wrap, copy =
     <div className={cn("group relative min-w-0 overflow-hidden rounded-lg border border-border bg-well", className)}>
       {(title || language) && (
         <div className="flex h-9 items-center justify-between gap-2 border-b border-border pr-1.5 pl-3">
-          <span className="truncate text-xs font-medium text-text-muted">{title ?? language}</span>
+          <span className="truncate text-xs font-medium text-subtle">{title ?? language}</span>
           <div className="flex items-center gap-2">
-            {title && language && <span className="font-mono text-2xs text-text-subtle">{language}</span>}
+            {title && language && <span className="font-mono text-2xs text-subtle">{language}</span>}
             {copy && <CopyButton text={code} label={t.common.copy_code} showLabel />}
           </div>
         </div>
