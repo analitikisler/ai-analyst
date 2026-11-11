@@ -227,8 +227,10 @@ Removed from 0.1, replaced by the prototype's actions: `pin_answer` (frozen answ
   mobile?"), why (with the release and the audit finding when the data has them), metrics by total, day, week,
   month, channel and device, yesterday (the last day with data, against the same weekday a week before), last
   week (the last complete Monday to Sunday week, against the week before), this month (against the same days a
-  month before), last month, watch, pin and event proposals, and refusals: `not_in_data` (products, returns,
-  customers), `planner_unknown` saying a model could answer, `metric_howto`. Follow-ups: the planner's own, then
+  month before), last month, a range of days in any month ("3–9 Sep", "28 Eyl – 4 Eki", in the year of the data),
+  watch, pin and event proposals, and refusals: `not_in_data` (products, returns, customers; `missing: "period"`
+  when the question names days the data does not cover, which are never answered with the nearest days that
+  have data), `planner_unknown` saying a model could answer, `metric_howto`. Follow-ups: the planner's own, then
   a pool, at most three, never a question asked in the conversation, never one that would repeat an answer, never
   a refusal, never a watch already in place.
 - Everything from the warehouse, events, findings and audits reaches the model as data: tool results carry a
@@ -654,7 +656,12 @@ ignored. `test/guard.test.js` checks the four exploratory queries against `fixtu
 - The proposed-metric note says accepting writes `metrics/` in the data folder (the mock's demo note said it was
   saved in the prototype only).
 - The why sentence names the release and the audit finding only when the data has them (on the demo it reads
-  exactly as the mock's).
+  exactly as the mock's). On any other data it says only what the figures and the audits say: the direction of
+  the difference, the one segment that carries it when exactly one does, the day it started, an audit's finding in
+  its own words, or that no finding explains it yet. "Mobile Safari" and the thank-you-page fix belong to the
+  demo's finding and are given with it alone.
+- Number grounding checks a number with its unit stuck to it ("5000TL"), and treats "may" and "ara" as months only
+  when written with a capital, so "3 may be" is a figure.
 
 ### Simulated and real
 

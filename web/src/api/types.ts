@@ -319,7 +319,8 @@ export interface Refusal {
   code: "planner_unknown" | "not_in_data" | "explore_failed" | "metric_howto" | "metric_proposed";
   /** metric_proposed: the proposed metric on the Metrics page. */
   metric_id?: string;
-  missing?: "product" | "return" | "customer" | "weekday";
+  /** period: the question names days the data does not cover. */
+  missing?: "product" | "return" | "customer" | "weekday" | "period";
   heading: Text;
   body: Text;
   nearest: Text[];

@@ -87,6 +87,13 @@ export const REFUSAL = {
     "The built-in planner covers orders, revenue, sessions, conversion rate, order value, ad spend, ROAS and the four tracking checks, one question at a time.",
     "Yerleşik planlayıcı sipariş, ciro, oturum, dönüşüm oranı, sepet ortalaması, reklam harcaması, ROAS ve dört ölçüm kontrolü hakkındaki soruları tek tek cevaplar.",
   ),
+  no_period: {
+    heading: T("There is no data for those days", "Bu günler için veri yok"),
+    body: (asked, data) => ({
+      en: `${asked.en} is outside the data, which covers ${data.en}. Ask about days inside it.`,
+      tr: `${asked.tr} verinin dışında; veri ${data.tr} dönemini kapsıyor. Bu dönemin içindeki günler sorulabilir.`,
+    }),
+  },
   no_product: {
     heading: T("This workspace has no product-level data", "Bu çalışma alanında ürün düzeyinde veri yok"),
     body: T(
