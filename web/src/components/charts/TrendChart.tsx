@@ -58,8 +58,8 @@ export function TrendChart({ query: q, type, height = 220, showPrevious = true, 
   const anim = !prefersReducedMotion();
   const tick = (k: string) => f.date(k);
   const legend = [
-    { key: "v", name: title, color: "var(--color-chart-1)", emphasis: true },
-    ...(prevRows.length && q.comparison ? [{ key: "p", name: `${t.charts.previous} · ${f.range(q.comparison.from, q.comparison.to)}`, color: "var(--color-chart-1)", dashed: true }] : []),
+    { key: "v", name: title, color: "var(--color-data-cat-1)", emphasis: true },
+    ...(prevRows.length && q.comparison ? [{ key: "p", name: `${t.charts.previous} · ${f.range(q.comparison.from, q.comparison.to)}`, color: "var(--color-data-cat-1)", dashed: true }] : []),
   ];
   const tooltip = (
     <Tooltip
@@ -73,8 +73,8 @@ export function TrendChart({ query: q, type, height = 220, showPrevious = true, 
           <ChartTooltipBox
             title={q.group_by === "week" ? f.range(row.key, addSix(row.key)) : f.date(row.key, true)}
             rows={[
-              { key: "v", name: title, color: "var(--color-chart-1)", value: f.value(row.raw, q.unit), emphasis: true },
-              ...(row.previous != null && row.previousKey ? [{ key: "p", name: f.date(row.previousKey), color: "var(--color-chart-1)", value: f.value(row.previous, q.unit), dashed: true }] : []),
+              { key: "v", name: title, color: "var(--color-data-cat-1)", value: f.value(row.raw, q.unit), emphasis: true },
+              ...(row.previous != null && row.previousKey ? [{ key: "p", name: f.date(row.previousKey), color: "var(--color-data-cat-1)", value: f.value(row.previous, q.unit), dashed: true }] : []),
             ]}
             footer={row.provisional ? t.charts.provisional_tip : undefined}
           />
@@ -104,13 +104,13 @@ export function TrendChart({ query: q, type, height = 220, showPrevious = true, 
               {axes}
               {tooltip}
               {eventLines(ev.groups)}
-              {showPrevious && prevRows.length > 0 && <Bar dataKey="previous" fill="var(--color-surface)" stroke="var(--color-chart-1)" strokeDasharray="3 2" strokeWidth={1} radius={[1, 1, 0, 0]} maxBarSize={24} isAnimationActive={false} />}
+              {showPrevious && prevRows.length > 0 && <Bar dataKey="previous" fill="var(--color-surface)" stroke="var(--color-data-cat-1)" strokeDasharray="3 2" strokeWidth={1} radius={[1, 1, 0, 0]} maxBarSize={24} isAnimationActive={false} />}
               <Bar dataKey="raw" radius={[1, 1, 0, 0]} maxBarSize={40} isAnimationActive={false}>
                 {data.map((r) => (
                   <Cell
                     key={r.key}
-                    fill={r.partial ? `url(#hatch-partial-${id})` : r.provisional ? "var(--color-chart-provisional)" : "var(--color-chart-1)"}
-                    stroke={r.partial || r.provisional ? "var(--color-chart-1)" : "none"}
+                    fill={r.partial ? `url(#hatch-partial-${id})` : r.provisional ? "var(--color-data-provisional)" : "var(--color-data-cat-1)"}
+                    stroke={r.partial || r.provisional ? "var(--color-data-cat-1)" : "none"}
                     strokeWidth={1}
                   />
                 ))}
@@ -119,14 +119,14 @@ export function TrendChart({ query: q, type, height = 220, showPrevious = true, 
           ) : (
             <ComposedChart width={width} height={height} data={data} margin={{ top: 20, right: 8, bottom: 0, left: 0 }} accessibilityLayer={false}>
               <ChartPatterns id={id} />
-              {prov && <ReferenceArea x1={prov} x2={q.rows[q.rows.length - 1]?.key} fill={`url(#hatch-prov-${id})`} fillOpacity={1} ifOverflow="hidden" label={{ value: t.ask.may_change, position: "insideTopRight", fill: "var(--color-text-muted)", fontSize: 12 }} />}
+              {prov && <ReferenceArea x1={prov} x2={q.rows[q.rows.length - 1]?.key} fill={`url(#hatch-prov-${id})`} fillOpacity={1} ifOverflow="hidden" label={{ value: t.ask.may_change, position: "insideTopRight", fill: "var(--color-muted)", fontSize: 12 }} />}
               {axes}
               {tooltip}
               {eventLines(ev.groups)}
-              {type === "area" && <Area dataKey="value" stroke="none" fill="var(--color-chart-1)" fillOpacity={0.12} baseValue={0} isAnimationActive={false} connectNulls={false} activeDot={false} />}
-              {showPrevious && prevRows.length > 0 && <Line dataKey="previous" stroke="var(--color-chart-1)" strokeWidth={1.5} strokeDasharray="4 3" strokeOpacity={0.7} dot={false} isAnimationActive={false} activeDot={false} />}
-              <Line dataKey="value" stroke="var(--color-chart-1)" strokeWidth={2} dot={false} isAnimationActive={anim} animationDuration={400} connectNulls={false} activeDot={{ r: 4, strokeWidth: 2, stroke: "var(--color-surface)", fill: "var(--color-chart-1)" }} />
-              <Line dataKey="valueP" stroke="var(--color-chart-1)" strokeWidth={2} strokeDasharray="3 3" dot={false} isAnimationActive={false} connectNulls={false} activeDot={false} />
+              {type === "area" && <Area dataKey="value" stroke="none" fill="var(--color-data-cat-1)" fillOpacity={0.12} baseValue={0} isAnimationActive={false} connectNulls={false} activeDot={false} />}
+              {showPrevious && prevRows.length > 0 && <Line dataKey="previous" stroke="var(--color-data-cat-1)" strokeWidth={1.5} strokeDasharray="4 3" strokeOpacity={0.7} dot={false} isAnimationActive={false} activeDot={false} />}
+              <Line dataKey="value" stroke="var(--color-data-cat-1)" strokeWidth={2} dot={false} isAnimationActive={anim} animationDuration={400} connectNulls={false} activeDot={{ r: 4, strokeWidth: 2, stroke: "var(--color-surface)", fill: "var(--color-data-cat-1)" }} />
+              <Line dataKey="valueP" stroke="var(--color-data-cat-1)" strokeWidth={2} strokeDasharray="3 3" dot={false} isAnimationActive={false} connectNulls={false} activeDot={false} />
             </ComposedChart>
           ))}
       </div>

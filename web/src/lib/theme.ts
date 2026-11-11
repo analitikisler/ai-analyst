@@ -1,4 +1,4 @@
-// Light / dark / system. "system" removes data-theme, so the CSS media query decides (brand/tokens.css);
+// Light / dark / system. "system" removes data-theme, so the CSS media query decides (src/cini/tokens.css);
 // light or dark set data-theme on <html>. index.html applies the saved choice before first paint.
 import { useSyncExternalStore } from "react";
 import { usePref, type Prefs } from "./prefs";

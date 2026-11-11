@@ -44,7 +44,7 @@ function useSourceName() {
 
 function Badge({ children, tone = "neutral" }: { children: React.ReactNode; tone?: "neutral" | "warn" | "accent" }) {
   return (
-    <span className={cn("inline-flex h-5 shrink-0 items-center rounded-sm border px-1.5 text-2xs font-medium", tone === "warn" ? "border-warning/50 bg-warning-soft text-text" : tone === "accent" ? "border-accent/40 bg-accent-soft text-accent-ink" : "border-border bg-surface-2 text-text-muted")}>
+    <span className={cn("inline-flex h-5 shrink-0 items-center rounded-sm border px-1.5 text-2xs font-medium", tone === "warn" ? "border-warn/50 bg-warn-soft text-text" : tone === "accent" ? "border-border-strong bg-surface-2 text-strong" : "border-border bg-surface-2 text-subtle")}>
       {children}
     </span>
   );
@@ -74,7 +74,7 @@ function MetricList() {
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
         <label className="relative min-w-0 flex-1">
           <span className="sr-only">{t.metrics.search}</span>
-          <SearchIcon size={14} strokeWidth={1.75} aria-hidden className="pointer-events-none absolute top-1/2 left-2.5 -translate-y-1/2 text-text-subtle" />
+          <SearchIcon size={14} strokeWidth={1.75} aria-hidden className="pointer-events-none absolute top-1/2 left-2.5 -translate-y-1/2 text-subtle" />
           <Input type="search" value={q} onChange={(e) => setQ(e.target.value)} placeholder={t.metrics.search} className="pl-8" />
         </label>
         <label>
@@ -99,13 +99,13 @@ function MetricList() {
               <Link to={`/metrics/${e.id}`} className="grid grid-cols-[minmax(0,1fr)_1rem] items-start gap-x-3 gap-y-1 px-4 py-3 outline-offset-[-2px] transition-colors hover:bg-surface-2">
                 <span className="flex min-w-0 flex-col gap-1">
                   <span className="flex flex-wrap items-center gap-2">
-                    <span className="text-sm font-medium text-text-strong">{pick(e.label)}</span>
-                    <span className="font-mono text-2xs text-text-muted">v{e.version}</span>
+                    <span className="text-sm font-medium text-strong">{pick(e.label)}</span>
+                    <span className="font-mono text-2xs text-subtle">v{e.version}</span>
                     {e.status === "proposed" && <Badge tone="accent">{t.metrics.proposed}</Badge>}
                     {e.status === "accepted" && <Badge>{t.metrics.accepted}</Badge>}
                   </span>
-                  <span className="line-clamp-2 text-[13px] leading-[18px] text-text-muted">{pick(e.description)}</span>
-                  <span className="flex flex-wrap items-center gap-x-3 gap-y-1 text-2xs text-text-muted">
+                  <span className="line-clamp-2 text-[13px] leading-[18px] text-subtle">{pick(e.description)}</span>
+                  <span className="flex flex-wrap items-center gap-x-3 gap-y-1 text-2xs text-subtle">
                     <span>{t.metric.units[e.unit]}{e.unit === "try" ? ` (${f.currency})` : ""}</span>
                     <span>{sourceName(e.source)}</span>
                     <span className="flex flex-wrap items-center gap-1.5">
@@ -113,7 +113,7 @@ function MetricList() {
                     </span>
                   </span>
                 </span>
-                <ChevronRightIcon size={16} strokeWidth={1.75} aria-hidden className="mt-0.5 text-text-subtle" />
+                <ChevronRightIcon size={16} strokeWidth={1.75} aria-hidden className="mt-0.5 text-subtle" />
               </Link>
             </li>
           ))}
@@ -168,7 +168,7 @@ function MetricDetail({ id }: { id: string }) {
       <PageHeader
         title={pick(e.label)}
         breadcrumbs={[{ label: t.metrics.title, to: "/metrics" }, { label: pick(e.label) }]}
-        titleAddon={e.status === "proposed" ? <Badge tone="accent">{t.metrics.proposed}</Badge> : e.status === "accepted" ? <Badge>{t.metrics.accepted}</Badge> : <span className="font-mono text-2xs text-text-muted">v{e.version}</span>}
+        titleAddon={e.status === "proposed" ? <Badge tone="accent">{t.metrics.proposed}</Badge> : e.status === "accepted" ? <Badge>{t.metrics.accepted}</Badge> : <span className="font-mono text-2xs text-subtle">v{e.version}</span>}
         actions={
           <Button variant="outline" onClick={() => openAsk(`metric:${e.id}`)}>
             <MessageSquareTextIcon strokeWidth={1.75} data-icon="inline-start" />
@@ -178,14 +178,14 @@ function MetricDetail({ id }: { id: string }) {
       />
       <p className="-mt-3 max-w-[72ch] text-base leading-6 text-text">{pick(e.description)}</p>
       {e.status === "proposed" && (
-        <Panel padded className="flex flex-col gap-3 border-accent/40">
+        <Panel padded className="flex flex-col gap-3 border-border-strong">
           {data.proposal && (
-            <p className="text-[13px] text-text-muted">
+            <p className="text-[13px] text-subtle">
               {fmt(t.metrics.from_answer, { q: data.proposal.question })}
               {data.proposal.conversation_id && (
                 <>
                   {" · "}
-                  <Link to={`/ask/${data.proposal.conversation_id}`} className="font-medium text-accent hover:underline">
+                  <Link to={`/ask/${data.proposal.conversation_id}`} className="font-medium text-link hover:underline">
                     {t.metrics.open_answer}
                   </Link>
                 </>
@@ -207,7 +207,7 @@ function MetricDetail({ id }: { id: string }) {
         <div className="flex min-w-0 flex-col gap-6">
           {data.series && (
             <Panel padded>
-              <h2 className="mb-2 text-sm font-semibold text-text-strong">{t.metrics.last_90}</h2>
+              <h2 className="mb-2 text-sm font-semibold text-strong">{t.metrics.last_90}</h2>
               <TrendChart query={data.series} type="line" title={pick(e.label)} height={200} showPrevious={false} />
             </Panel>
           )}
@@ -216,7 +216,7 @@ function MetricDetail({ id }: { id: string }) {
             <dl className="grid grid-cols-[minmax(7rem,10rem)_minmax(0,1fr)] gap-x-4 gap-y-2 p-4 text-[13px] leading-[18px]">
               {data.definition.map((row) => (
                 <div key={row.label.en} className="contents">
-                  <dt className="text-text-muted">{pick(row.label)}</dt>
+                  <dt className="text-subtle">{pick(row.label)}</dt>
                   <dd className="min-w-0 text-text">{pick(row.value)}</dd>
                 </div>
               ))}
@@ -240,7 +240,7 @@ function MetricDetail({ id }: { id: string }) {
                           <span className="font-mono tnum">{f.pct(c.delta_pct, 1, true)}</span>
                         </span>
                         <span className="text-[13px] text-text">{pick(c.label)}</span>
-                        <span className="text-2xs text-text-muted">
+                        <span className="text-2xs text-subtle">
                           {t.metrics.role[c.role]} · <span className="font-mono tnum">{f.range(c.from, c.to)}</span>
                         </span>
                       </Link>
@@ -248,7 +248,7 @@ function MetricDetail({ id }: { id: string }) {
                   ))}
                 </ul>
               ) : (
-                <p className="flex flex-col gap-2 text-[13px] text-text-muted">
+                <p className="flex flex-col gap-2 text-[13px] text-subtle">
                   <Badge tone="warn">{t.metrics.not_checked}</Badge>
                   {t.metrics.checks_none}
                 </p>
@@ -262,14 +262,14 @@ function MetricDetail({ id }: { id: string }) {
                 <ul className="flex flex-col gap-1.5">
                   {data.used_in.map((u) => (
                     <li key={u.tile_id}>
-                      <Link to={`/dashboards/${u.dashboard_id}#tile-${u.tile_id}`} className="font-medium text-accent hover:underline">
+                      <Link to={`/dashboards/${u.dashboard_id}#tile-${u.tile_id}`} className="font-medium text-link hover:underline">
                         {pick(u.dashboard)} › {pick(u.title)}
                       </Link>
                     </li>
                   ))}
                 </ul>
               ) : (
-                <p className="text-text-muted">{t.metrics.used_none}</p>
+                <p className="text-subtle">{t.metrics.used_none}</p>
               )}
             </div>
           </Panel>
@@ -278,7 +278,7 @@ function MetricDetail({ id }: { id: string }) {
             <ol className="flex flex-col gap-3 p-4 pt-2 text-[13px] leading-[18px]">
               {data.history.map((h, i) => (
                 <li key={i} className="flex flex-col gap-0.5">
-                  <span className="font-mono text-2xs text-text-muted tnum">
+                  <span className="font-mono text-2xs text-subtle tnum">
                     {h.version > 0 ? `v${h.version} · ` : ""}
                     {f.date(h.date, true)} · {pick(h.actor)}
                   </span>

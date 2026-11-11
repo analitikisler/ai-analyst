@@ -38,10 +38,10 @@ export function ReviewPanel({ onNavigate }: { onNavigate?: () => void }) {
       <ol className="flex flex-col divide-y divide-border">
         {t.review.flows.map((fl, i) => (
           <li key={fl.id} className="flex items-start gap-3 py-2.5">
-            <span className="w-8 shrink-0 font-mono text-2xs text-text-muted">{fl.id}</span>
+            <span className="w-8 shrink-0 font-mono text-2xs text-subtle">{fl.id}</span>
             <span className="min-w-0 flex-1">
               <span className="block text-sm font-medium text-text">{fl.title}</span>
-              <span className="block text-2xs text-text-muted">{fl.how}</span>
+              <span className="block text-2xs text-subtle">{fl.how}</span>
             </span>
             <Button variant="outline" size="xs" render={<Link to={flows[i]!} onClick={onNavigate} />} nativeButton={false}>
               {t.review.start}
@@ -50,13 +50,13 @@ export function ReviewPanel({ onNavigate }: { onNavigate?: () => void }) {
         ))}
       </ol>
       <div>
-        <h3 className="text-2xs font-medium text-text-muted">{t.review.extra}</h3>
+        <h3 className="text-2xs font-medium text-subtle">{t.review.extra}</h3>
         <ul className="mt-1 flex flex-col divide-y divide-border">
           {t.review.states.map((s, i) => (
             <li key={s.title} className="flex items-start gap-3 py-2">
               <span className="min-w-0 flex-1">
                 <span className="block text-sm text-text">{s.title}</span>
-                <span className="block text-2xs text-text-muted">{s.how}</span>
+                <span className="block text-2xs text-subtle">{s.how}</span>
               </span>
               <Button variant="outline" size="xs" render={<Link to={states[i]!} onClick={onNavigate} />} nativeButton={false}>
                 {t.review.start}
@@ -140,7 +140,7 @@ export function ReviewMenu() {
           <DialogTitle>{t.review.title}</DialogTitle>
           <DialogDescription>
             {t.review.lead} {t.review.shortcut}{" "}
-            <Link to="/tour" onClick={() => setOpen(false)} className="font-medium text-accent hover:underline">
+            <Link to="/tour" onClick={() => setOpen(false)} className="font-medium text-link hover:underline">
               {t.review.open_tour}
             </Link>
           </DialogDescription>

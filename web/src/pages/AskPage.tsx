@@ -27,7 +27,7 @@ function ConversationList({ items, current, onPick }: { items: ConversationSumma
   const t = useT();
   const f = useFormat();
   const pick = useBilingual();
-  if (!items.length) return <p className="px-2 text-[13px] text-text-muted">{t.ask.threads_empty}</p>;
+  if (!items.length) return <p className="px-2 text-[13px] text-subtle">{t.ask.threads_empty}</p>;
   const today = f.localDay(new Date());
   const yesterday = f.localDay(new Date(Date.now() - 86400000));
   const groupOf = (c: ConversationSummary) => {
@@ -41,7 +41,7 @@ function ConversationList({ items, current, onPick }: { items: ConversationSumma
         if (!list.length) return null;
         return (
           <section key={g} aria-label={t.ask.groups[g]}>
-            <h3 className="mb-1 px-2 text-2xs font-medium text-text-subtle">{t.ask.groups[g]}</h3>
+            <h3 className="mb-1 px-2 text-2xs font-medium text-subtle">{t.ask.groups[g]}</h3>
             <ul className="flex flex-col gap-px">
               {list.map((c) => (
                 <li key={c.id}>
@@ -50,7 +50,7 @@ function ConversationList({ items, current, onPick }: { items: ConversationSumma
                     onClick={onPick}
                     aria-current={c.id === current ? "page" : undefined}
                     title={c.title_text ? pick(c.title_text) : c.title}
-                    className={cn("block truncate rounded-md px-2 py-1.5 text-[13px] leading-[18px] outline-offset-[-2px]", c.id === current ? "bg-primary-soft font-medium text-accent-ink" : "text-text hover:bg-surface-2")}
+                    className={cn("block truncate rounded-md px-2 py-1.5 text-[13px] leading-[18px] outline-offset-[-2px]", c.id === current ? "bg-surface-2 font-medium text-strong" : "text-text hover:bg-surface-2")}
                   >
                     {c.title_text ? pick(c.title_text) : c.title}
                   </Link>
@@ -229,11 +229,11 @@ function EmptyAsk({ onAsk, running, onStop, composerRef, workspace }: { onAsk: (
   const demo = !!useAppState().data?.workspace.demo;
   return (
     <div className="mx-auto flex w-full max-w-[760px] flex-1 flex-col justify-center overflow-y-auto px-4 py-8 md:px-6">
-      <h1 className="text-center font-display text-2xl leading-8 font-heading tracking-[-0.012em] text-text-strong sm:text-[28px] sm:leading-[34px]">{fmt(t.ask.empty.heading, { workspace })}</h1>
+      <h1 className="text-center font-display text-2xl leading-8 font-heading tracking-[-0.012em] text-strong sm:text-[28px] sm:leading-[34px]">{fmt(t.ask.empty.heading, { workspace })}</h1>
       <Composer ref={composerRef} className="mt-6" draftKey="new" running={running} onStop={onStop} onSubmit={onAsk} escStops modelLine={false} />
       <section aria-label={t.ask.suggest.label} className="mt-4">
         {isError ? (
-          <p className="flex flex-wrap items-center justify-center gap-3 text-[13px] text-text-muted">
+          <p className="flex flex-wrap items-center justify-center gap-3 text-[13px] text-subtle">
             {t.err.suggestions}
             <Button variant="outline" size="sm" onClick={() => void refetch()}>
               {t.common.try_again}
@@ -287,7 +287,7 @@ export function NewDashboardDialog({ answerId, onClose, onCreated }: { answerId:
           }}
           className="flex flex-col gap-1.5"
         >
-          <label htmlFor="new-dash-name" className="text-2xs font-medium text-text-muted">
+          <label htmlFor="new-dash-name" className="text-2xs font-medium text-subtle">
             {t.dash.rename.label}
           </label>
           <Input id="new-dash-name" value={name} onChange={(e) => setName(e.target.value)} autoFocus />

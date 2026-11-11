@@ -1,13 +1,14 @@
 #!/usr/bin/env bun
-// Rewrites shadcn/ui component classes into the Tally vocabulary, so a component added later with
+// Rewrites shadcn/ui component classes into the house vocabulary (on the Çini kit, src/cini), so a component added later with
 // `bunx --bun shadcn@4.21.4 add <name>` matches the rest of the kit. Idempotent; run it after every add:
 //   bun scripts/tally-shadcn.mjs [files...]   (default: every file in src/components/ui)
 //
 // It also drops "use client" (not an RSC app). What it changes, and why (Analitik İşler design system, see PHASE1.md):
 // - `dark:*` classes go: tokens switch with the theme, components never branch on it.
-// - shadcn's `accent` means "hover ground"; Tally's `accent` is the link blue. Hover grounds become surface-2.
+// - shadcn's `accent` means "hover ground" (Çini's `accent` is the brand red, a link colour). Hover grounds become
+//   surface-2.
 // - Focus glows (`ring-3 ring-ring/50`) and `outline-none` on controls go: one focus treatment for the whole app,
-//   the 2 px accent outline from index.css. Menu items keep `outline-hidden`, their highlight is the ground.
+//   the 2 px focus outline from index.css. Menu items keep `outline-hidden`, their highlight is the ground.
 // - Invalid glows go (no glow, no blur); the red border stays.
 // - Overlays: scrim `bg-overlay`, a 1 px `ring-border` edge, no backdrop blur, no zoom.
 // - Nothing moves on press (`translate-y-px`), transitions are colour only.
@@ -32,7 +33,7 @@ function token(t, file) {
   if (/^border-destructive\/\d+$/.test(utility) && prefix.some((p) => p.includes("focus"))) return null;
   if (utility === "outline-none" && !prefix.some((p) => p.includes("focus"))) return null;
   if (/^outline-(1|ring)$/.test(utility) && prefix.some((p) => p.includes("focus"))) return null;
-  // Overlays: the Tally scrim, a 1 px rule instead of a translucent ring, no blur, nothing zooms.
+  // Overlays: the kit's scrim, a 1 px rule instead of a translucent ring, no blur, nothing zooms.
   if (/^backdrop-blur/.test(utility) || prefix.includes("supports-backdrop-filter")) return null;
   if (/^bg-black\/\d+$/.test(utility)) return [...prefix, "bg-overlay"].join(":");
   if (utility === "ring-foreground/10") return [...prefix, "ring-border"].join(":");
@@ -42,7 +43,7 @@ function token(t, file) {
   if (utility === "transition-all") return [...prefix, "transition-colors"].join(":");
   // Hover grounds and their ink.
   if (utility === "bg-accent") return [...prefix, "bg-surface-2"].join(":");
-  if (utility === "text-accent-foreground") return [...prefix, "text-text-strong"].join(":");
+  if (utility === "text-accent-foreground") return [...prefix, "text-strong"].join(":");
   // Radius on controls.
   if (CONTROLS.has(file)) {
     if (/^rounded-(lg|\[min\(var\(--radius-md\),\d+px\)\])$/.test(utility)) return [...prefix, "rounded-md"].join(":");

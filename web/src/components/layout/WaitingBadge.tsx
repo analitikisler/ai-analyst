@@ -17,16 +17,16 @@ export function WaitingBadge() {
   const label = plural(lang, pending.length, t.shell.waiting.button, { n: pending.length });
   return (
     <Popover>
-      <PopoverTrigger render={<Button variant="outline" size="sm" className="border-accent/40 bg-accent-soft text-accent-ink hover:bg-accent-soft" />}>
-        <span aria-hidden className="size-1.5 rounded-full bg-accent" />
+      <PopoverTrigger render={<Button variant="outline" size="sm" className="border-border-strong bg-surface-2 text-strong hover:bg-surface-2" />}>
+        <span aria-hidden className="size-1.5 rounded-full bg-point" />
         {label}
       </PopoverTrigger>
       <PopoverContent align="end" collisionPadding={{ top: 64, bottom: 8, left: 8, right: 8 }} className="max-h-[var(--available-height)] w-[22rem] max-w-[calc(100vw-16px)] gap-3 overflow-y-auto p-3">
-        <p className="text-sm font-semibold text-text-strong">{t.shell.waiting.title}</p>
+        <p className="text-sm font-semibold text-strong">{t.shell.waiting.title}</p>
         {pending.map((p) => (
           <ApprovalCard key={p.id} proposal={p} where="activity" />
         ))}
-        <Link to="/settings/activity?filter=waiting" className="text-[13px] font-medium text-accent hover:underline">
+        <Link to="/settings/activity?filter=waiting" className="text-[13px] font-medium text-link hover:underline">
           {t.shell.waiting.open_all}
         </Link>
       </PopoverContent>

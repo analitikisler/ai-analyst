@@ -20,7 +20,7 @@ export interface DeltaBadgeProps {
 
 const tones = {
   data: { soft: "border border-border bg-surface-2 text-text", plain: "text-text" },
-  gap: { soft: "border border-danger/40 bg-danger-soft text-danger", plain: "text-danger" },
+  gap: { soft: "border border-bad/40 bg-bad-soft text-bad", plain: "text-bad" },
 } as const;
 
 /** Signed change with an arrow; the sentence ("up 4.2%") is read to screen readers. Missing → "–". */

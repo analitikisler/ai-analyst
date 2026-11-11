@@ -17,7 +17,7 @@ export function DataTable<T>({ rows, columns, label, className, dense, maxHeight
         <thead className="sticky top-0 bg-surface">
           <tr className="border-b border-border-strong">
             {columns.map((c) => (
-              <th key={c.key} scope="col" className={cn("h-9 px-2 text-2xs font-medium whitespace-nowrap text-text-muted first:pl-0 last:pr-0", c.num ? "text-right" : "text-left")}>
+              <th key={c.key} scope="col" className={cn("h-9 px-2 text-2xs font-medium whitespace-nowrap text-subtle first:pl-0 last:pr-0", c.num ? "text-right" : "text-left")}>
                 {c.label}
               </th>
             ))}

@@ -37,14 +37,14 @@ export function CheckStrip({ checks: list }: { checks: CheckResult[] }) {
   };
   const allOk = checks.every((c) => c.verdict === "adds_up") && !changed.size;
   const heading = (
-    <h2 className="flex items-center gap-1.5 text-sm font-semibold text-text-strong">
+    <h2 className="flex items-center gap-1.5 text-sm font-semibold text-strong">
       {t.dash.strip.label}
       <InfoTip content={t.dash.strip.info} label={t.dash.strip.label} />
     </h2>
   );
   if (allOk) {
     return (
-      <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[13px] text-text-muted">
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[13px] text-subtle">
         {heading}
         <Status verdict="adds_up" word={plural(lang, checks.length, t.dash.strip.all_ok, { n: checks.length })} />
       </div>
@@ -67,15 +67,15 @@ export function CheckStrip({ checks: list }: { checks: CheckResult[] }) {
                 <Status verdict={c.verdict} />
                 {changed.has(c.check) && (
                   <span className="inline-flex items-center">
-                    <span aria-hidden className="size-1.5 rounded-full bg-accent" />
+                    <span aria-hidden className="size-1.5 rounded-full bg-point" />
                     <span className="sr-only">{t.dash.strip.changed}</span>
                   </span>
                 )}
               </span>
               <span className="col-span-3 col-start-1 row-start-2 min-w-0 truncate text-[13px] text-text sm:col-span-1 sm:col-start-auto sm:row-start-auto">{pick(c.label)}</span>
               <span className="col-start-2 row-start-1 text-right font-mono text-[13px] text-text tnum sm:col-start-auto sm:row-start-auto">{f.pct(c.delta_pct, 1, true)}</span>
-              <span className="hidden font-mono text-2xs text-text-muted tnum sm:block">{f.range(c.from, c.to)}</span>
-              <ChevronRightIcon size={14} strokeWidth={1.75} aria-hidden className="col-start-3 row-start-1 text-text-subtle sm:col-start-auto sm:row-start-auto" />
+              <span className="hidden font-mono text-2xs text-subtle tnum sm:block">{f.range(c.from, c.to)}</span>
+              <ChevronRightIcon size={14} strokeWidth={1.75} aria-hidden className="col-start-3 row-start-1 text-subtle sm:col-start-auto sm:row-start-auto" />
             </button>
           </li>
         ))}

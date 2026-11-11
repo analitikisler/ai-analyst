@@ -67,7 +67,7 @@ export function CheckDetail({ check, period, onAsk }: { check: CheckId; period?:
   return (
     <div className="flex flex-col gap-5 p-4 sm:p-5">
       <header className="flex flex-col gap-3 pr-10">
-        <h2 className="text-lg leading-6 font-semibold text-text-strong">{title}</h2>
+        <h2 className="text-lg leading-6 font-semibold text-strong">{title}</h2>
         <div className="flex flex-wrap gap-2">
           {journey && (
             <Button size="sm" onClick={() => openAudit(lastAudit && (lastAudit.status === "handoff" || lastAudit.result?.ok === false) && !state?.audit_fixed ? { run: lastAudit.id } : { check })}>
@@ -100,9 +100,9 @@ export function CheckDetail({ check, period, onAsk }: { check: CheckId; period?:
           </Button>
         </div>
       </header>
-      {watching && <p className="-mt-2 max-w-[72ch] text-[13px] text-text-muted">{t.check.watch_line}</p>}
+      {watching && <p className="-mt-2 max-w-[72ch] text-[13px] text-subtle">{t.check.watch_line}</p>}
       {runRun && (
-        <p className="flex flex-wrap items-center gap-3 rounded-md bg-surface-2 px-3 py-2 text-[13px] text-text-muted">
+        <p className="flex flex-wrap items-center gap-3 rounded-md bg-surface-2 px-3 py-2 text-[13px] text-subtle">
           {fmt(t.check.run_view, { time: f.whenMid(runRun.created_at) })}
           <Button
             variant="link"
@@ -120,17 +120,17 @@ export function CheckDetail({ check, period, onAsk }: { check: CheckId; period?:
       <Panel className="p-4 sm:p-5">
         <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
           <Status verdict={c.verdict} size="lg" />
-          <span className="font-mono text-[13px] text-text-muted tnum">{f.range(c.from, c.to)}</span>
-          {c.out_of_tolerance_since && c.verdict === "does_not_add_up" && <span className="text-[13px] text-text-muted">{plural(lang, sinceDays, t.check.since, { date: f.since(c.out_of_tolerance_since), n: sinceDays })}</span>}
+          <span className="font-mono text-[13px] text-subtle tnum">{f.range(c.from, c.to)}</span>
+          {c.out_of_tolerance_since && c.verdict === "does_not_add_up" && <span className="text-[13px] text-subtle">{plural(lang, sinceDays, t.check.since, { date: f.since(c.out_of_tolerance_since), n: sinceDays })}</span>}
         </div>
         <div className="mt-6 grid gap-6">
           <div className="order-2 min-w-0">
             <CheckEvidenceChart result={c} height={240} />
-            <p className="mt-2 text-2xs text-text-muted">{fmt(t.check.chart_context, { n: 14 })}</p>
+            <p className="mt-2 text-2xs text-subtle">{fmt(t.check.chart_context, { n: 14 })}</p>
           </div>
           <div className="order-1 flex min-w-0 flex-col gap-5">
             <Tally result={c} mark play />
-            {data.previous && <p className="text-2xs text-text-muted">{fmt(t.check.previous, { delta: f.pct(data.previous.delta_pct, 1, true), verdict: t.ask.verdict[data.previous.verdict] })}</p>}
+            {data.previous && <p className="text-2xs text-subtle">{fmt(t.check.previous, { delta: f.pct(data.previous.delta_pct, 1, true), verdict: t.ask.verdict[data.previous.verdict] })}</p>}
           </div>
         </div>
         <div className="mt-6 border-t border-border pt-4">
@@ -154,14 +154,14 @@ export function CheckDetail({ check, period, onAsk }: { check: CheckId; period?:
       </Panel>
       {c.findings.map((fd) => (
         <Panel key={fd.id} padded>
-          <h2 className="text-base font-semibold text-text-strong">{t.check.finding_title}</h2>
+          <h2 className="text-base font-semibold text-strong">{t.check.finding_title}</h2>
           <p className="mt-1 text-sm text-text">{pick(fd.text)}</p>
-          {fd.since && <p className="mt-1 font-mono text-2xs text-text-muted">{fd.release ? fmt(t.check.finding_meta, { source: fd.source, date: f.since(fd.since), release: fd.release }) : fmt(t.check.finding_meta_no_release, { source: fd.source, date: f.since(fd.since) })}</p>}
+          {fd.since && <p className="mt-1 font-mono text-2xs text-subtle">{fd.release ? fmt(t.check.finding_meta, { source: fd.source, date: f.since(fd.since), release: fd.release }) : fmt(t.check.finding_meta_no_release, { source: fd.source, date: f.since(fd.since) })}</p>}
           {fd.confirmed && (
             <p className="mt-2 flex flex-wrap items-center gap-x-2 text-[13px] text-text">
-              <ScanSearchIcon size={14} strokeWidth={1.75} aria-hidden className="text-text-muted" />
+              <ScanSearchIcon size={14} strokeWidth={1.75} aria-hidden className="text-subtle" />
               {fmt(t.audit.confirmed, { time: f.when(fd.confirmed.at) })}
-              <button type="button" onClick={() => openAudit({ run: fd.confirmed!.audit_id })} className="rounded-sm font-medium text-accent hover:underline">
+              <button type="button" onClick={() => openAudit({ run: fd.confirmed!.audit_id })} className="rounded-sm font-medium text-link hover:underline">
                 {t.audit.open_result}
               </button>
             </p>
@@ -170,7 +170,7 @@ export function CheckDetail({ check, period, onAsk }: { check: CheckId; period?:
       ))}
       {c.verdict === "does_not_add_up" && !c.findings.length && (
         <Panel padded>
-          <p className="text-[13px] text-text-muted">{t.check.no_finding}</p>
+          <p className="text-[13px] text-subtle">{t.check.no_finding}</p>
           <CodeBlock code={`npx -y @analitikisler/ai-tag-debugger run --site ${state?.workspace.demo === false ? "your-site.example" : "ornekmoda.example"} --journey purchase`} className="mt-2" />
         </Panel>
       )}
@@ -197,7 +197,7 @@ export function CheckDetail({ check, period, onAsk }: { check: CheckId; period?:
             <li key={r.id} className="border-b border-border py-2 last:border-0">
               <Link to={`?${runLink(r.id)}`} replace className="flex flex-wrap items-center gap-x-3 rounded-sm text-[13px] text-text hover:underline">
                 <span className="font-mono tnum">{f.when(r.created_at)}</span>
-                <span className="text-text-muted">{r.actor === "person" ? t.activity.actor.person : t.activity.actor.system}</span>
+                <span className="text-subtle">{r.actor === "person" ? t.activity.actor.person : t.activity.actor.system}</span>
                 <Status verdict={r.verdict} />
                 <span className="font-mono tnum">{f.pct(r.delta_pct, 1, true)}</span>
               </Link>

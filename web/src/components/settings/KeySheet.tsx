@@ -98,18 +98,18 @@ export function KeySheet() {
           <div className="flex flex-1 flex-col gap-4 overflow-y-auto p-4">
             {compat && (
               <div className="flex flex-col gap-1">
-                <label htmlFor="k-base" className="text-2xs font-medium text-text-muted">
+                <label htmlFor="k-base" className="text-2xs font-medium text-subtle">
                   {t.set.key.base_url}
                 </label>
                 <Input id="k-base" value={base} onChange={(e) => setBase(e.target.value)} readOnly={busy} className="font-mono" aria-invalid={err?.code === "unreachable" || undefined} aria-describedby="k-base-hint" autoComplete="off" spellCheck={false} />
-                <p id="k-base-hint" className="text-2xs text-text-subtle">
+                <p id="k-base-hint" className="text-2xs text-subtle">
                   {t.set.key.base_url_hint}
                 </p>
                 {err?.code === "unreachable" && <ErrLine text={errText} />}
               </div>
             )}
             <div className="flex flex-col gap-1">
-              <label htmlFor="k-key" className="text-2xs font-medium text-text-muted">
+              <label htmlFor="k-key" className="text-2xs font-medium text-subtle">
                 {compat ? t.set.key.optional : t.set.key.key}
               </label>
               <div className="flex gap-2">
@@ -118,14 +118,14 @@ export function KeySheet() {
                   {show ? <EyeOffIcon strokeWidth={1.75} /> : <EyeIcon strokeWidth={1.75} />}
                 </Button>
               </div>
-              {!compat && !key.trim() && <p className="text-2xs text-text-subtle">{t.set.key.empty}</p>}
+              {!compat && !key.trim() && <p className="text-2xs text-subtle">{t.set.key.empty}</p>}
               {(err?.code === "key_rejected" || err?.code === "rate_limited" || (err?.code === "unreachable" && !compat)) && <ErrLine text={`${errText} ${fmt(t.err.details, { code: `${err.status ?? ""} ${err.detail ?? ""}`.trim() })}`} />}
-              <a href={WHERE[provider]} target="_blank" rel="noreferrer" className="self-start text-2xs font-medium text-accent hover:underline">
+              <a href={WHERE[provider]} target="_blank" rel="noreferrer" className="self-start text-2xs font-medium text-link hover:underline">
                 {t.set.key.where} <span className="sr-only">{t.common.opens_tab}</span>
               </a>
             </div>
             <div className="flex flex-col gap-1">
-              <label htmlFor="k-model" className="text-2xs font-medium text-text-muted">
+              <label htmlFor="k-model" className="text-2xs font-medium text-subtle">
                 {t.set.key.model}
               </label>
               <Input id="k-model" value={model} onChange={(e) => setModel(e.target.value)} readOnly={busy} className="font-mono" aria-invalid={err?.code === "model_not_found" || undefined} autoComplete="off" spellCheck={false} />
@@ -133,7 +133,7 @@ export function KeySheet() {
             </div>
             {failure && <ErrLine text={failure} />}
             {result?.ok && (
-              <p className="flex items-center gap-1.5 text-[13px] text-success" aria-live="polite">
+              <p className="flex items-center gap-1.5 text-[13px] text-ok" aria-live="polite">
                 <StatusGlyph tone="ok" size={14} />
                 {fmt(t.set.key.ok, { model: result.model, s: f.dec(result.seconds ?? 1, 1) })}
               </p>
@@ -156,7 +156,7 @@ export function KeySheet() {
 
 function ErrLine({ text }: { text: string }) {
   return (
-    <p className="flex items-start gap-1.5 text-2xs text-danger" role="alert">
+    <p className="flex items-start gap-1.5 text-2xs text-bad" role="alert">
       <StatusGlyph tone="bad" size={12} className="mt-0.5 shrink-0" />
       {text}
     </p>

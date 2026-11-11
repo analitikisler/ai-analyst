@@ -78,7 +78,7 @@ export function AnswerCard({ answer: a, fresh, narrow, actions }: AnswerCardProp
       <StreamText id={a.id} text={pick(a.sentence)} active={!!fresh} onDone={() => setRevealed(true)} className="max-w-[68ch] text-[15px] leading-6 text-text" />
       {revealed && (
         <div className={cn("flex min-w-0 flex-col gap-3", fresh && "animate-[aia-fade-in_220ms_var(--ease-out)_both]")}>
-          {a.interpretation && <p className="-mt-1 text-[13px] leading-[18px] text-text-muted">{pick(a.interpretation)}</p>}
+          {a.interpretation && <p className="-mt-1 text-[13px] leading-[18px] text-subtle">{pick(a.interpretation)}</p>}
           {a.explore ? (
             a.explore.shape !== "number" && (
               <div className="min-w-0 rounded-lg border border-border bg-surface p-3 sm:p-4">
@@ -124,10 +124,10 @@ function ExploreHead({ answer: a }: { answer: Answer }) {
   return (
     <header className="flex flex-col gap-2">
       <ExploreBadge />
-      <p className="text-[13px] leading-[18px] font-medium text-text-muted">
+      <p className="text-[13px] leading-[18px] font-medium text-subtle">
         {pick(a.title)} · <span className="font-mono tnum">{f.range(x.spec.from, x.spec.to)}</span>
       </p>
-      {x.shape === "number" && <p className="font-display text-[28px] leading-9 font-heading tracking-[-0.012em] text-text-strong tnum">{f.value(a.query.total, x.unit)}</p>}
+      {x.shape === "number" && <p className="font-display text-[28px] leading-9 font-heading tracking-[-0.012em] text-strong tnum">{f.value(a.query.total, x.unit)}</p>}
     </header>
   );
 }
@@ -143,22 +143,22 @@ function CheckHead({ check: c, overall, fresh, sentence }: { check: CheckResult;
     <header>
       <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
         <Status verdict={c.verdict} size="lg" />
-        <span className="font-mono text-[13px] text-text-muted tnum">{f.range(c.from, c.to)}</span>
+        <span className="font-mono text-[13px] text-subtle tnum">{f.range(c.from, c.to)}</span>
       </div>
-      <p className="mt-2 text-[13px] leading-[18px] font-medium text-text-muted">{pick(c.label)}</p>
-      {c.verdict === "insufficient_data" ? (c.reason && !sentence?.includes(pick(c.reason)) ? <p className="mt-1 max-w-[68ch] text-[13px] leading-[18px] text-text-muted">{pick(c.reason)}</p> : null) : (
+      <p className="mt-2 text-[13px] leading-[18px] font-medium text-subtle">{pick(c.label)}</p>
+      {c.verdict === "insufficient_data" ? (c.reason && !sentence?.includes(pick(c.reason)) ? <p className="mt-1 max-w-[68ch] text-[13px] leading-[18px] text-subtle">{pick(c.reason)}</p> : null) : (
         <div className="mt-1 flex flex-wrap items-baseline gap-x-4 gap-y-2">
           <Marked draw={fresh} label={fmt(t.ask.figure_label, { value: pctText })}>
-            <DeltaFigure value={pctText} className={cn("text-[28px] leading-9 text-text-strong", fresh && "animate-[aia-fade-in_220ms_var(--ease-out)_both]")} />
+            <DeltaFigure value={pctText} className={cn("text-[28px] leading-9 text-strong", fresh && "animate-[aia-fade-in_220ms_var(--ease-out)_both]")} />
           </Marked>
-          <span className="text-sm text-text-muted tnum">
+          <span className="text-sm text-subtle tnum">
             {fewerMore} · {fmt(t.ask.tolerance, { t: f.pct(c.tolerance, 0) })}
             {c.out_of_tolerance_since && c.verdict === "does_not_add_up" ? ` · ${fmt(t.ask.since, { date: f.since(c.out_of_tolerance_since) })}` : ""}
           </span>
         </div>
       )}
       {overall && (
-        <p className="mt-1 flex flex-wrap items-center gap-2 text-[13px] text-text-muted tnum">
+        <p className="mt-1 flex flex-wrap items-center gap-2 text-[13px] text-subtle tnum">
           {fmt(t.tally.all_devices, { pct: f.pct(overall.delta_pct, 1, true) })}
           <Status verdict={overall.verdict} />
         </p>
@@ -174,8 +174,8 @@ function WhyHead({ check: c }: { check: CheckResult }) {
   return (
     <header className="flex flex-wrap items-center gap-x-3 gap-y-1">
       <Status verdict={c.verdict} size="lg" />
-      <span className="text-[13px] font-medium text-text-muted">{pick(c.label)}</span>
-      <span className="font-mono text-[13px] text-text-muted tnum">{f.range(c.from, c.to)}</span>
+      <span className="text-[13px] font-medium text-subtle">{pick(c.label)}</span>
+      <span className="font-mono text-[13px] text-subtle tnum">{f.range(c.from, c.to)}</span>
     </header>
   );
 }
@@ -188,7 +188,7 @@ function WhyBody({ answer: a, check: c, narrow }: { answer: Answer; check: Check
   const pick = useBilingual();
   const w = a.why!;
   const section = "flex min-w-0 flex-col gap-2";
-  const h = "text-sm font-semibold text-text-strong";
+  const h = "text-sm font-semibold text-strong";
   const dims = t.dimensions.device as Record<string, string>;
   const fd = c.findings[0];
   return (
@@ -222,7 +222,7 @@ function WhyBody({ answer: a, check: c, narrow }: { answer: Answer; check: Check
         <section className={section}>
           <h3 className={h}>{t.ask.why.found}</h3>
           <p className="flex flex-wrap items-start gap-2 text-[13px] leading-[18px] text-text">
-            <span className="inline-flex h-5 items-center gap-1 rounded-sm border border-border px-1.5 text-2xs text-text-muted">
+            <span className="inline-flex h-5 items-center gap-1 rounded-sm border border-border px-1.5 text-2xs text-subtle">
               <ScanSearchIcon size={12} strokeWidth={1.75} aria-hidden />
               {fd.source}
             </span>
@@ -259,15 +259,15 @@ function FigureHead({ answer: a, fresh }: { answer: Answer; fresh?: boolean }) {
   const metric = a.metrics[0];
   return (
     <header>
-      <p className="text-[13px] leading-[18px] font-medium text-text-muted">
+      <p className="text-[13px] leading-[18px] font-medium text-subtle">
         {metric ? pick(metric.label) : ""} · <span className="font-mono tnum">{f.range(q.from, q.to)}</span>
       </p>
       <div className="mt-1 flex flex-wrap items-baseline gap-x-3 gap-y-2">
         <Marked draw={fresh}>
-          <span className={cn("font-display text-[28px] leading-9 font-heading tracking-[-0.012em] text-text-strong tnum", fresh && "animate-[aia-fade-in_220ms_var(--ease-out)_both]")}>{q.total == null ? (a.kind === "number" ? t.format.no_data_period : t.format.no_data) : f.value(q.total, q.unit)}</span>
+          <span className={cn("font-display text-[28px] leading-9 font-heading tracking-[-0.012em] text-strong tnum", fresh && "animate-[aia-fade-in_220ms_var(--ease-out)_both]")}>{q.total == null ? (a.kind === "number" ? t.format.no_data_period : t.format.no_data) : f.value(q.total, q.unit)}</span>
         </Marked>
         {cmp && q.total != null && (
-          <span className="flex flex-wrap items-center gap-2 text-[13px] text-text-muted tnum">
+          <span className="flex flex-wrap items-center gap-2 text-[13px] text-subtle tnum">
             <DeltaBadge current={q.total} previous={cmp.total} unit={q.unit} size="md" />
             {fmt(t.ask.against, { value: f.value(cmp.total, q.unit), range: f.range(cmp.from, cmp.to) })}
           </span>
@@ -285,7 +285,7 @@ function Evidence({ answer: a, fresh, narrow }: { answer: Answer; fresh?: boolea
   const c = a.check;
   const title = a.metrics[0] ? pick(a.metrics[0].label) : "";
   const toggle = (
-    <button type="button" onClick={() => setTable((v) => !v)} aria-pressed={table} className="rounded-sm text-2xs font-medium text-accent hover:underline">
+    <button type="button" onClick={() => setTable((v) => !v)} aria-pressed={table} className="rounded-sm text-2xs font-medium text-link hover:underline">
       {table ? t.common.show_chart : t.common.show_table}
     </button>
   );
@@ -309,7 +309,7 @@ function Evidence({ answer: a, fresh, narrow }: { answer: Answer; fresh?: boolea
     );
     const header = (
       <div className="mb-2 flex items-center justify-between gap-2">
-        <span className="text-2xs font-medium text-text-muted">{split ? t.ask.by_device : t.check.chart}</span>
+        <span className="text-2xs font-medium text-subtle">{split ? t.ask.by_device : t.check.chart}</span>
         {toggle}
       </div>
     );
@@ -355,7 +355,7 @@ function Evidence({ answer: a, fresh, narrow }: { answer: Answer; fresh?: boolea
       ) : (
         <TrendChart query={q} type={q.group_by === "day" ? "line" : "column"} title={title} height={narrow ? 180 : 240} showPrevious={q.group_by === "day"} />
       )}
-      {q.group_by === "week" && <p className="mt-2 text-2xs text-text-muted">{fmt(t.dash.complete_weeks, { range: f.range(q.from, q.to) })}</p>}
+      {q.group_by === "week" && <p className="mt-2 text-2xs text-subtle">{fmt(t.dash.complete_weeks, { range: f.range(q.from, q.to) })}</p>}
     </div>
   );
 }
@@ -371,7 +371,7 @@ function WhereLine({ check: c }: { check: CheckResult }) {
   return (
     <div>
       <p className="flex flex-wrap items-center gap-x-4 gap-y-1 text-[13px] leading-[18px]">
-        <span className="text-text-muted">{t.ask.where}:</span>
+        <span className="text-subtle">{t.ask.where}:</span>
         {c.breakdown.map((b) => (
           <span key={b.key} className="inline-flex items-center gap-2">
             <span className="text-text">{(t.dimensions.device as Record<string, string>)[b.key] ?? b.key}</span>
@@ -411,7 +411,7 @@ function FindingLine({ check: c, defaultOpen }: { check: CheckResult; defaultOpe
   const rest = cut > 0 ? text.slice(cut + 1).trim() : "";
   return (
     <div className="flex flex-wrap items-start gap-x-2 gap-y-1 text-[13px] leading-[18px]">
-      <span className="inline-flex h-5 items-center gap-1 rounded-sm border border-border px-1.5 text-2xs text-text-muted">
+      <span className="inline-flex h-5 items-center gap-1 rounded-sm border border-border px-1.5 text-2xs text-subtle">
         <ScanSearchIcon size={12} strokeWidth={1.75} aria-hidden />
         {fd.source}
       </span>
@@ -419,7 +419,7 @@ function FindingLine({ check: c, defaultOpen }: { check: CheckResult; defaultOpe
         {head}
         {open && rest ? `: ${rest}` : ""}
         {rest && (
-          <button type="button" onClick={() => setOpen((v) => !v)} aria-expanded={open} className="ml-2 rounded-sm font-medium text-accent hover:underline">
+          <button type="button" onClick={() => setOpen((v) => !v)} aria-expanded={open} className="ml-2 rounded-sm font-medium text-link hover:underline">
             {open ? t.ask.less : t.ask.more}
           </button>
         )}
@@ -441,10 +441,10 @@ function DefinitionRow({ answer: a }: { answer: Answer }) {
         {a.metrics.map((m) => (
           <li key={m.id} className="text-[13px] leading-[18px]">
             <p className="font-medium text-text">
-              {pick(m.label)} <span className="font-mono text-text-muted">v{m.version}</span>
+              {pick(m.label)} <span className="font-mono text-subtle">v{m.version}</span>
             </p>
-            <p className="mt-0.5 max-w-[66ch] text-text-muted">{pick(m.description)}</p>
-            <button type="button" onClick={() => openMetric(m.id)} className="mt-1 rounded-sm font-medium text-accent hover:underline">
+            <p className="mt-0.5 max-w-[66ch] text-subtle">{pick(m.description)}</p>
+            <button type="button" onClick={() => openMetric(m.id)} className="mt-1 rounded-sm font-medium text-link hover:underline">
               {t.ask.open_definition}
             </button>
           </li>
@@ -473,7 +473,7 @@ function SqlRow({ answer: a }: { answer: Answer }) {
 export function ActionButton({ label, onClick, children, pressed, render }: { label: string; onClick?: () => void; children: React.ReactNode; pressed?: boolean; render?: React.ReactElement }) {
   return (
     <Tooltip>
-      <TooltipTrigger render={render ?? <Button variant="ghost" size="icon-sm" aria-label={label} aria-pressed={pressed} onClick={onClick} className={cn("text-text-muted hover:text-text", pressed && "text-text")} />}>{children}</TooltipTrigger>
+      <TooltipTrigger render={render ?? <Button variant="ghost" size="icon-sm" aria-label={label} aria-pressed={pressed} onClick={onClick} className={cn("text-subtle hover:text-text", pressed && "text-text")} />}>{children}</TooltipTrigger>
       <TooltipContent>{label}</TooltipContent>
     </Tooltip>
   );
@@ -518,7 +518,7 @@ export function MessageActions({ answer: a, question, always, onAsk, onNewDashbo
         </ActionButton>
       ) : (
         <DropdownMenu>
-          <ActionButton label={t.ask.actions.pin} render={<DropdownMenuTrigger render={<Button variant="ghost" size="icon-sm" aria-label={t.ask.actions.pin} className="text-text-muted hover:text-text" />} />}>
+          <ActionButton label={t.ask.actions.pin} render={<DropdownMenuTrigger render={<Button variant="ghost" size="icon-sm" aria-label={t.ask.actions.pin} className="text-subtle hover:text-text" />} />}>
             <PinIcon strokeWidth={1.75} />
           </ActionButton>
           <DropdownMenuContent align="start" className="min-w-56">

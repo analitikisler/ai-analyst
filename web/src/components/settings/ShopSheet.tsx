@@ -25,12 +25,12 @@ function SecretNote({ secret }: { secret: ConnectorSecret | null | undefined }) 
   if (!secret?.set) return null;
   if (secret.locked)
     return (
-      <p className="flex items-start gap-1.5 text-2xs text-text-muted">
+      <p className="flex items-start gap-1.5 text-2xs text-subtle">
         <LockIcon size={12} strokeWidth={1.75} aria-hidden className="mt-0.5 shrink-0" />
         {fmt(t.set.env_lock, { variable: secret.env ?? "" })}
       </p>
     );
-  return <p className="text-2xs text-text-muted">{fmt(t.sources.saved_secret, { hint: secret.hint ?? "" })}</p>;
+  return <p className="text-2xs text-subtle">{fmt(t.sources.saved_secret, { hint: secret.hint ?? "" })}</p>;
 }
 
 export function ShopSheet() {
@@ -138,8 +138,8 @@ export function ShopSheet() {
     }
   };
   const field = "font-mono";
-  const label = "text-2xs font-medium text-text-muted";
-  const hint = "text-2xs text-text-subtle";
+  const label = "text-2xs font-medium text-subtle";
+  const hint = "text-2xs text-subtle";
 
   return (
     <Sheet open={open} onOpenChange={(o) => !o && close()}>
@@ -225,7 +225,7 @@ export function ShopSheet() {
                 {testing ? t.sources.testing : test ? t.sources.retest : t.sources.test}
               </Button>
               {failure && (
-                <p className="mt-2 text-[13px] text-danger" role="alert">
+                <p className="mt-2 text-[13px] text-bad" role="alert">
                   {failure}
                 </p>
               )}
@@ -238,9 +238,9 @@ export function ShopSheet() {
           )}
         </div>
         <SheetFooter className="flex-col gap-3 border-t border-border sm:flex-col">
-          <p className="text-2xs text-text-muted">{t.sources.privacy}</p>
+          <p className="text-2xs text-subtle">{t.sources.privacy}</p>
           <div className="flex flex-wrap items-center justify-end gap-2">
-            {!passed && <span className="mr-auto text-2xs text-text-muted">{t.sources.test_first}</span>}
+            {!passed && <span className="mr-auto text-2xs text-subtle">{t.sources.test_first}</span>}
             <Button variant="ghost" onClick={close}>
               {t.common.cancel}
             </Button>

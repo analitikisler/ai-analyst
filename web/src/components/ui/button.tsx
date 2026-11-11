@@ -9,18 +9,18 @@ const buttonVariants = cva(
   {
     variants: {
       variant: {
-        // Tally action: the one primary per view.
-        default: "bg-primary text-primary-foreground hover:bg-primary-hover",
+        // Çini action: ink, the one primary per view.
+        default: "bg-primary text-primary-foreground hover:bg-action-hover",
         // Overt "secondary": control edge in border-strong on the surface.
         outline:
-          "border-border-strong bg-surface text-text hover:border-text-strong hover:bg-surface-2 aria-expanded:bg-surface-2",
+          "border-border-strong bg-surface text-text hover:border-strong hover:bg-surface-2 aria-expanded:bg-surface-2",
         secondary:
-          "bg-surface-2 text-text-strong hover:bg-[color-mix(in_oklab,var(--surface-2),var(--text-strong)_6%)] aria-expanded:bg-surface-2",
+          "bg-surface-2 text-strong hover:bg-[color-mix(in_oklab,var(--color-surface-2),var(--color-text-strong)_6%)] aria-expanded:bg-surface-2",
         ghost:
-          "text-text-muted hover:bg-surface-2 hover:text-text aria-expanded:bg-surface-2 aria-expanded:text-text",
+          "text-subtle hover:bg-surface-2 hover:text-text aria-expanded:bg-surface-2 aria-expanded:text-text",
         destructive:
-          "bg-danger-soft text-danger hover:border-danger",
-        link: "h-auto px-0 text-accent underline-offset-4 hover:underline",
+          "bg-bad-soft text-bad hover:border-bad",
+        link: "h-auto px-0 text-link underline-offset-4 hover:underline",
       },
       size: {
         default:

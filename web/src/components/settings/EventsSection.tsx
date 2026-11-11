@@ -68,13 +68,13 @@ export function EventsList() {
               <li key={e.id} className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 gap-y-0.5 px-3 py-2">
                 <span className="flex min-w-0 flex-col gap-0.5">
                   <span className="flex min-w-0 items-center gap-1.5 text-[13px] font-medium text-text">
-                    <Icon size={13} strokeWidth={1.75} aria-hidden className="shrink-0 text-text-muted" />
+                    <Icon size={13} strokeWidth={1.75} aria-hidden className="shrink-0 text-subtle" />
                     <span className="min-w-0">{pick(e.title)}</span>
                   </span>
-                  <span className="font-mono text-2xs text-text-muted tnum">
+                  <span className="font-mono text-2xs text-subtle tnum">
                     {f.date(e.date, true)} · {t.events.types[e.type]} · {t.events.sources[e.source]}
                   </span>
-                  {e.note && <span className="text-2xs text-text-muted">{pick(e.note)}</span>}
+                  {e.note && <span className="text-2xs text-subtle">{pick(e.note)}</span>}
                 </span>
                 <span className="flex items-center gap-0.5">
                   <Button variant="ghost" size="icon-sm" aria-label={`${t.events.edit}: ${pick(e.title)}`} title={t.events.edit} onClick={() => setEditing(e)}>
@@ -89,7 +89,7 @@ export function EventsList() {
           })}
         </ul>
       ) : (
-        <p className="text-[13px] text-text-muted">{t.events.empty}</p>
+        <p className="text-[13px] text-subtle">{t.events.empty}</p>
       )}
       <EventDialog event={editing} onClose={() => setEditing(null)} onSaved={(id) => undoable(t.events.saved, id)} />
     </div>
@@ -130,7 +130,7 @@ function EventDialog({ event, onClose, onSaved }: { event: ChartEvent | "new" | 
     onClose();
   };
   const field = "flex flex-col gap-1.5";
-  const label = "text-2xs font-medium text-text-muted";
+  const label = "text-2xs font-medium text-subtle";
   return (
     <Dialog open={!!event} onOpenChange={(o) => !o && onClose()}>
       <DialogContent>

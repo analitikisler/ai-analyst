@@ -28,14 +28,14 @@ export function InfoTip({ term, content, label, side = "top", className }: InfoT
     <Tooltip>
       <TooltipTrigger
         aria-label={label ?? (term ? fmt(t.kit.about, { term: term.term }) : t.kit.aboutThis)}
-        className={cn("inline-flex size-4 items-center justify-center rounded-sm text-text-subtle transition-colors hover:text-text", className)}
+        className={cn("inline-flex size-4 items-center justify-center rounded-sm text-subtle transition-colors hover:text-text", className)}
       >
         <InfoIcon size={14} strokeWidth={1.75} aria-hidden />
       </TooltipTrigger>
       <TooltipContent side={side}>
         <span className="block">
-          {term && <span className="mb-0.5 block font-semibold text-text-strong">{term.term}</span>}
-          <span className="block text-text-muted">{term ? (term.long ?? term.short) : content}</span>
+          {term && <span className="mb-0.5 block font-semibold text-strong">{term.term}</span>}
+          <span className="block text-subtle">{term ? (term.long ?? term.short) : content}</span>
         </span>
       </TooltipContent>
     </Tooltip>

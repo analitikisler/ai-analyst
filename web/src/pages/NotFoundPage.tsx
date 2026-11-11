@@ -9,12 +9,12 @@ import { fmt, useT } from "@/i18n";
 function MicroTally() {
   const t = useT();
   return (
-    <div className="mb-2 grid grid-cols-[auto_auto_auto] items-center gap-x-3 gap-y-1.5 text-2xs text-text-muted" aria-label={`${t.nf.tally_expected} 1 · ${t.nf.tally_found} 0`} role="img">
+    <div className="mb-2 grid grid-cols-[auto_auto_auto] items-center gap-x-3 gap-y-1.5 text-2xs text-subtle" aria-label={`${t.nf.tally_expected} 1 · ${t.nf.tally_found} 0`} role="img">
       <span aria-hidden>{t.nf.tally_expected}</span>
-      <span aria-hidden className="size-6 rounded-xs border border-chart-ref-edge bg-surface" />
+      <span aria-hidden className="size-6 rounded-xs border border-border-strong bg-surface" />
       <span aria-hidden className="font-mono text-text">1</span>
       <span aria-hidden>{t.nf.tally_found}</span>
-      <span aria-hidden className="size-6 rounded-xs border border-dashed border-danger" />
+      <span aria-hidden className="size-6 overflow-hidden rounded-xs border border-dashed border-border-strong hatch-missing" />
       <span aria-hidden className="font-mono text-text">0</span>
     </div>
   );
@@ -30,8 +30,8 @@ export function NotFoundInline({ title, action, to }: { title: string; action: s
     <div className="flex flex-1 flex-col items-center justify-center gap-4 px-6 py-16 text-center">
       <MicroTally />
       <div className="max-w-md">
-        <h1 className="font-display text-2xl leading-8 font-heading text-text-strong">{title}</h1>
-        <p className="mt-2 text-sm text-text-muted">{t.nf.body}</p>
+        <h1 className="font-display text-2xl leading-8 font-heading text-strong">{title}</h1>
+        <p className="mt-2 text-sm text-subtle">{t.nf.body}</p>
       </div>
       <div className="flex flex-wrap justify-center gap-2">
         <Button render={<Link to={to} />} nativeButton={false}>
@@ -55,8 +55,8 @@ export default function NotFoundPage() {
     <div className="flex flex-1 flex-col items-center justify-center gap-4 px-6 py-16 text-center">
       <MicroTally />
       <div className="max-w-md">
-        <h1 className="font-display text-2xl leading-8 font-heading text-text-strong">{t.nf.title}</h1>
-        <p className="mt-2 text-sm text-text-muted">{t.nf.body}</p>
+        <h1 className="font-display text-2xl leading-8 font-heading text-strong">{t.nf.title}</h1>
+        <p className="mt-2 text-sm text-subtle">{t.nf.body}</p>
       </div>
       <div className="flex flex-wrap justify-center gap-2">
         <Button render={<Link to="/ask" />} nativeButton={false}>

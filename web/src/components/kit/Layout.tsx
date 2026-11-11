@@ -38,10 +38,10 @@ export function PanelHeader({ title, subtitle, actions, titleAddon, className, .
     <div className={cn("flex flex-wrap items-start justify-between gap-x-3 gap-y-2 px-4 pt-4", className)} {...rest}>
       <div className="min-w-0 flex-[1_1_12rem]">
         <div className="flex items-center gap-1.5">
-          <h3 className="truncate font-sans text-base font-semibold text-text-strong">{title}</h3>
+          <h3 className="truncate font-sans text-base font-semibold text-strong">{title}</h3>
           {titleAddon}
         </div>
-        {subtitle && <p className="mt-0.5 text-[13px] leading-[18px] text-text-muted">{subtitle}</p>}
+        {subtitle && <p className="mt-0.5 text-[13px] leading-[18px] text-subtle">{subtitle}</p>}
       </div>
       {actions && <div className="flex shrink-0 items-center gap-2">{actions}</div>}
     </div>

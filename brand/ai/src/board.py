@@ -4,7 +4,7 @@ from pathlib import Path
 D = Path(__file__).resolve().parent.parent
 P = [('tag-debugger', 'ai tag debugger', 'Open source · MIT'), ('tagging-server', 'ai tagging server', 'Early development'),
      ('cloud', 'ai cloud', 'Waitlist'), ('visibility', 'ai visibility', 'Open source · AGPL-3.0 · Alpha · Be the answer.'), ('analyst', 'ai analyst', 'Alpha')]
-COL = [('Ink', '#17140F', '#F1ECE2'), ('Paper', '#F3F0E8', '#151310'), ('Point · red pen', '#C12D30', '#FA6B6D'), ('Pencil', '#6A645A', '#A39C8F')]
+COL = [('Ink', '#17140F', '#F1ECE2'), ('Glaze', '#FAF5F0', '#13100D'), ('Point · red pen', '#C12D30', '#FA6B6D'), ('Pencil', '#6A645A', '#A39C8F')]
 
 def img(path, alt, h=None, cls=''):
     style = f' style="height:{h}px"' if h else ''
@@ -38,9 +38,9 @@ html = f'''<!doctype html>
 <title>ai brand board</title>
 <meta name="description" content="The ai tool family of Analitik İşler: mark, lockups, icons, favicons, master logo and colours, light and dark. Rules in BRAND.md.">
 <style>
-:root {{ --bg: #F3F0E8; --card: #FBF9F4; --ink: #17140F; --muted: #6A645A; --rule: #DDD7CB; --point: #C12D30; color-scheme: light; }}
-@media (prefers-color-scheme: dark) {{ :root:not([data-theme="light"]) {{ --bg: #151310; --card: #1C1A16; --ink: #F1ECE2; --muted: #A39C8F; --rule: #35312A; --point: #FA6B6D; color-scheme: dark; }} }}
-:root[data-theme="dark"] {{ --bg: #151310; --card: #1C1A16; --ink: #F1ECE2; --muted: #A39C8F; --rule: #35312A; --point: #FA6B6D; color-scheme: dark; }}
+:root {{ --bg: #FAF5F0; --card: #FBF9F4; --ink: #17140F; --muted: #6A645A; --rule: #DDD7CB; --point: #C12D30; color-scheme: light; }}
+@media (prefers-color-scheme: dark) {{ :root:not([data-theme="light"]) {{ --bg: #13100D; --card: #1C1A16; --ink: #F1ECE2; --muted: #A39C8F; --rule: #35312A; --point: #FA6B6D; color-scheme: dark; }} }}
+:root[data-theme="dark"] {{ --bg: #13100D; --card: #1C1A16; --ink: #F1ECE2; --muted: #A39C8F; --rule: #35312A; --point: #FA6B6D; color-scheme: dark; }}
 * {{ box-sizing: border-box; }}
 body {{ margin: 0; background: var(--bg); color: var(--ink); font: 16px/1.55 system-ui, -apple-system, "Segoe UI", sans-serif; }}
 main {{ max-width: 1120px; margin: 0 auto; padding: 48px 16px 96px; }}
@@ -51,8 +51,8 @@ p {{ max-width: 46em; color: var(--muted); }}
 code {{ font: 13px/1.4 ui-monospace, "SF Mono", Menlo, monospace; }}
 .lead b {{ color: var(--ink); }}
 .pair {{ display: grid; grid-template-columns: 1fr 1fr; gap: 0; border: 1px solid var(--rule); border-radius: 10px; overflow: hidden; }}
-.tile {{ display: grid; place-items: center; min-height: 120px; padding: 24px; background: #F3F0E8; }}
-.tile.ink {{ background: #151310; }}
+.tile {{ display: grid; place-items: center; min-height: 120px; padding: 24px; background: #FAF5F0; }}
+.tile.ink {{ background: #13100D; }}
 .tile img {{ max-width: 100%; }}
 .product {{ margin-top: 28px; padding: 20px; border: 1px solid var(--rule); border-radius: 12px; background: var(--card); }}
 .product header {{ display: flex; justify-content: space-between; align-items: baseline; gap: 12px; margin-bottom: 14px; }}
@@ -61,7 +61,7 @@ code {{ font: 13px/1.4 ui-monospace, "SF Mono", Menlo, monospace; }}
 @media (min-width: 760px) {{ .row {{ grid-template-columns: 1fr 1fr; }} }}
 .icons {{ display: flex; flex-wrap: wrap; align-items: end; gap: 14px; margin-top: 16px; }}
 .icons img {{ border-radius: 6px; box-shadow: 0 0 0 1px var(--rule); }}
-.icons .mono {{ margin-left: auto; padding: 10px 12px; border-radius: 6px; background: #F3F0E8; box-shadow: 0 0 0 1px var(--rule); }}
+.icons .mono {{ margin-left: auto; padding: 10px 12px; border-radius: 6px; background: #FAF5F0; box-shadow: 0 0 0 1px var(--rule); }}
 .grid2 {{ display: grid; gap: 14px; }}
 @media (min-width: 760px) {{ .grid2 {{ grid-template-columns: 1fr 1fr; }} }}
 .sws {{ display: grid; gap: 12px; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); }}

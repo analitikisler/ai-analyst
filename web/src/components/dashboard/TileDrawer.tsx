@@ -61,20 +61,20 @@ export function TileDrawer({ result, onAsk }: { result: DashboardResult; onAsk: 
               ) : q ? (
                 <div className="flex flex-col gap-4">
                   <p className="flex flex-wrap items-baseline gap-3">
-                    <span className="font-display text-[28px] leading-9 font-heading text-text-strong tnum">{q.total == null ? t.format.no_data : f.value(q.total, q.unit)}</span>
+                    <span className="font-display text-[28px] leading-9 font-heading text-strong tnum">{q.total == null ? t.format.no_data : f.value(q.total, q.unit)}</span>
                     {compare && q.comparison && <DeltaBadge current={q.total} previous={q.comparison.total} unit={q.unit} size="md" />}
-                    {compare && q.comparison && <span className="text-[13px] text-text-muted">{fmt(t.ask.against, { value: f.value(q.comparison.total, q.unit), range: f.range(q.comparison.from, q.comparison.to) })}</span>}
+                    {compare && q.comparison && <span className="text-[13px] text-subtle">{fmt(t.ask.against, { value: f.value(q.comparison.total, q.unit), range: f.range(q.comparison.from, q.comparison.to) })}</span>}
                   </p>
                   {q.group_by === "channel" || q.group_by === "device" ? <SplitBars query={q} title={pick(tile.title)} /> : q.rows.length > 1 ? <TrendChart query={q} type={q.group_by === "day" ? "line" : "column"} title={pick(tile.title)} height={200} /> : null}
                 </div>
               ) : null}
               <dl className="mt-6 flex flex-col gap-4 text-[13px] leading-[18px]">
                 <div>
-                  <dt className="text-2xs font-medium text-text-muted">{t.dash.drawer.query}</dt>
+                  <dt className="text-2xs font-medium text-subtle">{t.dash.drawer.query}</dt>
                   <dd className="mt-0.5 text-text">{queryLine}</dd>
                 </div>
                 <div>
-                  <dt className="text-2xs font-medium text-text-muted">{t.ask.definition}</dt>
+                  <dt className="text-2xs font-medium text-subtle">{t.ask.definition}</dt>
                   <dd className="mt-1 flex flex-wrap gap-2">
                     {metrics.map((m) => (
                       <Button key={m} variant="outline" size="xs" onClick={() => openMetric(m)}>
@@ -88,7 +88,7 @@ export function TileDrawer({ result, onAsk }: { result: DashboardResult; onAsk: 
                     <CodeBlock key={i} code={s} language="sql" title={`SQL ${i + 1} / ${sqls.length}`} maxHeight={220} />
                   ))}
                 </div>
-                <p className="text-2xs text-text-muted">{fmt(t.dash.drawer.ran_duckdb, { time: f.time(r.ran_at) })}</p>
+                <p className="text-2xs text-subtle">{fmt(t.dash.drawer.ran_duckdb, { time: f.time(r.ran_at) })}</p>
               </dl>
             </div>
             <SheetFooter className="flex-row flex-wrap border-t border-border">

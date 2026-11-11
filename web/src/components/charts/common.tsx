@@ -16,7 +16,7 @@ export interface SeriesDef {
   hollow?: boolean;
 }
 
-export const axisTick = { fill: "var(--color-text-subtle)", fontSize: 12, fontFamily: "var(--font-sans)" } as const;
+export const axisTick = { fill: "var(--color-muted)", fontSize: 12, fontFamily: "var(--font-sans)" } as const;
 export const axisLine = { stroke: "var(--color-border-strong)" } as const;
 export const gridStroke = "var(--color-border)";
 export const cursorStroke = { stroke: "var(--color-border-strong)", strokeWidth: 1 } as const;
@@ -62,10 +62,10 @@ export function ChartPatterns({ id }: { id: string }) {
   return (
     <defs>
       <pattern id={`hatch-partial-${id}`} width="5" height="5" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
-        <rect width="1.5" height="5" fill="var(--color-chart-1)" />
+        <rect width="1.5" height="5" fill="var(--color-data-cat-1)" />
       </pattern>
       <pattern id={`hatch-gap-${id}`} width="5" height="5" patternUnits="userSpaceOnUse" patternTransform="rotate(135)">
-        <rect width="1.5" height="5" fill="var(--color-danger)" />
+        <rect width="1.5" height="5" fill="var(--color-data-broken)" />
       </pattern>
       <pattern id={`hatch-neutral-${id}`} width="5" height="5" patternUnits="userSpaceOnUse" patternTransform="rotate(135)">
         <rect width="1.5" height="5" fill="var(--color-border-strong)" />
@@ -89,19 +89,19 @@ export interface TooltipRow {
 export function ChartTooltipBox({ title, rows, footer }: { title?: ReactNode; rows: TooltipRow[]; footer?: ReactNode }) {
   return (
     <div className="max-w-72 min-w-40 rounded-md border border-border bg-surface px-3 py-2 text-xs shadow-md">
-      {title && <div className="mb-1.5 font-medium text-text-muted">{title}</div>}
+      {title && <div className="mb-1.5 font-medium text-subtle">{title}</div>}
       <div className="flex flex-col gap-1">
         {rows.map((r) => (
           <div key={r.key} className="flex items-center justify-between gap-4">
             <span className="flex min-w-0 items-center gap-1.5">
               <Swatch color={r.color} dashed={r.dashed} />
-              <span className={cn("truncate", r.emphasis ? "font-semibold text-text-strong" : "text-text-muted")}>{r.name}</span>
+              <span className={cn("truncate", r.emphasis ? "font-semibold text-strong" : "text-subtle")}>{r.name}</span>
             </span>
             <span className={cn("font-mono text-text tnum", r.emphasis && "font-semibold")}>{r.value}</span>
           </div>
         ))}
       </div>
-      {footer && <div className="mt-1.5 border-t border-border pt-1.5 text-text-subtle">{footer}</div>}
+      {footer && <div className="mt-1.5 border-t border-border pt-1.5 text-subtle">{footer}</div>}
     </div>
   );
 }
@@ -119,7 +119,7 @@ export function ChartLegend({ items, className }: { items: SeriesDef[]; classNam
       {items.map((s) => (
         <li key={s.key} className="inline-flex max-w-56 items-center gap-1.5 text-2xs">
           <Swatch color={s.color} dashed={s.dashed} hollow={s.hollow} />
-          <span className={cn("truncate", s.emphasis ? "font-medium text-text" : "text-text-muted")}>{s.name}</span>
+          <span className={cn("truncate", s.emphasis ? "font-medium text-text" : "text-subtle")}>{s.name}</span>
         </li>
       ))}
     </ul>
@@ -129,7 +129,7 @@ export function ChartLegend({ items, className }: { items: SeriesDef[]; classNam
 export function ChartEmpty({ height, children }: { height: number; children?: ReactNode }) {
   const t = useT();
   return (
-    <div className="flex items-center justify-center rounded-md border border-dashed border-border text-[13px] text-text-subtle" style={{ height }}>
+    <div className="flex items-center justify-center rounded-md border border-dashed border-border text-[13px] text-subtle" style={{ height }}>
       {children ?? t.charts.empty}
     </div>
   );

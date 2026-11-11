@@ -148,62 +148,62 @@ export function BigQuerySheet() {
             className="flex flex-col gap-5"
           >
             <fieldset className="flex flex-col gap-2">
-              <legend className="mb-1 text-sm font-semibold text-text-strong">{t.set.bq.signin}</legend>
+              <legend className="mb-1 text-sm font-semibold text-strong">{t.set.bq.signin}</legend>
               <label className="flex items-start gap-2 text-sm text-text">
-                <input type="radio" name="auth" checked={auth === "adc"} onChange={() => setAuth("adc")} className="mt-1 accent-[var(--color-primary)]" />
+                <input type="radio" name="auth" checked={auth === "adc"} onChange={() => setAuth("adc")} className="mt-1 accent-action" />
                 <span>
                   {t.set.bq.adc}
-                  {s && <span className="block text-2xs text-text-muted">{fmt(t.set.bq.adc_found, { identity: s.data_source.credentials.identity ?? "" })}</span>}
+                  {s && <span className="block text-2xs text-subtle">{fmt(t.set.bq.adc_found, { identity: s.data_source.credentials.identity ?? "" })}</span>}
                 </span>
               </label>
               {auth === "adc" && (
                 <div className="ml-6 flex flex-col gap-1">
-                  <label htmlFor="bq-imp" className="text-2xs font-medium text-text-muted">
+                  <label htmlFor="bq-imp" className="text-2xs font-medium text-subtle">
                     {t.set.bq.impersonate}
                   </label>
                   <Input id="bq-imp" value={impersonate} onChange={(e) => setImpersonate(e.target.value)} className={fieldCls} autoComplete="off" spellCheck={false} />
-                  <p className="text-2xs text-text-subtle">{t.set.bq.impersonate_hint}</p>
+                  <p className="text-2xs text-subtle">{t.set.bq.impersonate_hint}</p>
                 </div>
               )}
               <label className="flex items-start gap-2 text-sm text-text">
-                <input type="radio" name="auth" checked={auth === "key_file"} onChange={() => setAuth("key_file")} className="mt-1 accent-[var(--color-primary)]" />
+                <input type="radio" name="auth" checked={auth === "key_file"} onChange={() => setAuth("key_file")} className="mt-1 accent-action" />
                 <span>{t.set.bq.keyfile}</span>
               </label>
               {auth === "key_file" && (
                 <div className="ml-6 flex flex-col gap-1">
-                  <label htmlFor="bq-path" className="text-2xs font-medium text-text-muted">
+                  <label htmlFor="bq-path" className="text-2xs font-medium text-subtle">
                     {t.set.bq.keyfile_path}
                   </label>
                   <Input id="bq-path" ref={pathRef} value={path} onChange={(e) => setPath(e.target.value)} className={fieldCls} autoComplete="off" spellCheck={false} />
-                  <p className="text-2xs text-text-subtle">{t.set.bq.keyfile_hint}</p>
-                  <p className="text-2xs text-text-subtle">{t.set.bq.err.org_policy}</p>
+                  <p className="text-2xs text-subtle">{t.set.bq.keyfile_hint}</p>
+                  <p className="text-2xs text-subtle">{t.set.bq.err.org_policy}</p>
                 </div>
               )}
             </fieldset>
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="flex flex-col gap-1">
-                <label htmlFor="bq-data" className="text-2xs font-medium text-text-muted">
+                <label htmlFor="bq-data" className="text-2xs font-medium text-subtle">
                   {t.set.bq.data_project}
                 </label>
                 <Input id="bq-data" ref={dataRef} required value={dataProject} onChange={(e) => setDataProject(e.target.value)} className={fieldCls} autoComplete="off" spellCheck={false} />
               </div>
               <div className="flex flex-col gap-1">
-                <label htmlFor="bq-job" className="text-2xs font-medium text-text-muted">
+                <label htmlFor="bq-job" className="text-2xs font-medium text-subtle">
                   {t.set.bq.job_project}
                 </label>
                 <Input id="bq-job" ref={jobRef} value={jobProject} placeholder={t.set.bq.job_same} onChange={(e) => setJobProject(e.target.value)} className={fieldCls} aria-describedby="bq-job-hint" autoComplete="off" spellCheck={false} />
-                <p id="bq-job-hint" className="text-2xs text-text-subtle">
+                <p id="bq-job-hint" className="text-2xs text-subtle">
                   {t.set.bq.job_hint}
                 </p>
               </div>
               <div className="flex flex-col gap-1">
-                <label htmlFor="bq-ds" className="text-2xs font-medium text-text-muted">
+                <label htmlFor="bq-ds" className="text-2xs font-medium text-subtle">
                   {t.set.bq.dataset}
                 </label>
                 <Input id="bq-ds" ref={datasetRef} value={dataset} onChange={(e) => setDataset(e.target.value)} className={fieldCls} autoComplete="off" spellCheck={false} />
               </div>
               <div className="flex flex-col gap-1">
-                <span className="text-2xs font-medium text-text-muted">{t.set.bq.location}</span>
+                <span className="text-2xs font-medium text-subtle">{t.set.bq.location}</span>
                 <span className="flex h-8 items-center rounded-md border border-border bg-surface-2 px-2.5 font-mono text-[13px] text-text">{test?.detected.location && !stale ? test.detected.location : t.set.bq.location_pending}</span>
               </div>
             </div>
@@ -213,7 +213,7 @@ export function BigQuerySheet() {
                 {testing ? t.set.bq.testing : t.set.bq.test}
               </Button>
               {failure && (
-                <p className="mt-2 text-[13px] text-danger" role="alert">
+                <p className="mt-2 text-[13px] text-bad" role="alert">
                   {failure}
                 </p>
               )}
@@ -222,9 +222,9 @@ export function BigQuerySheet() {
           {test && (
             <section aria-label={t.set.bq.test} className={cn("mt-5 rounded-lg border border-border", stale && "opacity-60")}>
               <header className="flex items-center justify-between gap-2 border-b border-border px-3 py-2">
-                <h3 className="text-sm font-semibold text-text-strong">{t.set.bq.test}</h3>
+                <h3 className="text-sm font-semibold text-strong">{t.set.bq.test}</h3>
                 {!testing && (
-                  <span className="flex items-center gap-2 font-mono text-2xs text-text-muted" aria-live="polite">
+                  <span className="flex items-center gap-2 font-mono text-2xs text-subtle" aria-live="polite">
                     <TallyMicro expected={7} measured={ok} verdict={ok === 7 ? "adds_up" : "does_not_add_up"} width={48} />
                     {fmt(t.set.bq.summary, { ok })}
                   </span>
@@ -236,8 +236,8 @@ export function BigQuerySheet() {
                   return (
                     <li key={id} role="listitem" className="px-3 py-2.5">
                       <div className="flex items-start gap-3">
-                        <span className="w-4 font-mono text-2xs text-text-subtle">{i + 1}</span>
-                        <span className={cn("min-w-0 flex-1 text-[13px] leading-[18px]", step.status === "waiting" ? "text-text-subtle" : "text-text")}>
+                        <span className="w-4 font-mono text-2xs text-subtle">{i + 1}</span>
+                        <span className={cn("min-w-0 flex-1 text-[13px] leading-[18px]", step.status === "waiting" ? "text-subtle" : "text-text")}>
                           {step.status === "ok" || (step.status === "failed" && step.detail) ? stepText(step) : t.set.bq.step_names[id]}
                         </span>
                         <span className="w-20 shrink-0 text-right">
@@ -245,10 +245,10 @@ export function BigQuerySheet() {
                         </span>
                       </div>
                       {step.status === "failed" && (
-                        <div className="mt-2 ml-7 rounded-md bg-danger-soft p-3 text-[13px] leading-[18px] text-text">
+                        <div className="mt-2 ml-7 rounded-md bg-bad-soft p-3 text-[13px] leading-[18px] text-text">
                           <p>{errText(step)}</p>
                           <EnableApiButton error={step.error} />
-                          <p className="mt-1 text-text-muted">{state?.source.kind === "bigquery" ? t.set.bq.nothing_changed_bq : t.set.bq.nothing_changed}</p>
+                          <p className="mt-1 text-subtle">{state?.source.kind === "bigquery" ? t.set.bq.nothing_changed_bq : t.set.bq.nothing_changed}</p>
                           <Button variant="link" size="sm" className="mt-1" onClick={() => fieldFor(step).current?.focus()}>
                             {t.set.bq.fix}
                           </Button>
@@ -259,19 +259,19 @@ export function BigQuerySheet() {
                 })}
               </ol>
               {!testing && !stale && (test.warnings ?? []).map((w) => (
-                <p key={w.code} role="note" className="border-t border-border bg-warning-soft px-3 py-2 text-[13px] leading-[18px] text-text">
+                <p key={w.code} role="note" className="border-t border-border bg-warn-soft px-3 py-2 text-[13px] leading-[18px] text-text">
                   {plural(lang, w.params.n, t.set.bq.warn.credential_broader, { n: f.int(w.params.n), datasets: w.params.datasets })}
                 </p>
               ))}
-              {stale && <p className="border-t border-border px-3 py-2 text-2xs text-text-muted">{t.set.bq.stale}</p>}
+              {stale && <p className="border-t border-border px-3 py-2 text-2xs text-subtle">{t.set.bq.stale}</p>}
               {!testing && !test.ok && !stale && (
-                <p className="border-t border-border px-3 py-2 text-2xs text-text-muted">
+                <p className="border-t border-border px-3 py-2 text-2xs text-subtle">
                   {t.set.bq.m6.body}{" "}
-                  <a href="https://github.com/analitikisler/ai-analyst/blob/main/docs/connecting-bigquery.md" target="_blank" rel="noreferrer" className="font-medium text-accent hover:underline">
+                  <a href="https://github.com/analitikisler/ai-analyst/blob/main/docs/connecting-bigquery.md" target="_blank" rel="noreferrer" className="font-medium text-link hover:underline">
                     {t.set.bq.m6.guide}
                   </a>
                   {" · "}
-                  <a href={`mailto:hello@analitikisler.com?subject=${encodeURIComponent(t.help.subject_setup)}`} className="font-medium text-accent hover:underline">
+                  <a href={`mailto:hello@analitikisler.com?subject=${encodeURIComponent(t.help.subject_setup)}`} className="font-medium text-link hover:underline">
                     {t.set.bq.m6.email}
                   </a>
                 </p>
@@ -283,9 +283,9 @@ export function BigQuerySheet() {
           </p>
         </div>
         <SheetFooter className="flex-col gap-3 border-t border-border sm:flex-col">
-          <p className="text-2xs text-text-muted">{t.set.bq.privacy}</p>
+          <p className="text-2xs text-subtle">{t.set.bq.privacy}</p>
           <div className="flex flex-wrap items-center justify-end gap-2">
-            {!passed && <span className="mr-auto text-2xs text-text-muted">{t.set.bq.use_disabled}</span>}
+            {!passed && <span className="mr-auto text-2xs text-subtle">{t.set.bq.use_disabled}</span>}
             <Button variant="ghost" onClick={() => close()}>
               {t.common.cancel}
             </Button>

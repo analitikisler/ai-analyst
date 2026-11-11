@@ -78,9 +78,9 @@ export function ConnSteps({ ids, names, shown, doneText, onFix, stale }: { ids: 
   return (
     <section aria-label={t.sources.test} className={cn("rounded-lg border border-border", stale && "opacity-60")}>
       <header className="flex items-center justify-between gap-2 border-b border-border px-3 py-2">
-        <h3 className="text-sm font-semibold text-text-strong">{t.sources.test}</h3>
+        <h3 className="text-sm font-semibold text-strong">{t.sources.test}</h3>
         {finished && (
-          <span className="font-mono text-2xs text-text-muted" aria-live="polite">
+          <span className="font-mono text-2xs text-subtle" aria-live="polite">
             {fmt(t.sources.summary, { ok, n: ids.length })}
           </span>
         )}
@@ -92,11 +92,11 @@ export function ConnSteps({ ids, names, shown, doneText, onFix, stale }: { ids: 
           return (
             <li key={id} className="px-3 py-2.5">
               <div className="flex items-start gap-3">
-                <span className="w-4 font-mono text-2xs text-text-subtle">{i + 1}</span>
-                <span className={cn("min-w-0 flex-1 text-[13px] leading-[18px]", step.status === "waiting" ? "text-text-subtle" : "text-text")}>{real && (real.status === "ok" || real.status === "warning") ? doneText(real) : names[id]}</span>
+                <span className="w-4 font-mono text-2xs text-subtle">{i + 1}</span>
+                <span className={cn("min-w-0 flex-1 text-[13px] leading-[18px]", step.status === "waiting" ? "text-subtle" : "text-text")}>{real && (real.status === "ok" || real.status === "warning") ? doneText(real) : names[id]}</span>
                 <span className="w-20 shrink-0 text-right">
                   {step.status === "warning" ? (
-                    <span className="inline-flex items-center gap-1 font-mono text-2xs font-medium text-warning">
+                    <span className="inline-flex items-center gap-1 font-mono text-2xs font-medium text-warn">
                       <StatusGlyph tone="warn" size={12} />
                       {t.sources.warning}
                     </span>
@@ -106,10 +106,10 @@ export function ConnSteps({ ids, names, shown, doneText, onFix, stale }: { ids: 
                 </span>
               </div>
               {real?.status === "failed" && (
-                <div className="mt-2 ml-7 rounded-md bg-danger-soft p-3 text-[13px] leading-[18px] text-text">
+                <div className="mt-2 ml-7 rounded-md bg-bad-soft p-3 text-[13px] leading-[18px] text-text">
                   <p>{connErrText(t, real.error, names[id])}</p>
                   <EnableApiButton error={real.error} />
-                  <p className="mt-1 text-text-muted">{t.sources.nothing_changed}</p>
+                  <p className="mt-1 text-subtle">{t.sources.nothing_changed}</p>
                   {onFix && (
                     <Button variant="link" size="sm" className="mt-1" onClick={() => onFix(real)}>
                       {t.sources.fix}
@@ -121,16 +121,16 @@ export function ConnSteps({ ids, names, shown, doneText, onFix, stale }: { ids: 
           );
         })}
       </ol>
-      {stale && <p className="border-t border-border px-3 py-2 text-2xs text-text-muted">{t.sources.stale}</p>}
+      {stale && <p className="border-t border-border px-3 py-2 text-2xs text-subtle">{t.sources.stale}</p>}
     </section>
   );
 }
 
 const PILL: Record<ConnectorState["status"], string> = {
-  not_connected: "border-border text-text-muted",
-  connected: "border-success/40 text-success",
-  syncing: "border-accent/40 text-accent-ink",
-  error: "border-danger/50 text-danger",
+  not_connected: "border-border text-subtle",
+  connected: "border-ok/40 text-ok",
+  syncing: "border-border-strong text-strong",
+  error: "border-bad/50 text-bad",
 };
 
 function StatusPill({ status }: { status: ConnectorState["status"] }) {
@@ -175,29 +175,29 @@ function ConnectorCard({ c, title, lead, onOpen }: { c: ConnectorState; title: s
   return (
     <article className="flex min-w-0 flex-col gap-2 rounded-lg border border-border bg-surface p-3" aria-label={title}>
       <header className="flex flex-wrap items-start justify-between gap-2">
-        <h3 className="min-w-0 text-sm font-semibold text-text-strong">{title}</h3>
+        <h3 className="min-w-0 text-sm font-semibold text-strong">{title}</h3>
         <StatusPill status={status} />
       </header>
-      <p className="text-[13px] leading-[18px] text-text-muted">{lead}</p>
-      <p className="text-2xs text-text-subtle">{fmt(t.sources.fills, { columns: c.fills.map((x) => t.sources.col[x]).join(", ") })}</p>
+      <p className="text-[13px] leading-[18px] text-subtle">{lead}</p>
+      <p className="text-2xs text-subtle">{fmt(t.sources.fills, { columns: c.fills.map((x) => t.sources.col[x]).join(", ") })}</p>
       {c.target && <p className="truncate font-mono text-2xs text-text" title={c.target}>{c.target}</p>}
       {c.last_sync && (
-        <p className="font-mono text-2xs text-text-muted tnum">{fmt(file ? t.sources.imported_at : t.sources.last_sync, { time: f.whenMid(c.last_sync.at), range })}{c.time_zone ? ` · ${fmt(t.sources.zone, { zone: c.time_zone })}` : ""}</p>
+        <p className="font-mono text-2xs text-subtle tnum">{fmt(file ? t.sources.imported_at : t.sources.last_sync, { time: f.whenMid(c.last_sync.at), range })}{c.time_zone ? ` · ${fmt(t.sources.zone, { zone: c.time_zone })}` : ""}</p>
       )}
-      {c.last_sync && !c.last_sync.ok && <p className="text-2xs text-warning">{t.sources.sync_failed}</p>}
+      {c.last_sync && !c.last_sync.ok && <p className="text-2xs text-warn">{t.sources.sync_failed}</p>}
       {status === "syncing" && (
-        <p className="flex items-center gap-2 text-2xs text-text-muted" aria-live="polite">
+        <p className="flex items-center gap-2 text-2xs text-subtle" aria-live="polite">
           <Spinner className="size-3" />
           {t.sources.syncing_note}
         </p>
       )}
       {c.warnings.map((w, i) => (
-        <p key={i} role="note" className="rounded-md bg-warning-soft px-2 py-1.5 text-2xs leading-4 text-text">
+        <p key={i} role="note" className="rounded-md bg-warn-soft px-2 py-1.5 text-2xs leading-4 text-text">
           {pick(w)}
         </p>
       ))}
       {c.error && (
-        <div role="alert" className="rounded-md bg-danger-soft px-2 py-1.5 text-[13px] leading-[18px] text-text">
+        <div role="alert" className="rounded-md bg-bad-soft px-2 py-1.5 text-[13px] leading-[18px] text-text">
           <p>{connErrText(t, c.error)}</p>
           <EnableApiButton error={c.error} />
           <Button variant="link" size="sm" className="-ml-2" onClick={() => onOpen(SHEET_OF[c.id])}>
@@ -280,7 +280,7 @@ export function ConnectorCards() {
           : shopSlot && <ConnectorCard c={{ ...shopSlot, name: { en: t.sources.card.shop.title, tr: t.sources.card.shop.title } }} title={t.sources.card.shop.title} lead={t.sources.card.shop.lead} onOpen={() => open("shopify")} />}
       </div>
       {ordersSources > 1 && (
-        <p role="note" className="rounded-md bg-warning-soft px-3 py-2 text-[13px] leading-[18px] text-text">
+        <p role="note" className="rounded-md bg-warn-soft px-3 py-2 text-[13px] leading-[18px] text-text">
           {t.sources.one_orders}
         </p>
       )}
@@ -301,7 +301,7 @@ export function WaitlistCards() {
           {/* Name above the button: no name is cut off at any width or language. */}
           <span className="flex min-w-0 flex-col">
             <span className="text-sm font-medium break-words text-text">{pick(w.name)}</span>
-            <span className="text-2xs text-text-muted">{t.sources.waitlist.badge}</span>
+            <span className="text-2xs text-subtle">{t.sources.waitlist.badge}</span>
           </span>
           <Button size="sm" variant="ghost" className="-ml-2" render={<a href={w.mailto} />} nativeButton={false} aria-label={`${t.sources.waitlist.join}: ${pick(w.name)}`}>
             <MailIcon strokeWidth={1.75} data-icon="inline-start" />

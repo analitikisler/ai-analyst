@@ -1,7 +1,7 @@
 #!/usr/bin/env bun
 // House-rule lint for src/ (runs before every build):
 // - no `dark:` classes: tokens switch with the theme by themselves;
-// - no hex colours in components: tokens only (brand/tokens.css owns every value);
+// - no hex colours in components: roles only (the Çini kit in src/cini owns every value);
 // - no inline interface text in JSX: copy lives in src/i18n/en.ts and tr.ts;
 // - no em dashes anywhere in the copy or the code;
 // - product names as brand/ai BRAND.md §3 writes them: never "AI Analyst", "AI Tag Debugger", "Analitik İşler Cloud" or
@@ -18,7 +18,8 @@ async function* walk(dir) {
   for (const entry of await readdir(dir, { withFileTypes: true })) {
     const full = path.join(dir, entry.name);
     if (entry.isDirectory()) {
-      if (entry.name !== "fixtures") yield* walk(full);
+      // src/cini is the Çini kit, copied as-is from analitikisler-design/cini-kit/dist: not the app's code.
+      if (entry.name !== "fixtures" && entry.name !== "cini") yield* walk(full);
     } else if (/\.(tsx?|css)$/.test(entry.name)) yield full;
   }
 }

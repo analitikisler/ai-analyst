@@ -66,7 +66,7 @@ export function AuditSheet() {
         </div>
         {demo && !(run && run.status === "handoff") && (
           <SheetFooter className="border-t border-border">
-            <p className="text-2xs text-text-muted">{t.audit.simulated}</p>
+            <p className="text-2xs text-subtle">{t.audit.simulated}</p>
           </SheetFooter>
         )}
       </SheetContent>
@@ -100,7 +100,7 @@ function AuditForm({ check, onStarted }: { check: CheckId; onStarted: (id: strin
     }
   };
   const row = "flex flex-col gap-1.5";
-  const label = "text-2xs font-medium text-text-muted";
+  const label = "text-2xs font-medium text-subtle";
   return (
     <form
       className="flex flex-col gap-5"
@@ -153,7 +153,7 @@ function AuditResult({ run }: { run: AuditRun }) {
   if (run.result) return <AuditSimulated run={run} result={run.result} />;
   // A handoff whose finding is on its way back (handoff cleared, result not attached yet).
   return (
-    <p className="flex items-center gap-2 text-[13px] text-text-muted">
+    <p className="flex items-center gap-2 text-[13px] text-subtle">
       <Spinner className="size-3.5" />
       {t.audit.handoff_waiting}
     </p>
@@ -165,20 +165,20 @@ function AuditHandoff({ run, handoff }: { run: AuditRun; handoff: Handoff }) {
   const t = useT();
   return (
     <div className="flex flex-col gap-4">
-      <h3 className="text-sm font-semibold text-text-strong">{t.audit.handoff_title}</h3>
+      <h3 className="text-sm font-semibold text-strong">{t.audit.handoff_title}</h3>
       <p className="text-[13px] leading-[18px] text-text">{handoff.deep_link ? t.audit.handoff_lead_app : t.audit.handoff_lead}</p>
-      <p className="font-mono text-2xs text-text-muted">
+      <p className="font-mono text-2xs text-subtle">
         {run.url} · {t.audit.device_value} · {run.platforms.map((p) => t.audit.platform[p]).join(", ")}
       </p>
       <div className="flex flex-col gap-2">
         <div className="flex items-center justify-between gap-2">
-          <p className="text-2xs font-medium text-text-muted">{t.audit.handoff_steps}</p>
+          <p className="text-2xs font-medium text-subtle">{t.audit.handoff_steps}</p>
           <CopyButton text={handoff.mcp_steps.join("\n\n")} label={t.audit.copy_all} showLabel />
         </div>
         <ol className="flex flex-col gap-2">
           {handoff.mcp_steps.map((step, i) => (
             <li key={i} className="flex items-start gap-2">
-              <span className="mt-2 w-4 shrink-0 font-mono text-2xs text-text-subtle">{i + 1}</span>
+              <span className="mt-2 w-4 shrink-0 font-mono text-2xs text-subtle">{i + 1}</span>
               <CodeBlock code={step} wrap className="min-w-0 flex-1" />
             </li>
           ))}
@@ -192,7 +192,7 @@ function AuditHandoff({ run, handoff }: { run: AuditRun; handoff: Handoff }) {
           </Button>
         </div>
       )}
-      <p className="flex items-center gap-2 text-[13px] text-text-muted">
+      <p className="flex items-center gap-2 text-[13px] text-subtle">
         <Spinner className="size-3.5" />
         {t.audit.handoff_waiting}
       </p>
@@ -232,21 +232,21 @@ function AuditSimulated({ run, result }: { run: AuditRun; result: AuditFinding }
   const watching = !!state?.watches.some((w) => w.check === run.check);
   return (
     <div className="flex flex-col gap-5">
-      <p className="font-mono text-2xs text-text-muted tnum">
+      <p className="font-mono text-2xs text-subtle tnum">
         {run.url} · {t.audit.device_value} · {f.when(run.started_at)}
       </p>
       <ol className="flex flex-col gap-3" aria-live="polite">
         {run.steps.slice(0, Math.min(shown, run.steps.length)).map((s, i) => (
           <li key={i} className="flex flex-col gap-1 animate-[aia-fade-in_160ms_var(--ease-out)]">
             <p className="flex items-center gap-2 text-[13px] font-medium text-text">
-              <span className="w-4 font-mono text-2xs text-text-subtle">{i + 1}</span>
+              <span className="w-4 font-mono text-2xs text-subtle">{i + 1}</span>
               {pick(s.name)}
-              <span className="truncate font-mono text-2xs font-normal text-text-muted">{s.url.replace(/^https:\/\//, "")}</span>
+              <span className="truncate font-mono text-2xs font-normal text-subtle">{s.url.replace(/^https:\/\//, "")}</span>
             </p>
             <ul className="ml-6 flex flex-wrap gap-1.5">
               {s.hits.map((h) => (
-                <li key={h.platform} className={h.status === "missing" ? "inline-flex h-5 items-center gap-1 rounded-sm border border-danger/50 bg-danger-soft px-1.5 text-2xs text-text" : "inline-flex h-5 items-center gap-1 rounded-sm border border-border bg-surface-2 px-1.5 text-2xs text-text"}>
-                  {h.status === "missing" ? <XIcon size={11} strokeWidth={2} aria-hidden className="text-danger" /> : <CheckIcon size={11} strokeWidth={2} aria-hidden className="text-success" />}
+                <li key={h.platform} className={h.status === "missing" ? "inline-flex h-5 items-center gap-1 rounded-sm border border-bad/50 bg-bad-soft px-1.5 text-2xs text-text" : "inline-flex h-5 items-center gap-1 rounded-sm border border-border bg-surface-2 px-1.5 text-2xs text-text"}>
+                  {h.status === "missing" ? <XIcon size={11} strokeWidth={2} aria-hidden className="text-bad" /> : <CheckIcon size={11} strokeWidth={2} aria-hidden className="text-ok" />}
                   {t.audit.platform[h.platform]} · <span className="font-mono">{h.event}</span> · {h.status === "missing" ? t.audit.missing : t.audit.sent}
                 </li>
               ))}
@@ -255,23 +255,23 @@ function AuditSimulated({ run, result }: { run: AuditRun; result: AuditFinding }
         ))}
       </ol>
       {!done && (
-        <p className="flex items-center gap-2 text-[13px] text-text-muted">
+        <p className="flex items-center gap-2 text-[13px] text-subtle">
           <Spinner className="size-3.5" />
           <span className="shimmer">{t.audit.running}</span>
         </p>
       )}
       {done && (
         <section className="flex flex-col gap-3 rounded-lg border border-border bg-surface p-4 animate-[aia-fade-in_220ms_var(--ease-out)]">
-          <h3 className="text-sm font-semibold text-text-strong">{t.audit.result}</h3>
+          <h3 className="text-sm font-semibold text-strong">{t.audit.result}</h3>
           <p className="flex flex-wrap items-center gap-2">
             <Status verdict={result.ok ? "adds_up" : "does_not_add_up"} word={result.ok ? t.audit.sent : t.audit.missing} />
-            <span className="text-2xs text-text-muted">
+            <span className="text-2xs text-subtle">
               {t.audit.severity_label}: {t.audit.severity[result.severity]}
             </span>
           </p>
           <p className="text-sm text-text">{pick(result.title)}</p>
           <div className="flex flex-col gap-1">
-            <p className="text-2xs font-medium text-text-muted">{t.audit.evidence}</p>
+            <p className="text-2xs font-medium text-subtle">{t.audit.evidence}</p>
             <ul className="flex list-disc flex-col gap-1 pl-5 text-[13px] leading-[18px] text-text">
               {result.evidence.map((e, i) => (
                 <li key={i}>{pick(e)}</li>
@@ -280,7 +280,7 @@ function AuditSimulated({ run, result }: { run: AuditRun; result: AuditFinding }
           </div>
           {result.console && <CodeBlock code={result.console} title={t.audit.console} wrap />}
           <div className="flex flex-col gap-1">
-            <p className="text-2xs font-medium text-text-muted">{t.audit.fix}</p>
+            <p className="text-2xs font-medium text-subtle">{t.audit.fix}</p>
             <p className="text-[13px] leading-[18px] text-text">{pick(result.fix)}</p>
           </div>
           <div className="flex flex-wrap gap-2">

@@ -1,6 +1,7 @@
 # ai · brand guide for the Analitik İşler tools
 
-> Version 1.0 · 25 Oct 2026 · owner: Analitik İşler.
+> Version 1.1 · 11 Nov 2026 (colour and type moved to Çini · Mercan, §4 and §10; 1.0 of 25 Oct 2026 is kept as
+> `BRAND.pre-cini.md`) · owner: Analitik İşler.
 > One guide for every tool in the family: ai tag debugger, ai tagging server, ai cloud, ai visibility, ai analyst.
 > Each tool repo copies this folder (or links to it) instead of keeping a brand of its own. If a tool's own brand
 > file disagrees with this one, this one wins.
@@ -80,24 +81,27 @@ service builds any multi-agent system a client needs). Never write that a servic
 
 ## 4. Colour
 
-The family has **two inks and one red**. The red is the same red the Analitik İşler site uses for "broken": the site
-has one red, and the logo's point, the red pen and the error state all use it (owner decision, 25 Oct 2026).
+Since 11 Nov 2026 the family's colours are the Analitik İşler design system **Çini · Mercan** (the owner's pick:
+"Pano + Mercan"). It replaces "Pen and plate" and Tally, which are retired. **The tools take it from the kit:**
+`analitikisler-design/cini-kit/dist/`, built from the site's tokens. Its README has the install steps and the rules.
 
 | Role | Light | Dark | Notes |
 |---|---|---|---|
-| **Ink** (logo, text) | `#17140F` | `#F1ECE2` | 16.1 : 1 on paper / 15.8 : 1 on dark paper |
-| **Paper** (logo ground, app tiles) | `#F3F0E8` | `#151310` | |
-| **Point / red pen** | `#C12D30` | `#FA6B6D` | 5.0 : 1 on paper, 5.7 : 1 on white, 6.5 : 1 on dark paper. Site tokens `ref.red.53` / `ref.red.71` (`--color-bad`, `--color-brand-point`). |
-| **Pencil** (status words, captions) | `#6A645A` | `#A39C8F` | 5.2 : 1 / 6.8 : 1 |
+| **Ink** (logo, text, primary buttons) | `#17140F` | `#F1ECE2` | |
+| **Glaze** (page ground, logo ground, app tiles) | `#FAF5F0` | `#13100D` | |
+| **Red** (the logo's point, links, the red pen, the Pano tile) | `#C12D30` | `#FA6B6D` | The brand colour. **No longer the error colour.** |
+| **Coral** (the Pano route's point, one highlighted figure) | `#C45E3D` | `#F0926D` | Never alone as a signal. |
+| **Teal** (measured, sent, passes) | `#087671` | `#3B9E98` | |
+| **Wine** (errors, broken, fails) | `#72051A` | `#FEC6D6` | Replaces the red for errors. |
 
-- On a product's own UI the logo takes the page's text colour (`currentColor`); only the point stays red. On the
-  Analitik İşler site that is the site's navy ink (`#071529` light / `#F9FBFF` dark).
-- **One red point per logo.** The red never fills a shape larger than the point or a pen stroke. An endorsed lockup
-  is two logos together, so it carries two points: the product's and the one on the master logo's işler.
+- On a product's own UI the logo takes the page's text colour (`currentColor`); only the point stays red.
+- **One red point per logo.** The red never fills a shape larger than the point or a pen stroke **inside a logo**. An
+  endorsed lockup is two logos together, so it carries two points: the product's and the one on the master logo's
+  işler. (Outside the logo, the red also colours links and the Pano tile; see the kit.)
 - **Mono** files are one colour throughout (point included) for print, embossing, single-colour places.
-- Never place the red point on a red or orange ground; use mono there.
-- UI colours of a product (links, buttons, charts) come from the Analitik İşler design system (Tally), not from this
-  guide. `tokens.css` / `tokens.json` here carry only the brand colours above.
+- Never place the red point on a red or orange ground, such as a Pano field; use mono there.
+- The tools' UIs (links, buttons, charts, states) use the kit's roles, never hex values copied by hand. The
+  `tokens.css` / `tokens.json` in this folder carry only the logo colours above.
 
 ---
 
@@ -179,8 +183,9 @@ site repo.
 
 - **Logos**: Schibsted Grotesk (800 for the mark, 450 for names), already outlined in the files; nobody needs the font
   to use a logo.
-- **Product UIs, docs, READMEs, slides**: the Analitik İşler system fonts: Google Sans for text and headings, a mono
-  for code and numbers. **No second heading font** (owner decision): Schibsted lives inside the logo files only.
+- **Product UIs, docs, READMEs, slides**: Çini's two faces, from the kit (`fonts.css`): **Gabarito** for text,
+  headings and buttons, **Azeret Mono** for code, event names, IDs and figures. Both SIL OFL. No third face:
+  Schibsted lives inside the logo files only. (Google Sans is retired with "Pen and plate".)
 
 ---
 
@@ -190,7 +195,7 @@ site repo.
   "revolutionary", "supercharge"), no exclamation marks.
 - The maker is **Analitik İşler**, not "we" and not a person's name (Bahadır appears as founder only where a person is
   meant: About, author bylines, legal).
-- Statuses are plain words (Waitlist, Alpha), no ✓ or ! in front.
+- Product status labels are plain words (Waitlist, Alpha), no ✓ or ! in front. (Check results in a UI do carry a glyph and a word: the kit's `.status`.)
 - No durations or promises of time for any service. Tool release dates and versions are facts and may be stated.
 - Turkish copy is written natively, not translated: no second-person possessives, short noun-phrase headings,
   "Server-side tracking" in headings (never "taraflı").
@@ -210,6 +215,7 @@ site repo.
 | `assets/icons/` | App icons 512 / 64 / 32 (paper and ink tiles) and the tool favicons 16 / 32 / 64. |
 | `assets/master/` | The Analitik İşler master logo, light / dark / mono. |
 | `assets/favicon/` | The company favicon: three black bars (SVG, ICO 16 + 32, Apple touch icon 180). |
+| `../cini-kit/` | The design kit for the tools' UIs: tokens, fonts, controls, the Pano pattern and these logos (§4). |
 
 All SVGs are outlined paths (no `<text>`), carry a `<title>`, and use only the colours in §4. They were generated by
 `design/10-rework/brand/src/build.py` in the site repo and recoloured to the site red on 25 Oct 2026; to rebuild them,

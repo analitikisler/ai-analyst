@@ -64,7 +64,12 @@ own tables.
 
 ## Brand
 
-The logo components in `src/components/art/BrandLogos.tsx` are generated from `../brand/ai/assets` with
+Colour, type, the Pano pattern and the logos come from the Çini · Mercan kit of Analitik İşler, copied as-is into
+`src/cini` (its `README.md` has the rules; `VERSION` names the build). Don't edit those files: copy a new build of
+the kit over them. `src/index.css` imports the kit's `tokens.css`, `fonts.css` (Gabarito and Azeret Mono) and
+`tailwind.css`, which point shadcn's names at the kit's roles. Names, logos and voice are in `../brand/ai/BRAND.md`.
+
+The logo components in `src/components/art/BrandLogos.tsx` are generated from `src/cini/logos` with
 `bun run brand` (ink as currentColor, the point as `--color-brand-point`). The favicons and the app icon in
-`public/brand` are copies of `../brand/ai/assets/icons`; the 180 px `apple-touch-icon.png` is made on macOS with
+`public/brand` are copies of `src/cini/logos/icons`; the 180 px `apple-touch-icon.png` is made on macOS with
 `sips -s format png ai-analyst-512.svg --out ai-512.png && sips -z 180 180 ai-512.png --out apple-touch-icon.png`.

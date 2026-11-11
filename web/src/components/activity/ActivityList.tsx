@@ -62,10 +62,10 @@ export function ActivityList() {
       {error && <ErrorState title={t.err.generic} onRetry={() => void refetch()} />}
       {data && (pending.length > 0 || filter === "waiting") && (
         <section aria-labelledby="waiting-title" className="flex flex-col gap-3">
-          <h3 id="waiting-title" className="text-sm font-semibold text-text-strong">
+          <h3 id="waiting-title" className="text-sm font-semibold text-strong">
             {t.activity.waiting}
           </h3>
-          {pending.length ? pending.map((p) => <ApprovalCard key={p.id} proposal={p} where="activity" />) : <p className="text-[13px] text-text-muted">{t.activity.waiting_empty}</p>}
+          {pending.length ? pending.map((p) => <ApprovalCard key={p.id} proposal={p} where="activity" />) : <p className="text-[13px] text-subtle">{t.activity.waiting_empty}</p>}
         </section>
       )}
       {data && filter === "all" && data.activity.length === 0 && <EmptyState bordered icon={HistoryIcon} title={t.activity.empty.title} body={t.activity.empty.body} />}
@@ -73,20 +73,20 @@ export function ActivityList() {
         <div className="flex flex-col gap-6">
           {[...groups.entries()].map(([day, rows]) => (
             <section key={day} aria-label={day === today ? t.common.today : day === yesterday ? t.common.yesterday : f.date(day, true)}>
-              <h3 className="mb-2 text-2xs font-medium text-text-muted">{day === today ? t.common.today : day === yesterday ? t.common.yesterday : f.date(day, true)}</h3>
+              <h3 className="mb-2 text-2xs font-medium text-subtle">{day === today ? t.common.today : day === yesterday ? t.common.yesterday : f.date(day, true)}</h3>
               <ul className="overflow-hidden rounded-lg border border-border bg-surface">
                 {rows.map((a) => (
                   <li key={a.id} className="grid grid-cols-[2.75rem_minmax(0,1fr)_auto] items-center gap-x-3 gap-y-0.5 border-b border-border px-4 py-2.5 last:border-0 sm:grid-cols-[3.5rem_9rem_minmax(0,1fr)_auto]">
-                    <span className="font-mono text-2xs text-text-muted tnum">{f.time(a.at)}</span>
-                    <span className="order-first col-span-3 text-2xs text-text-muted sm:order-none sm:col-span-1 sm:text-[13px]">{actor(a)}</span>
+                    <span className="font-mono text-2xs text-subtle tnum">{f.time(a.at)}</span>
+                    <span className="order-first col-span-3 text-2xs text-subtle sm:order-none sm:col-span-1 sm:text-[13px]">{actor(a)}</span>
                     <span className="min-w-0 text-sm text-text">{pick(a.detail)}</span>
                     <span className="flex justify-end">
                       {a.undo &&
                         (a.undone ? (
-                          <span className="text-2xs text-text-muted">{t.activity.undone}</span>
+                          <span className="text-2xs text-subtle">{t.activity.undone}</span>
                         ) : a.undo_gone ? (
                           <Tooltip>
-                            <TooltipTrigger render={<Button variant="ghost" size="xs" aria-disabled className="cursor-not-allowed text-text-subtle" />}>{t.activity.undo}</TooltipTrigger>
+                            <TooltipTrigger render={<Button variant="ghost" size="xs" aria-disabled className="cursor-not-allowed text-subtle" />}>{t.activity.undo}</TooltipTrigger>
                             <TooltipContent>{t.activity.undo_gone}</TooltipContent>
                           </Tooltip>
                         ) : (

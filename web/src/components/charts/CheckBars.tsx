@@ -10,7 +10,7 @@ import { ChartLegend } from "./common";
 /** A source with no device split (all unknown): the check ran on totals, so there is no device table to show. */
 export function NoDeviceSplit({ className }: { className?: string }) {
   const t = useT();
-  return <p className={className ?? "text-[13px] text-text-muted"}>{t.check.no_split}</p>;
+  return <p className={className ?? "text-[13px] text-subtle"}>{t.check.no_split}</p>;
 }
 
 export function CheckBars({ result: c, className, compact }: { result: CheckResult; className?: string; compact?: boolean }) {
@@ -26,31 +26,37 @@ export function CheckBars({ result: c, className, compact }: { result: CheckResu
         <ChartLegend
           className="mb-3"
           items={[
-            { key: "e", name: pick(c.expected.label), color: "var(--color-chart-ref-edge)", hollow: true },
-            { key: "m", name: pick(c.measured.label), color: "var(--color-chart-1)", emphasis: true },
+            { key: "e", name: pick(c.expected.label), color: "var(--color-border-strong)", hollow: true },
+            { key: "m", name: pick(c.measured.label), color: "var(--color-data-measured)", emphasis: true },
           ]}
         />
       )}
       <ul className="flex flex-col gap-3">
         {c.breakdown.map((row) => {
-          // Missing data draws as an empty bar; the figures read "–" and the verdict says there is no data.
+          // Missing data draws as the Pano hatch across the row's bars; the figures read "–" and the verdict says there
+          // is no data.
+          const missing = row.expected == null || row.measured == null;
           const b = { ...row, expected: row.expected ?? 0, measured: row.measured ?? 0 };
           const under = b.measured <= b.expected;
           return (
             <li key={b.key} className="grid grid-cols-[minmax(4.5rem,6rem)_minmax(0,1fr)] items-center gap-x-3 gap-y-1">
               <span className="text-[13px] text-text">{(t.dimensions.device as Record<string, string>)[b.key] ?? b.key}</span>
-              <span aria-hidden className="flex flex-col gap-1">
-                <span className="relative h-2.5 rounded-xs border border-chart-ref-edge bg-surface" style={{ width: `${(b.expected / max) * 100}%` }} />
-                <span className="relative h-2.5" style={{ width: `${(Math.max(b.expected, b.measured) / max) * 100}%` }}>
-                  <span className="absolute inset-y-0 left-0 rounded-xs bg-chart-1" style={{ width: `${(b.measured / Math.max(b.expected, b.measured)) * 100}%` }} />
-                  {under && b.expected > b.measured && (
-                    <span className="absolute inset-y-0 right-0 overflow-hidden rounded-xs border border-dashed border-border-strong" style={{ width: `${((b.expected - b.measured) / b.expected) * 100}%` }}>
-                      <Hatch tone={b.verdict === "does_not_add_up" ? "gap" : "neutral"} />
+              <span aria-hidden className={missing ? "flex h-6 flex-col overflow-hidden rounded-xs border border-dashed border-border-strong hatch-missing" : "flex flex-col gap-1"}>
+                {!missing && (
+                  <>
+                    <span className="relative h-2.5 rounded-xs border border-border-strong bg-surface" style={{ width: `${(b.expected / max) * 100}%` }} />
+                    <span className="relative h-2.5" style={{ width: `${(Math.max(b.expected, b.measured) / max) * 100}%` }}>
+                      <span className="absolute inset-y-0 left-0 rounded-xs bg-measured" style={{ width: `${(b.measured / Math.max(b.expected, b.measured)) * 100}%` }} />
+                      {under && b.expected > b.measured && (
+                        <span className="absolute inset-y-0 right-0 overflow-hidden rounded-xs border border-dashed border-border-strong" style={{ width: `${((b.expected - b.measured) / b.expected) * 100}%` }}>
+                          <Hatch tone={b.verdict === "does_not_add_up" ? "gap" : "neutral"} />
+                        </span>
+                      )}
                     </span>
-                  )}
-                </span>
+                  </>
+                )}
               </span>
-              <span className="col-start-2 flex flex-wrap items-center gap-x-3 gap-y-0.5 font-mono text-2xs text-text-muted tnum">
+              <span className="col-start-2 flex flex-wrap items-center gap-x-3 gap-y-0.5 font-mono text-2xs text-subtle tnum">
                 <span>
                   {f.value(row.expected, c.unit)} · {f.value(row.measured, c.unit)}
                 </span>

@@ -49,12 +49,12 @@ function Card({ id, title, lead, scope, children }: { id: Section; title: string
     <section id={`set-${id}`} aria-labelledby={`set-${id}-title`} className="scroll-mt-[72px] overflow-hidden rounded-lg border border-border bg-surface">
       <header className="flex flex-wrap items-start justify-between gap-2 border-b border-border px-4 py-3">
         <div className="min-w-0">
-          <h2 id={`set-${id}-title`} tabIndex={-1} className="text-base font-semibold text-text-strong outline-offset-2">
+          <h2 id={`set-${id}-title`} tabIndex={-1} className="text-base font-semibold text-strong outline-offset-2">
             {title}
           </h2>
-          <p className="mt-0.5 text-[13px] text-text-muted">{lead}</p>
+          <p className="mt-0.5 text-[13px] text-subtle">{lead}</p>
         </div>
-        {scope && <span className="inline-flex h-5 shrink-0 items-center rounded-sm border border-border-strong px-1.5 text-2xs text-text-muted">{t.set.scope[scope]}</span>}
+        {scope && <span className="inline-flex h-5 shrink-0 items-center rounded-sm border border-border-strong px-1.5 text-2xs text-subtle">{t.set.scope[scope]}</span>}
       </header>
       <div className="divide-y divide-border">{children}</div>
     </section>
@@ -66,7 +66,7 @@ function EnvLock({ value }: { value: { locked: boolean; env?: string } }) {
   const t = useT();
   if (!value.locked) return null;
   return (
-    <p className="mb-2 flex items-start gap-1.5 text-2xs text-text-muted">
+    <p className="mb-2 flex items-start gap-1.5 text-2xs text-subtle">
       <LockIcon size={12} strokeWidth={1.75} aria-hidden className="mt-0.5 shrink-0" />
       <span>{fmt(t.set.env_lock, { variable: value.env ?? "" })}</span>
     </p>
@@ -78,7 +78,7 @@ function Row({ label, hint, children, className }: { label: React.ReactNode; hin
     <div className={cn("grid gap-x-6 gap-y-2 px-4 py-3 md:grid-cols-[15rem_minmax(0,1fr)]", className)}>
       <div className="min-w-0">
         <div className="text-sm font-medium text-text">{label}</div>
-        {hint && <p className="mt-0.5 text-2xs text-text-subtle">{hint}</p>}
+        {hint && <p className="mt-0.5 text-2xs text-subtle">{hint}</p>}
       </div>
       <div className="min-w-0">{children}</div>
     </div>
@@ -117,7 +117,7 @@ export default function SettingsPage() {
       <div className="grid gap-8 lg:grid-cols-[200px_minmax(0,1fr)]">
         <nav aria-label={t.set.title} className="lg:sticky lg:top-20 lg:self-start">
           <label className="lg:hidden">
-            <span className="mb-1 block text-2xs font-medium text-text-muted">{t.set.jump}</span>
+            <span className="mb-1 block text-2xs font-medium text-subtle">{t.set.jump}</span>
             <NativeSelect value={active} onChange={(e) => navigate(`/settings/${e.target.value}`)} className="w-full">
               {SECTIONS.map((x) => (
                 <NativeSelectOption key={x} value={x}>
@@ -129,7 +129,7 @@ export default function SettingsPage() {
           <ul className="hidden flex-col gap-px lg:flex">
             {SECTIONS.map((x) => (
               <li key={x}>
-                <Link to={x === "chat-apps" ? `/settings/chat-apps/${client ?? "claude-desktop"}` : `/settings/${x}`} aria-current={active === x ? "location" : undefined} className={cn("flex h-8 items-center rounded-md px-2 text-sm font-medium", active === x ? "bg-primary-soft text-accent-ink" : "text-text-muted hover:bg-surface-2 hover:text-text")}>
+                <Link to={x === "chat-apps" ? `/settings/chat-apps/${client ?? "claude-desktop"}` : `/settings/${x}`} aria-current={active === x ? "location" : undefined} className={cn("flex h-8 items-center rounded-md px-2 text-sm font-medium", active === x ? "bg-surface-2 text-strong" : "text-subtle hover:bg-surface-2 hover:text-text")}>
                   {t.set.nav[x]}
                 </Link>
               </li>
@@ -138,7 +138,7 @@ export default function SettingsPage() {
         </nav>
         <div className="flex min-w-0 flex-col gap-6">
           {s && !s.server.loopback && (
-            <p role="note" className="flex items-start gap-2 rounded-lg border border-warning/50 bg-warning-soft px-4 py-3 text-[13px] leading-[18px] text-text">
+            <p role="note" className="flex items-start gap-2 rounded-lg border border-warn/50 bg-warn-soft px-4 py-3 text-[13px] leading-[18px] text-text">
               <LockIcon size={14} strokeWidth={1.75} aria-hidden className="mt-0.5 shrink-0" />
               {t.set.readonly}
             </p>
@@ -214,35 +214,35 @@ function DataSection({ s }: { s: Settings }) {
         {demo ? (
           <>
             <p className="text-sm text-text">{t.set.data.demo_name}</p>
-            <p className="mt-0.5 font-mono text-2xs text-text-muted tnum">{fmt(t.set.data.demo_meta, { from: f.date(state?.workspace.data_from), to: f.date(state?.workspace.data_to, true), rows: f.int(state?.workspace.rows), time: f.whenMid(state?.workspace.refreshed_at) })}</p>
+            <p className="mt-0.5 font-mono text-2xs text-subtle tnum">{fmt(t.set.data.demo_meta, { from: f.date(state?.workspace.data_from), to: f.date(state?.workspace.data_to, true), rows: f.int(state?.workspace.rows), time: f.whenMid(state?.workspace.refreshed_at) })}</p>
             <Disclosure label={t.set.data.demo_contents} className="mt-1">
               <ul className="flex flex-col gap-1.5 text-[13px]">
                 {sources?.map((x) => (
                   <li key={x.id} className="flex flex-wrap items-center gap-2">
                     <span className="text-text">{pick(x.name)}</span>
-                    <span className="font-mono text-2xs text-text-muted">{x.detail}</span>
-                    <span className="inline-flex h-5 items-center rounded-sm border border-border bg-surface-2 px-1.5 text-2xs text-text-muted">{t.set.data.demo_tag}</span>
+                    <span className="font-mono text-2xs text-subtle">{x.detail}</span>
+                    <span className="inline-flex h-5 items-center rounded-sm border border-border bg-surface-2 px-1.5 text-2xs text-subtle">{t.set.data.demo_tag}</span>
                   </li>
                 ))}
               </ul>
-              <p className="mt-2 text-2xs text-text-muted">{t.set.data.demo_note}</p>
+              <p className="mt-2 text-2xs text-subtle">{t.set.data.demo_note}</p>
             </Disclosure>
           </>
         ) : kind === "local" ? (
           <>
             <p className="text-sm text-text">{t.sources.kind.local}</p>
-            <p className="mt-0.5 font-mono text-2xs text-text-muted tnum">
+            <p className="mt-0.5 font-mono text-2xs text-subtle tnum">
               {connected.length ? fmt(t.sources.local_meta, { range: localRange, sources: connected.map((c) => pick(c.name)).join(", ") }) : t.sources.local_none}
             </p>
           </>
         ) : (
           <>
             <p className="text-sm text-text">{fmt(t.set.data.bq.in_use_name, { table: bq ? `${bq.data_project}.${bq.dataset}` : (state?.source.table ?? state?.source.project ?? "–"), location: bq?.location ?? "–" })}</p>
-            <p className="mt-0.5 font-mono text-2xs text-text-muted tnum">{fmt(t.set.data.bq.in_use_meta, { time: f.whenMid(s.data_source.checked_at) })}</p>
+            <p className="mt-0.5 font-mono text-2xs text-subtle tnum">{fmt(t.set.data.bq.in_use_meta, { time: f.whenMid(s.data_source.checked_at) })}</p>
           </>
         )}
         {sourceUnavailableSentence(t, state?.source.error) && (
-          <p role="status" className="mt-2 flex items-start gap-1.5 text-[13px] leading-[18px] text-danger">
+          <p role="status" className="mt-2 flex items-start gap-1.5 text-[13px] leading-[18px] text-bad">
             <StatusGlyph tone="bad" size={12} className="mt-[3px] shrink-0" />
             {sourceUnavailableSentence(t, state?.source.error)}
           </p>
@@ -284,19 +284,19 @@ function DataSection({ s }: { s: Settings }) {
       </Row>
       <div className="flex flex-col gap-3 px-4 py-4">
         <div>
-          <h3 className="text-sm font-semibold text-text-strong">{t.sources.connect_title}</h3>
-          <p className="mt-0.5 text-[13px] text-text-muted">{t.sources.connect_lead}</p>
-          {__DEMO__ && <p className="mt-0.5 text-2xs text-text-subtle">{t.sources.simulated}</p>}
+          <h3 className="text-sm font-semibold text-strong">{t.sources.connect_title}</h3>
+          <p className="mt-0.5 text-[13px] text-subtle">{t.sources.connect_lead}</p>
+          {__DEMO__ && <p className="mt-0.5 text-2xs text-subtle">{t.sources.simulated}</p>}
         </div>
         <ConnectorCards />
       </div>
       <Row label={t.sources.card.bigquery.title} hint={t.sources.card.bigquery.lead}>
         <div className="flex flex-wrap items-center gap-3">
-          {kind === "bigquery" && <span className="inline-flex h-6 items-center rounded-sm border border-accent/40 bg-accent-soft px-2 text-xs font-medium text-accent-ink">{t.set.data.in_use}</span>}
+          {kind === "bigquery" && <span className="inline-flex h-6 items-center rounded-sm border border-border-strong bg-surface-2 px-2 text-xs font-medium text-strong">{t.set.data.in_use}</span>}
           <Button variant="outline" size="sm" disabled={s.data_source.kind.locked} onClick={() => setParams({ connect: "bigquery" })}>
             {kind === "bigquery" ? t.set.data.bq.change : t.set.data.bq.connect}
           </Button>
-          <a href="https://github.com/analitikisler/ai-analyst/blob/main/docs/connecting-bigquery.md" target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-[13px] font-medium text-accent hover:underline">
+          <a href="https://github.com/analitikisler/ai-analyst/blob/main/docs/connecting-bigquery.md" target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-[13px] font-medium text-link hover:underline">
             {t.set.data.bq.guide}
             <ExternalLinkIcon size={14} strokeWidth={1.75} aria-hidden />
             <span className="sr-only">{t.common.opens_tab}</span>
@@ -332,8 +332,8 @@ function DataSection({ s }: { s: Settings }) {
       </Row>
       <div className="flex flex-col gap-3 px-4 py-4">
         <div>
-          <h3 className="text-sm font-semibold text-text-strong">{t.sources.waitlist.title}</h3>
-          <p className="mt-0.5 text-[13px] text-text-muted">{t.sources.waitlist.lead}</p>
+          <h3 className="text-sm font-semibold text-strong">{t.sources.waitlist.title}</h3>
+          <p className="mt-0.5 text-[13px] text-subtle">{t.sources.waitlist.lead}</p>
         </div>
         <WaitlistCards />
       </div>
@@ -390,7 +390,7 @@ function ModelSection({ s }: { s: Settings }) {
     <Card id="model" title={t.set.nav.model} lead={t.set.model.lead}>
       <div className="px-4 py-3">
         <p className="text-sm text-text">{status}</p>
-        {also.length > 0 && <p className="mt-0.5 text-2xs text-text-muted">{fmt(t.set.model.also_set, { providers: also.join(", ") })}</p>}
+        {also.length > 0 && <p className="mt-0.5 text-2xs text-subtle">{fmt(t.set.model.also_set, { providers: also.join(", ") })}</p>}
       </div>
       {PROVIDERS.map((id) => {
         const p = s.model.providers.find((x) => x.id === id)!;
@@ -400,13 +400,13 @@ function ModelSection({ s }: { s: Settings }) {
             label={
               <span className="flex flex-wrap items-center gap-2">
                 {t.set.model.providers[id]}
-                {active === id && <span className="inline-flex h-5 items-center rounded-sm border border-accent/40 bg-accent-soft px-1.5 text-2xs font-medium text-accent-ink">{t.set.model.in_use}</span>}
+                {active === id && <span className="inline-flex h-5 items-center rounded-sm border border-border-strong bg-surface-2 px-1.5 text-2xs font-medium text-strong">{t.set.model.in_use}</span>}
               </span>
             }
             hint={id === "openai_compatible" ? t.set.model.compat_hint : undefined}
           >
             <div className="flex flex-col gap-2">
-              <p className="flex items-center gap-1.5 text-[13px] text-text-muted">
+              <p className="flex items-center gap-1.5 text-[13px] text-subtle">
                 <LockIcon size={14} strokeWidth={1.75} aria-hidden />
                 {p.set ? (p.hint ? fmt(t.set.model.saved, { hint: p.hint }) : fmt(t.set.model.saved_nohint, { url: p.base_url ?? "" })) : t.set.model.not_set}
                 {p.set && p.model && <span className="font-mono text-2xs">· {p.model}</span>}
@@ -442,14 +442,14 @@ function ModelSection({ s }: { s: Settings }) {
                   </>
                 )}
               </div>
-              {tested[id] && <p className="text-2xs text-text-muted" aria-live="polite">{tested[id]}</p>}
+              {tested[id] && <p className="text-2xs text-subtle" aria-live="polite">{tested[id]}</p>}
             </div>
           </Row>
         );
       })}
       <ExploreRow active={active !== "planner"} />
       <Row label={t.set.model.planner.split(" · ")[0]!}>
-        <p className="text-[13px] text-text-muted">{t.set.model.planner}</p>
+        <p className="text-[13px] text-subtle">{t.set.model.planner}</p>
         {active !== "planner" && (
           <Button
             variant="outline"
@@ -512,11 +512,11 @@ function ExploreRow({ active }: { active: boolean }) {
               notify(v ? x.on : x.off, { type: "success" });
             }}
           />
-          <span id="explore-reason" className="text-[13px] text-text-muted">
+          <span id="explore-reason" className="text-[13px] text-subtle">
             {active ? (on ? x.on : x.off) : x.disabled}
           </span>
         </span>
-        <ul className="flex list-disc flex-col gap-0.5 pl-5 text-2xs text-text-muted">
+        <ul className="flex list-disc flex-col gap-0.5 pl-5 text-2xs text-subtle">
           {x.safety.map((line) => (
             <li key={line}>{line}</li>
           ))}
@@ -545,7 +545,7 @@ function ChatSection({ client }: { client: ChatClient }) {
   return (
     <Card id="chat-apps" title={t.set.nav["chat-apps"]} lead={t.set.chat.lead}>
       <div className="px-4 py-3">
-        <p className="text-[13px] text-text-muted">{t.set.chat.what}</p>
+        <p className="text-[13px] text-subtle">{t.set.chat.what}</p>
         <div role="tablist" aria-label={t.set.chat.tabs_label} className="mt-3 flex gap-1 overflow-x-auto border-b border-border scrollbar-none">
           {CLIENTS.map((c) => (
             <button
@@ -563,7 +563,7 @@ function ChatSection({ client }: { client: ChatClient }) {
                   navigate(`/settings/chat-apps/${n}`, { replace: true });
                 }
               }}
-              className={cn("-mb-px h-9 shrink-0 border-b-2 px-3 text-sm font-medium whitespace-nowrap outline-offset-[-2px]", c === client ? "border-accent text-text-strong" : "border-transparent text-text-muted hover:text-text")}
+              className={cn("-mb-px h-9 shrink-0 border-b-2 px-3 text-sm font-medium whitespace-nowrap outline-offset-[-2px]", c === client ? "border-strong text-strong" : "border-transparent text-subtle hover:text-text")}
             >
               {t.set.chat.tab[c]}
             </button>
@@ -584,21 +584,21 @@ function ChatSection({ client }: { client: ChatClient }) {
             </div>
           ) : setupError ? (
             // The snippet holds this machine's paths, so the server gives it to this machine only.
-            <p role="note" className="rounded-md border border-border bg-surface-2 px-3 py-2 text-[13px] text-text-muted">{describeError(t, setupError)}</p>
+            <p role="note" className="rounded-md border border-border bg-surface-2 px-3 py-2 text-[13px] text-subtle">{describeError(t, setupError)}</p>
           ) : (
             <Skeleton className="h-40 w-full" />
           )}
           {setup?.config_path && (
             <div className="text-[13px]">
-              <p className="text-2xs font-medium text-text-muted">{t.set.chat.config_file}</p>
+              <p className="text-2xs font-medium text-subtle">{t.set.chat.config_file}</p>
               <p className="mt-1 flex flex-wrap items-center gap-2">
-                <span className="text-2xs text-text-muted">{t.set.chat.config_mac}</span>
+                <span className="text-2xs text-subtle">{t.set.chat.config_mac}</span>
                 <code className="rounded-sm bg-well px-1.5 py-0.5 font-mono text-2xs text-text">{setup.config_path.mac}</code>
                 <CopyButton text={setup.config_path.mac} label={t.set.chat.copy_path} />
               </p>
               {setup.config_path.windows && (
                 <p className="mt-1 flex flex-wrap items-center gap-2">
-                  <span className="text-2xs text-text-muted">{t.set.chat.config_windows}</span>
+                  <span className="text-2xs text-subtle">{t.set.chat.config_windows}</span>
                   <code className="rounded-sm bg-well px-1.5 py-0.5 font-mono text-2xs text-text">{setup.config_path.windows}</code>
                   <CopyButton text={setup.config_path.windows} label={t.set.chat.copy_path} />
                 </p>
@@ -606,7 +606,7 @@ function ChatSection({ client }: { client: ChatClient }) {
             </div>
           )}
           <div className="text-[13px]">
-            <p className="text-text-muted">{fmt(t.set.chat.try, { client: name })}</p>
+            <p className="text-subtle">{fmt(t.set.chat.try, { client: name })}</p>
             <p className="mt-1 flex flex-wrap items-center gap-2">
               <span className="text-text">{question}</span>
               <CopyButton text={question} label={t.common.copy} />
@@ -618,8 +618,8 @@ function ChatSection({ client }: { client: ChatClient }) {
                 <p className="text-text">{fmt(t.set.chat.status_last, { client: last.client, time: f.time(last.at), tool: toolWords(last) })}</p>
                 {calls!.length > 1 && (
                   <>
-                    <p className="mt-2 text-2xs font-medium text-text-muted">{t.set.chat.recent}</p>
-                    <ul className="mt-1 flex flex-col gap-0.5 font-mono text-2xs text-text-muted">
+                    <p className="mt-2 text-2xs font-medium text-subtle">{t.set.chat.recent}</p>
+                    <ul className="mt-1 flex flex-col gap-0.5 font-mono text-2xs text-subtle">
                       {calls!.map((c, i) => (
                         <li key={i}>
                           {f.time(c.at)} · {c.client} · {toolWords(c)}
@@ -630,10 +630,10 @@ function ChatSection({ client }: { client: ChatClient }) {
                 )}
               </>
             ) : (
-              <p className="text-text-muted">{t.set.chat.status_none}</p>
+              <p className="text-subtle">{t.set.chat.status_none}</p>
             )}
           </div>
-          <p className="text-2xs text-text-muted">{t.set.chat.note}</p>
+          <p className="text-2xs text-subtle">{t.set.chat.note}</p>
         </div>
       </div>
     </Card>
@@ -689,7 +689,7 @@ function HelpSection({ s }: { s: Settings }) {
             <span className="sr-only">{t.common.opens_email}</span>
           </Button>
         </div>
-        <p className="text-2xs text-text-muted">{fmt(t.help.meta, { address: s.help.email })}</p>
+        <p className="text-2xs text-subtle">{fmt(t.help.meta, { address: s.help.email })}</p>
         {s.preferences.make_it_yours === "hidden" && (
           <div>
             <Button
@@ -728,23 +728,23 @@ function AboutSection({ s }: { s: Settings }) {
     <Card id="about" title={t.set.nav.about} lead={t.about.privacy}>
       <div className="flex flex-col gap-4 px-4 py-3 text-[13px]">
         {/* The maker line is the endorsed lockup (BRAND §6): the master logo, never the name set in type. */}
-        <div className="w-fit p-2 text-text-strong">
+        <div className="w-fit p-2 text-strong">
           <AiAnalystEndorsed height={44} title={t.about.maker} />
         </div>
         <p className="flex flex-wrap gap-x-3 gap-y-1 text-text">
           <span className="font-mono">{fmt(t.about.version, { v: s.server.version })}</span>
-          <a href="https://github.com/analitikisler/ai-analyst" target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 font-medium text-accent hover:underline">
+          <a href="https://github.com/analitikisler/ai-analyst" target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 font-medium text-link hover:underline">
             {t.about.licence}
             <ExternalLinkIcon size={14} strokeWidth={1.75} aria-hidden />
             <span className="sr-only">{t.common.opens_tab}</span>
           </a>
         </p>
         <div>
-          <h3 className="text-2xs font-medium text-text-muted">{t.about.this_copy}</h3>
+          <h3 className="text-2xs font-medium text-subtle">{t.about.this_copy}</h3>
           <dl className="mt-1 flex flex-col divide-y divide-border">
             {rows.map(([k, v]) => (
               <div key={k} className="flex flex-wrap items-center gap-x-3 gap-y-1 py-2">
-                <dt className="w-32 text-text-muted">{k}</dt>
+                <dt className="w-32 text-subtle">{k}</dt>
                 <dd className="flex min-w-0 flex-1 items-center gap-2">
                   <code className="min-w-0 truncate font-mono text-2xs text-text">{v}</code>
                   <CopyButton text={v} />
@@ -754,19 +754,19 @@ function AboutSection({ s }: { s: Settings }) {
           </dl>
         </div>
         <div>
-          <h3 className="text-2xs font-medium text-text-muted">{t.about.keyboard}</h3>
+          <h3 className="text-2xs font-medium text-subtle">{t.about.keyboard}</h3>
           <dl className="mt-1 grid grid-cols-[8rem_minmax(0,1fr)] gap-x-3 gap-y-1.5">
             {keys.map(([k, v]) => (
               <div key={k} className="contents">
                 <dt className="font-mono text-2xs text-text">{k}</dt>
-                <dd className="text-text-muted">{v}</dd>
+                <dd className="text-subtle">{v}</dd>
               </div>
             ))}
           </dl>
         </div>
         <p className="text-text">
           {t.about.contact}:{" "}
-          <a href="mailto:hello@analitikisler.com" className="font-medium text-accent hover:underline">
+          <a href="mailto:hello@analitikisler.com" className="font-medium text-link hover:underline">
             hello@analitikisler.com
           </a>
         </p>

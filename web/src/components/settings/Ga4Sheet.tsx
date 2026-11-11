@@ -101,7 +101,7 @@ export function Ga4Sheet() {
   const radio = (value: Signin, label: string, extra?: React.ReactNode) => (
     <>
       <label className="flex items-start gap-2 text-sm text-text">
-        <input type="radio" name="ga4-auth" checked={signin === value} onChange={() => setSignin(value)} className="mt-1 accent-[var(--color-primary)]" />
+        <input type="radio" name="ga4-auth" checked={signin === value} onChange={() => setSignin(value)} className="mt-1 accent-action" />
         <span>{label}</span>
       </label>
       {signin === value && extra}
@@ -124,39 +124,39 @@ export function Ga4Sheet() {
             }}
           >
             <div className="flex flex-col gap-1">
-              <label htmlFor="ga4-prop" className="text-2xs font-medium text-text-muted">
+              <label htmlFor="ga4-prop" className="text-2xs font-medium text-subtle">
                 {t.sources.ga4.property}
               </label>
               <Input id="ga4-prop" ref={propRef} required inputMode="numeric" value={property} onChange={(e) => setProperty(e.target.value)} className={field} autoComplete="off" spellCheck={false} aria-describedby="ga4-prop-hint" />
-              <p id="ga4-prop-hint" className="text-2xs text-text-subtle">
+              <p id="ga4-prop-hint" className="text-2xs text-subtle">
                 {t.sources.ga4.property_hint}
               </p>
             </div>
             <fieldset className="flex flex-col gap-2">
-              <legend className="mb-1 text-sm font-semibold text-text-strong">{t.sources.ga4.signin}</legend>
-              {radio("adc", t.set.bq.adc, s && <p className="ml-6 text-2xs text-text-muted">{fmt(t.set.bq.adc_found, { identity: s.data_source.credentials.identity ?? "" })}</p>)}
+              <legend className="mb-1 text-sm font-semibold text-strong">{t.sources.ga4.signin}</legend>
+              {radio("adc", t.set.bq.adc, s && <p className="ml-6 text-2xs text-subtle">{fmt(t.set.bq.adc_found, { identity: s.data_source.credentials.identity ?? "" })}</p>)}
               {radio(
                 "impersonate",
                 t.set.bq.impersonate,
                 <div className="ml-6 flex flex-col gap-1">
                   <Input aria-label={t.set.bq.impersonate} value={impersonate} onChange={(e) => setImpersonate(e.target.value)} className={field} autoComplete="off" spellCheck={false} />
-                  <p className="text-2xs text-text-subtle">{t.set.bq.impersonate_hint}</p>
+                  <p className="text-2xs text-subtle">{t.set.bq.impersonate_hint}</p>
                 </div>,
               )}
               {radio(
                 "key_file",
                 t.set.bq.keyfile,
                 <div className="ml-6 flex flex-col gap-1">
-                  <label htmlFor="ga4-path" className="text-2xs font-medium text-text-muted">
+                  <label htmlFor="ga4-path" className="text-2xs font-medium text-subtle">
                     {t.set.bq.keyfile_path}
                   </label>
                   <Input id="ga4-path" ref={pathRef} value={path} onChange={(e) => setPath(e.target.value)} className={field} autoComplete="off" spellCheck={false} />
-                  <p className="text-2xs text-text-subtle">{t.set.bq.keyfile_hint}</p>
+                  <p className="text-2xs text-subtle">{t.set.bq.keyfile_hint}</p>
                 </div>,
               )}
             </fieldset>
             <div className="flex flex-col gap-1.5">
-              <span className="text-2xs font-medium text-text-muted">{t.sources.history.label}</span>
+              <span className="text-2xs font-medium text-subtle">{t.sources.history.label}</span>
               <SegmentedControl
                 label={t.sources.history.label}
                 value={history}
@@ -166,7 +166,7 @@ export function Ga4Sheet() {
                   { value: 400, label: t.sources.history.d400 },
                 ]}
               />
-              <p className="text-2xs text-text-subtle">{t.sources.history.hint}</p>
+              <p className="text-2xs text-subtle">{t.sources.history.hint}</p>
             </div>
             <div>
               <Button type="submit" variant="outline" disabled={testing || !property.trim()}>
@@ -174,7 +174,7 @@ export function Ga4Sheet() {
                 {testing ? t.sources.testing : test ? t.sources.retest : t.sources.test}
               </Button>
               {failure && (
-                <p className="mt-2 text-[13px] text-danger" role="alert">
+                <p className="mt-2 text-[13px] text-bad" role="alert">
                   {failure}
                 </p>
               )}
@@ -184,7 +184,7 @@ export function Ga4Sheet() {
             <div className="mt-5 flex flex-col gap-2">
               <ConnSteps ids={IDS} names={t.sources.ga4.steps} shown={shown} doneText={done} stale={stale} onFix={(st) => (st.id === "credentials" ? pathRef : propRef).current?.focus()} />
               {!testing && !stale && test?.warnings.map((w, i) => (
-                <p key={i} role="note" className="rounded-md bg-warning-soft px-3 py-2 text-[13px] leading-[18px] text-text">
+                <p key={i} role="note" className="rounded-md bg-warn-soft px-3 py-2 text-[13px] leading-[18px] text-text">
                   {pick(w)}
                 </p>
               ))}
@@ -192,9 +192,9 @@ export function Ga4Sheet() {
           )}
         </div>
         <SheetFooter className="flex-col gap-3 border-t border-border sm:flex-col">
-          <p className="text-2xs text-text-muted">{t.set.bq.privacy}</p>
+          <p className="text-2xs text-subtle">{t.set.bq.privacy}</p>
           <div className="flex flex-wrap items-center justify-end gap-2">
-            {!passed && <span className="mr-auto text-2xs text-text-muted">{t.sources.test_first}</span>}
+            {!passed && <span className="mr-auto text-2xs text-subtle">{t.sources.test_first}</span>}
             <Button variant="ghost" onClick={close}>
               {t.common.cancel}
             </Button>

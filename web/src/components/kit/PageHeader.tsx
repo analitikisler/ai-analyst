@@ -34,7 +34,7 @@ export function PageHeader({ title, subtitle, actions, breadcrumbs, titleAddon, 
       <div className="min-w-0">
         {breadcrumbs && breadcrumbs.length > 0 && (
           <nav aria-label={t.shell.breadcrumb} className="mb-2">
-            <ol className="flex flex-wrap items-center gap-1 text-xs text-text-subtle">
+            <ol className="flex flex-wrap items-center gap-1 text-xs text-subtle">
               {breadcrumbs.map((c, i) => (
                 <Fragment key={i}>
                   <li>
@@ -57,10 +57,10 @@ export function PageHeader({ title, subtitle, actions, breadcrumbs, titleAddon, 
           </nav>
         )}
         <div className="flex flex-wrap items-center gap-2">
-          <h1 className="font-display text-2xl leading-8 font-heading tracking-[-0.012em] text-text-strong sm:text-[28px] sm:leading-[34px]">{title}</h1>
+          <h1 className="font-display text-2xl leading-8 font-heading tracking-[-0.012em] text-strong sm:text-[28px] sm:leading-[34px]">{title}</h1>
           {titleAddon}
         </div>
-        {subtitle && <p className="mt-1 max-w-2xl text-sm text-text-muted">{subtitle}</p>}
+        {subtitle && <p className="mt-1 max-w-2xl text-sm text-subtle">{subtitle}</p>}
       </div>
       {actions && <div className="flex shrink-0 flex-wrap items-center gap-2">{actions}</div>}
     </header>

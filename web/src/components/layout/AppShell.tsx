@@ -156,7 +156,7 @@ export function AppShell() {
                 <Button variant="ghost" size="icon" className="size-10" aria-label={t.shell.menu_open} aria-expanded={navOpen} onClick={() => setNavOpen(true)}>
                   <MenuIcon strokeWidth={1.75} />
                 </Button>
-                <p className="min-w-0 flex-1 truncate text-base leading-6 font-semibold text-text-strong">{title}</p>
+                <p className="min-w-0 flex-1 truncate text-base leading-6 font-semibold text-strong">{title}</p>
                 <div ref={slots.setPhoneActions} className="flex items-center empty:hidden" />
                 <WaitingBadge />
                 {!onAsk && (

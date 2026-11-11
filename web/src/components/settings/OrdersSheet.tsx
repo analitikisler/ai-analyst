@@ -121,12 +121,12 @@ export function OrdersSheet() {
   // Keyboard users can open the file picker from the drop zone too.
   useEffect(() => setDrag(false), [open]);
   const p = upload?.preview;
-  const label = "text-2xs font-medium text-text-muted";
+  const label = "text-2xs font-medium text-subtle";
   const select = (k: keyof OrdersMapping, required: boolean) => (
     <div key={k} className="flex min-w-0 flex-col gap-1">
       <label htmlFor={`om-${k}`} className={label}>
         {t.sources.orders.field[k as keyof typeof t.sources.orders.field]}
-        {required && <span className="ml-1 text-text-subtle">({t.sources.orders.required})</span>}
+        {required && <span className="ml-1 text-subtle">({t.sources.orders.required})</span>}
       </label>
       <NativeSelect id={`om-${k}`} size="sm" value={(upload?.mapping[k] as string | null) ?? ""} onChange={(e) => setField(k, e.target.value)} className="w-full">
         {!required && <NativeSelectOption value="">{t.sources.orders.none}</NativeSelectOption>}
@@ -159,27 +159,27 @@ export function OrdersSheet() {
               }}
               onDragLeave={() => setDrag(false)}
               onDrop={onDrop}
-              className={cn("flex flex-col items-center gap-2 rounded-lg border border-dashed px-4 py-8 text-center", drag ? "border-accent bg-accent-soft" : "border-border-strong")}
+              className={cn("flex flex-col items-center gap-2 rounded-lg border border-dashed px-4 py-8 text-center", drag ? "border-strong bg-surface-2" : "border-border-strong")}
             >
               {reading ? (
-                <p className="flex items-center gap-2 text-sm text-text-muted" aria-live="polite">
+                <p className="flex items-center gap-2 text-sm text-subtle" aria-live="polite">
                   <Spinner /> {t.sources.orders.reading}
                 </p>
               ) : (
                 <>
-                  <UploadIcon size={20} strokeWidth={1.75} aria-hidden className="text-text-muted" />
+                  <UploadIcon size={20} strokeWidth={1.75} aria-hidden className="text-subtle" />
                   <p className="text-sm text-text">{t.sources.orders.drop}</p>
                   <Button size="sm" variant="outline" onClick={() => input.current?.click()}>
                     {t.sources.orders.choose}
                   </Button>
-                  <p className="text-2xs text-text-subtle">{t.sources.orders.max}</p>
+                  <p className="text-2xs text-subtle">{t.sources.orders.max}</p>
                   {__DEMO__ && (
                     <div className="mt-2 flex flex-col items-center gap-0.5">
                       <Button size="sm" variant="ghost" onClick={() => void sample()}>
                         <FileSpreadsheetIcon strokeWidth={1.75} data-icon="inline-start" />
                         {t.sources.orders.sample}
                       </Button>
-                      <p className="text-2xs text-text-subtle">{t.sources.orders.sample_hint}</p>
+                      <p className="text-2xs text-subtle">{t.sources.orders.sample_hint}</p>
                     </div>
                   )}
                 </>
@@ -202,7 +202,7 @@ export function OrdersSheet() {
             <>
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <p className="flex min-w-0 items-center gap-2 text-sm text-text">
-                  <FileSpreadsheetIcon size={16} strokeWidth={1.75} aria-hidden className="shrink-0 text-text-muted" />
+                  <FileSpreadsheetIcon size={16} strokeWidth={1.75} aria-hidden className="shrink-0 text-subtle" />
                   <span className="truncate font-mono text-[13px]">{fmt(t.sources.orders.file, { name: upload.file_name, kind: upload.kind.toUpperCase() })}</span>
                 </p>
                 <Button size="sm" variant="ghost" onClick={() => setUpload(null)}>
@@ -211,10 +211,10 @@ export function OrdersSheet() {
               </div>
               <section aria-labelledby="om-cols" className="flex flex-col gap-3">
                 <div>
-                  <h3 id="om-cols" className="text-sm font-semibold text-text-strong">
+                  <h3 id="om-cols" className="text-sm font-semibold text-strong">
                     {t.sources.orders.columns}
                   </h3>
-                  <p className="text-2xs text-text-subtle">{t.sources.orders.columns_hint}</p>
+                  <p className="text-2xs text-subtle">{t.sources.orders.columns_hint}</p>
                 </div>
                 <div className="grid gap-3 sm:grid-cols-2">
                   {REQUIRED.map((k) => select(k, true))}
@@ -230,13 +230,13 @@ export function OrdersSheet() {
                         </NativeSelectOption>
                       ))}
                     </NativeSelect>
-                    <p className="text-2xs text-text-subtle">{t.sources.orders.time_zone_hint}</p>
+                    <p className="text-2xs text-subtle">{t.sources.orders.time_zone_hint}</p>
                   </div>
                 </div>
               </section>
               <fieldset className="flex flex-col gap-2">
-                <legend className="text-sm font-semibold text-text-strong">{t.sources.orders.statuses}</legend>
-                <p className="text-2xs text-text-subtle">{t.sources.orders.statuses_hint}</p>
+                <legend className="text-sm font-semibold text-strong">{t.sources.orders.statuses}</legend>
+                <p className="text-2xs text-subtle">{t.sources.orders.statuses_hint}</p>
                 {upload.statuses.length ? (
                   <ul className="flex flex-col gap-1.5">
                     {upload.statuses.map((st) => (
@@ -244,21 +244,21 @@ export function OrdersSheet() {
                         <label className="flex items-center gap-2 text-[13px] text-text">
                           <Checkbox checked={upload.mapping.exclude_statuses.includes(st.value)} onCheckedChange={(on) => toggleStatus(st.value, !!on)} />
                           <span className="min-w-0 flex-1 truncate">{st.value || t.format.dash}</span>
-                          <span className="font-mono text-2xs text-text-muted tnum">{plural(lang, st.count, t.sources.orders.count, { n: f.int(st.count) })}</span>
+                          <span className="font-mono text-2xs text-subtle tnum">{plural(lang, st.count, t.sources.orders.count, { n: f.int(st.count) })}</span>
                         </label>
                       </li>
                     ))}
                   </ul>
                 ) : (
-                  <p className="text-2xs text-text-muted">{t.sources.orders.no_status}</p>
+                  <p className="text-2xs text-subtle">{t.sources.orders.no_status}</p>
                 )}
               </fieldset>
               {p && (
                 <section aria-labelledby="om-prev" aria-busy={updating} className={cn("flex flex-col gap-3 rounded-lg border border-border p-3", updating && "opacity-70")}>
-                  <h3 id="om-prev" className="flex items-center gap-2 text-sm font-semibold text-text-strong">
+                  <h3 id="om-prev" className="flex items-center gap-2 text-sm font-semibold text-strong">
                     {t.sources.orders.preview}
                     {updating && (
-                      <span className="flex items-center gap-1 text-2xs font-normal text-text-muted">
+                      <span className="flex items-center gap-1 text-2xs font-normal text-subtle">
                         <Spinner className="size-3" /> {t.sources.orders.updating}
                       </span>
                     )}
@@ -269,7 +269,7 @@ export function OrdersSheet() {
                         {fmt(t.sources.orders.totals, { orders: plural(lang, p.orders, t.sources.orders.count, { n: f.int(p.orders) }), revenue: f.money(p.revenue), range: p.from && p.to ? `${f.range(p.from, p.to)} · ${plural(lang, p.days, t.sources.days, { n: f.int(p.days) })}` : t.format.dash })}
                       </p>
                       <div>
-                        <p className="mb-1 text-2xs text-text-muted">{t.sources.orders.chart}</p>
+                        <p className="mb-1 text-2xs text-subtle">{t.sources.orders.chart}</p>
                         <Sparkline values={p.daily.map((d) => d.orders)} width={300} height={48} area label={t.sources.orders.chart} className="max-w-full" />
                       </div>
                       <div className="grid gap-3 sm:grid-cols-2">
@@ -278,11 +278,11 @@ export function OrdersSheet() {
                       </div>
                     </>
                   ) : (
-                    <p className="text-[13px] text-text-muted">{t.sources.orders.empty}</p>
+                    <p className="text-[13px] text-subtle">{t.sources.orders.empty}</p>
                   )}
-                  <p className="text-2xs text-text-muted">{fmt(t.sources.orders.excluded, { status: f.int(p.excluded.status), no_date: f.int(p.excluded.no_date), bad_total: f.int(p.excluded.bad_total) })}</p>
+                  <p className="text-2xs text-subtle">{fmt(t.sources.orders.excluded, { status: f.int(p.excluded.status), no_date: f.int(p.excluded.no_date), bad_total: f.int(p.excluded.bad_total) })}</p>
                   {p.warnings.map((w, i) => (
-                    <p key={i} role="note" className="rounded-md bg-warning-soft px-2 py-1.5 text-2xs leading-4 text-text">
+                    <p key={i} role="note" className="rounded-md bg-warn-soft px-2 py-1.5 text-2xs leading-4 text-text">
                       {pick(w)}
                     </p>
                   ))}
@@ -291,7 +291,7 @@ export function OrdersSheet() {
             </>
           )}
           {failure && (
-            <p className="text-[13px] text-danger" role="alert">
+            <p className="text-[13px] text-bad" role="alert">
               {failure}
             </p>
           )}
@@ -314,12 +314,12 @@ function Breakdown({ title, rows, total }: { title: string; rows: [string, numbe
   const f = useFormat();
   return (
     <div>
-      <p className="mb-1 text-2xs font-medium text-text-muted">{title}</p>
+      <p className="mb-1 text-2xs font-medium text-subtle">{title}</p>
       <ul className="flex flex-col gap-1">
         {rows.map(([k, n]) => (
           <li key={k} className="flex items-center gap-2 text-[13px]">
             <span className="min-w-0 flex-1 truncate text-text">{k}</span>
-            <span className="font-mono text-2xs text-text-muted tnum">{f.pct(total ? n / total : 0, 0)}</span>
+            <span className="font-mono text-2xs text-subtle tnum">{f.pct(total ? n / total : 0, 0)}</span>
           </li>
         ))}
       </ul>
