@@ -5,8 +5,6 @@
 export type Lang = "en" | "tr";
 /** A server-made string in both languages (B06). */
 export type Text = Record<Lang, string>;
-/** @deprecated the name used before B06; same shape. */
-export type Bilingual = Text;
 
 export type MetricId =
   | "ad_spend"

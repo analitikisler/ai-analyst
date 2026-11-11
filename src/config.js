@@ -164,7 +164,6 @@ export function loadConfig({ env = process.env, cwd = process.cwd(), file } = {}
     configFile,
     cwd,
     env,
-    file: fromFile,
     port,
     host: pick("HOST", fromFile.host, "127.0.0.1"),
     allowedHosts: allowed,
@@ -193,8 +192,6 @@ export function loadConfig({ env = process.env, cwd = process.cwd(), file } = {}
     connectors: connectorsConfig(env, fromFile, secrets),
     provider,
     model: has("AI_ANALYST_MODEL") ? env.AI_ANALYST_MODEL : active ? active.model || MODEL_DEFAULT[active.id] : DEFAULT_MODEL,
-    // Kept for the Anthropic path and older callers.
-    anthropicApiKey: provider.value === "anthropic" && providers.anthropic.source && !providers.anthropic.cloud ? providers.anthropic.key : null,
     cloud,
     // null: named after the data (workspaceName). The demo name is only ever used on demo data.
     workspace: pick("AI_ANALYST_WORKSPACE", fromFile.workspace, null) || null,

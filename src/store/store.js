@@ -40,7 +40,6 @@ export class Store {
   constructor(file) {
     // The data dir holds conversations, figures and keys: only the person's own account may read it.
     if (file !== ":memory:") mkdirSync(path.dirname(file), { recursive: true, mode: 0o700 });
-    this.file = file;
     this.db = new DatabaseSync(file);
     if (file !== ":memory:") chmodSync(file, 0o600);
     this.db.exec("PRAGMA journal_mode = WAL; PRAGMA busy_timeout = 3000;");

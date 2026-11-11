@@ -75,7 +75,6 @@ test("config: env first, then the config file, with the CONTRACT defaults", () =
   assert.equal(workspaceName({ ...own, bigquery: { ...own.bigquery, dataset: null } }, { demo: false }), "shop-data-1");
   const named = loadConfig({ env: { AI_ANALYST_WORKSPACE: "Acme", AI_ANALYST_WAREHOUSE: "bigquery", BIGQUERY_PROJECT: "shop-data-1" }, cwd: "/nonexistent" });
   assert.equal(workspaceName(named, { demo: false }), "Acme");
-  assert.equal(c.anthropicApiKey, null);
   const e = loadConfig({ env: { AI_ANALYST_WAREHOUSE: "bigquery", BIGQUERY_PROJECT: "p-12345", AI_ANALYST_MODEL: "claude-sonnet-5-5", PORT: "9000" }, cwd: "/nonexistent" });
   assert.deepEqual([e.warehouse, e.bigquery.project, e.model, e.port], ["bigquery", "p-12345", "claude-sonnet-5-5", 9000]);
   assert.throws(() => loadConfig({ env: { AI_ANALYST_WAREHOUSE: "snowflake" }, cwd: "/nonexistent" }), /duckdb, bigquery or local/);

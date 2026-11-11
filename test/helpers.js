@@ -28,7 +28,6 @@ export function tempDir(prefix = "ai-analyst-") {
 }
 
 /** Model keys and settings from the caller's shell must never reach a test: only these variables are seen. */
-export const testEnv = (extra = {}) => ({ ...extra });
 
 /**
  * @param {{ seed?: boolean, env?: object, ...opts }} [o] seed: also seed the workspace (dashboard, check run, demo
@@ -36,7 +35,7 @@ export const testEnv = (extra = {}) => ({ ...extra });
  */
 export async function demoWorkspace({ seed = true, env = {}, ...opts } = {}) {
   const dir = tempDir("ai-analyst-");
-  const config = loadConfig({ env: testEnv({ AI_ANALYST_DATA_DIR: dir, ...env }), cwd: dir });
+  const config = loadConfig({ env: { AI_ANALYST_DATA_DIR: dir, ...env }, cwd: dir });
   const ws = await openWorkspace(config, { seed: true, workspace: seed, ...opts });
   ws.dir = dir;
   return ws;

@@ -1,4 +1,4 @@
-// Per-browser preferences (language override, theme, dismissed cards). localStorage can be missing or throw
+// Per-browser preferences (language override, theme, the collapsed Ask column). localStorage can be missing or throw
 // (private windows, blocked storage, previews), so every read and write is guarded and the app works without it.
 import { useCallback, useSyncExternalStore } from "react";
 
@@ -8,20 +8,14 @@ export interface Prefs {
   /** "system" follows the browser. */
   lang: "system" | "en" | "tr";
   theme: "system" | "light" | "dark";
-  /** The sidebar "Make it yours" card was dismissed. */
-  makeItYoursDismissed: boolean;
-  /** "Not now" on the ai cloud line. */
-  cloudNotNow: boolean;
   /** The Ask page conversation column is collapsed. */
   askColumnCollapsed: boolean;
 }
 
-const DEFAULTS: Prefs = { lang: "system", theme: "system", makeItYoursDismissed: false, cloudNotNow: false, askColumnCollapsed: false };
+const DEFAULTS: Prefs = { lang: "system", theme: "system", askColumnCollapsed: false };
 const ALLOWED: { [K in keyof Prefs]: (v: unknown) => v is Prefs[K] } = {
   lang: (v): v is Prefs["lang"] => v === "system" || v === "en" || v === "tr",
   theme: (v): v is Prefs["theme"] => v === "system" || v === "light" || v === "dark",
-  makeItYoursDismissed: (v): v is boolean => typeof v === "boolean",
-  cloudNotNow: (v): v is boolean => typeof v === "boolean",
   askColumnCollapsed: (v): v is boolean => typeof v === "boolean",
 };
 

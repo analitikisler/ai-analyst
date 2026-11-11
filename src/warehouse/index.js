@@ -18,7 +18,7 @@ import { buildLocalWarehouse, localFile } from "../connectors/local.js";
  * @property {() => Promise<{ from: string, to: string, rows: number }>} range
  * @property {() => string|null} refreshedAt
  * @property {() => void} close
- * @property {{ hits: number, misses: number }} [stats]
+ * @property {{ misses: number }} [stats] queries that ran (were not answered from the cache)
  */
 
 export const demoFile = (config) => path.join(config.dataDir, "demo.duckdb");
@@ -26,23 +26,19 @@ export const demoFile = (config) => path.join(config.dataDir, "demo.duckdb");
 /** Wraps a warehouse with a small result cache keyed by the SQL text. */
 export function withCache(wh, { ttlMs = 5 * 60 * 1000, max = 500 } = {}) {
   const cache = new Map();
-  const stats = { hits: 0, misses: 0 };
+  const stats = { misses: 0 };
   return {
     ...wh,
     stats,
     async query(sql) {
       const hit = cache.get(sql);
-      if (hit && Date.now() - hit.at < ttlMs) {
-        stats.hits++;
-        return structuredClone(hit.rows);
-      }
+      if (hit && Date.now() - hit.at < ttlMs) return structuredClone(hit.rows);
       stats.misses++;
       const rows = await wh.query(sql);
       if (cache.size >= max) cache.delete(cache.keys().next().value);
       cache.set(sql, { at: Date.now(), rows });
       return structuredClone(rows);
     },
-    clearCache: () => cache.clear(),
   };
 }
 

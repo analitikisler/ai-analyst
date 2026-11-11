@@ -80,8 +80,7 @@ type UndoRecord =
   | { kind: "dashboard_rename"; dashboard_id: string; name: Text }
   | { kind: "event_add"; event_id: string }
   | { kind: "event_update"; event: ChartEvent }
-  | { kind: "event_delete"; event: ChartEvent }
-  | { kind: "events_import"; ids: string[] };
+  | { kind: "event_delete"; event: ChartEvent };
 
 /** A metric proposed from an exploratory answer (owner round 5), shown on the Metrics page. */
 interface ProposedMetric {
@@ -141,9 +140,6 @@ function describeTables(): { dialect: "duckdb"; tables: DescribedTable[] } {
     });
   return { dialect: "duckdb", tables };
 }
-
-const CHART_SIZE: Record<string, { w: 3 | 4 | 6 | 8 | 12; h: 1 | 2 }> = {};
-void CHART_SIZE;
 
 function seedTile(dashboard_id: string, id: string, title: Text, query: TileQuery, chart: ChartType, w: Tile["size"]["w"], h: Tile["size"]["h"]): Tile {
   return { id, dashboard_id, title, answer_id: null, query, chart, size: { w, h }, created_by: "demo", created_at: SEED_AT, version: 1 };
@@ -506,10 +502,6 @@ function chatSetup(client: ChatAppSetup["client"]): ChatAppSetup {
 
 // ---------------------------------------------------------------- undo
 
-function undoLabel(entry: Activity): Text {
-  return entry.detail;
-}
-
 function applyUndo(entry: Activity): void {
   const rec = db.undo[entry.id];
   if (!rec) throw new ApiError("not_undoable", "Only changes with an undo can be undone.");
@@ -588,9 +580,6 @@ function applyUndo(entry: Activity): void {
       break;
     case "event_delete":
       db.events = [...db.events.filter((e) => e.id !== rec.event.id), clone(rec.event)];
-      break;
-    case "events_import":
-      db.events = db.events.filter((e) => !rec.ids.includes(e.id));
       break;
   }
 }
@@ -900,7 +889,7 @@ const handlers: { [N in keyof Actions]: Handler<N> } = {
     if (entry.undone) throw new ApiError("already_undone", "This was already undone.", 409);
     applyUndo(entry);
     entry.undone = true;
-    log("person", "undo", ACT.undid(undoLabel(entry)));
+    log("person", "undo", ACT.undid(entry.detail));
     return { undone: true, activity: clone(entry) };
   },
   list_dashboards: () => state().dashboards,

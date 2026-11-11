@@ -7,7 +7,6 @@ import { FlaskConicalIcon } from "lucide-react";
 import { useAppState } from "@/api/queries";
 import { useAskStore } from "@/ask/AskStore";
 import { AiAnalystLogo } from "@/components/art/BrandLogos";
-import { StatusGlyph } from "@/components/art/StatusGlyph";
 import { Skeleton } from "@/components/ui/skeleton";
 import { fmt, useT } from "@/i18n";
 import { MakeItYoursCard } from "./MakeItYoursCard";
@@ -59,7 +58,6 @@ function NavRow({ item, onNavigate }: { item: NavItem; onNavigate?: () => void }
   const Icon = item.icon;
   const active = pathname === item.to || pathname.startsWith(`${item.to}/`);
   const changed = item.key === "dashboards" ? (data?.badges.checks_changed ?? 0) : 0;
-  const waiting = 0; // Waiting decisions show in the top bar (WaitingBadge).
   return (
     <NavLink to={item.to} onClick={onNavigate} className={itemCls(active)} aria-current={active ? "page" : undefined}>
       <Icon size={16} strokeWidth={1.75} aria-hidden />
@@ -74,12 +72,6 @@ function NavRow({ item, onNavigate }: { item: NavItem; onNavigate?: () => void }
         <span className="ml-auto inline-flex h-5 min-w-5 items-center justify-center rounded-sm border border-border bg-surface-2 px-1 font-mono text-2xs text-text">
           {changed}
           <span className="sr-only">{fmt(t.shell.badge.checks, { n: changed })}</span>
-        </span>
-      )}
-      {waiting > 0 && (
-        <span className="ml-auto inline-flex h-5 min-w-5 items-center justify-center rounded-sm border border-accent/40 bg-accent-soft px-1 font-mono text-2xs text-accent-ink">
-          {waiting}
-          <span className="sr-only">{fmt(t.shell.badge.waiting, { n: waiting })}</span>
         </span>
       )}
     </NavLink>
@@ -122,5 +114,3 @@ export function Sidebar({ onNavigate, footer }: { onNavigate?: () => void; foote
     </div>
   );
 }
-
-export { StatusGlyph };

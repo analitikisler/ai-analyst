@@ -132,9 +132,6 @@ function steps(query: QueryResult, check?: CheckResult): Step[] {
   return out;
 }
 
-/** Events are global (Settings › Events) and every chart draws the ones in its range, so answers carry none. */
-const events = (_c: CheckResult): Answer["events"] => [];
-
 const pct = (lang: Lang, r: number | null, signed = false) => f[lang].pct(r, 1, signed);
 const abs = (r: number | null) => (r == null ? null : Math.abs(r));
 
@@ -224,7 +221,8 @@ function checkAnswer(check: CheckId, p: Period, ctx: PlanContext, opts: { kind?:
       query,
       check: c,
       metrics: [metricRef(ck.expected.metric), metricRef(ck.measured.metric)],
-      events: events(c),
+      // Events are global (Settings › Events) and every chart draws the ones in its range, so answers carry none.
+      events: [],
       validation: { ok: true, unmatched: [] },
       created_by: ctx.model ? "agent" : "planner",
       model_label: ctx.model?.label ?? T("Built-in planner", "Yerleşik planlayıcı"),
@@ -323,10 +321,9 @@ function splitSentence(q: QueryResult): Text {
   }
   if (!top) return both((l) => `${m.label[l]} · ${r[l]}`);
   const next = rows.slice(1, 3);
-  const last = null as { key: string; value: number | null } | null;
   return {
-    en: `${m.label.en} for ${r.en}: ${v("en", q.total)}${m.unit === "pct" || m.unit === "ratio" || q.metric === "aov" ? " overall" : ""}. ${dimName(top.key, "en")} leads at ${v("en", top.value)}${next.length ? `, then ${next.map((x) => `${dimName(x.key, "en")} ${v("en", x.value)}`).join(" and ")}` : ""}${last ? `; ${dimName(last.key, "en")} ${v("en", last.value)}` : ""}.`,
-    tr: `${r.tr} döneminde ${mid(m.label.tr, "tr")} ${v("tr", q.total)}. ${dimName(top.key, "tr")} ${v("tr", top.value)} ile önde${next.length ? `; ardından ${next.map((x) => `${dimName(x.key, "tr")} ${v("tr", x.value)}`).join(" ve ")}` : ""}${last ? `; ${dimName(last.key, "tr")} ${v("tr", last.value)}` : ""}.`,
+    en: `${m.label.en} for ${r.en}: ${v("en", q.total)}${m.unit === "pct" || m.unit === "ratio" || q.metric === "aov" ? " overall" : ""}. ${dimName(top.key, "en")} leads at ${v("en", top.value)}${next.length ? `, then ${next.map((x) => `${dimName(x.key, "en")} ${v("en", x.value)}`).join(" and ")}` : ""}.`,
+    tr: `${r.tr} döneminde ${mid(m.label.tr, "tr")} ${v("tr", q.total)}. ${dimName(top.key, "tr")} ${v("tr", top.value)} ile önde${next.length ? `; ardından ${next.map((x) => `${dimName(x.key, "tr")} ${v("tr", x.value)}`).join(" ve ")}` : ""}.`,
   };
 }
 

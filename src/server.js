@@ -145,7 +145,7 @@ export function allowedHostsFor(config, port) {
  */
 export function createHandler(app, opts = {}) {
   // A checkout serves web/dist; an installed package ships the same files as web-dist (src/pack.js).
-  const webDir = path.resolve(opts.webDir ?? app.webDir ?? (existsSync(path.join(ROOT, "web", "dist", "index.html")) || !existsSync(path.join(ROOT, "web-dist")) ? path.join(ROOT, "web", "dist") : path.join(ROOT, "web-dist")));
+  const webDir = path.resolve(opts.webDir ?? (existsSync(path.join(ROOT, "web", "dist", "index.html")) || !existsSync(path.join(ROOT, "web-dist")) ? path.join(ROOT, "web", "dist") : path.join(ROOT, "web-dist")));
   const running = new Map(); // turn id -> AbortController
   let indexCache = null;
   const portOf = () => opts.port?.() ?? app.config.port;

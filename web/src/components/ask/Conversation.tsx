@@ -14,7 +14,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { fmt, useBilingual, useT } from "@/i18n";
 import { TurnView, type ThreadActions } from "./Thread";
 
-export function ConversationThread({ conversationId, actions, onNotFound, footer, className, contentClassName }: { conversationId: string | null; actions: ThreadActions; onNotFound?: () => void; footer?: ReactNode; className?: string; contentClassName?: string }) {
+export function ConversationThread({ conversationId, actions, footer, className, contentClassName }: { conversationId: string | null; actions: ThreadActions; footer?: ReactNode; className?: string; contentClassName?: string }) {
   const t = useT();
   const pick = useBilingual();
   const { live, announced } = useAskStore();
@@ -24,10 +24,7 @@ export function ConversationThread({ conversationId, actions, onNotFound, footer
   if (liveHere && live?.turnId) freshIds.current.add(live.turnId);
   const turns = data?.turn_list.filter((tt) => !(liveHere && tt.id === live?.turnId)) ?? [];
 
-  if (conversationId && error) {
-    onNotFound?.();
-    return <EmptyState icon={MessageSquareOffIcon} title={t.nf.conversation} />;
-  }
+  if (conversationId && error) return <EmptyState icon={MessageSquareOffIcon} title={t.nf.conversation} />;
   const contextName = (c: unknown): Text | null => ((c as { name?: Text } | null)?.name ? (c as { name: Text }).name : null);
   return (
     <MessageScrollerProvider autoScroll defaultScrollPosition="last-anchor">

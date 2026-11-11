@@ -107,7 +107,7 @@ function readDir(dir, schema, kind) {
 
 /**
  * @param {string} dir the folder that holds metrics/ and checks/
- * @returns {{ metrics: Record<string, any>, checks: Record<string, any>, dimensions: typeof MART.dimensions }}
+ * @returns {{ metrics: Record<string, any>, checks: Record<string, any> }}
  */
 export function loadPack(dir) {
   const metrics = readDir(path.join(dir, "metrics"), metricSchema, "metric");
@@ -124,5 +124,5 @@ export function loadPack(dir) {
   for (const m of Object.values(metrics)) {
     if (m.check && !checks[m.check]) throw new Error(`metrics/${m.id}.yaml: check "${m.check}" is not in the pack.`);
   }
-  return { metrics, checks, dimensions: MART.dimensions };
+  return { metrics, checks };
 }

@@ -142,23 +142,6 @@ export function createFormat(lang: Lang, currency: string = currentCurrency) {
     return `${date(from, true)}–${date(to, true)}`;
   };
 
-  /** "just now", "5 minutes ago", "2 hours ago", "3 days ago", then the date. */
-  const relativeTime = (iso: string | null | undefined, nowMs: number = Date.now()): string => {
-    if (!iso) return dash;
-    const ms = new Date(iso).getTime();
-    if (Number.isNaN(ms)) return dash;
-    const s = Math.round((nowMs - ms) / 1000);
-    if (s < 45) return t.justNow;
-    const m = Math.round(s / 60);
-    if (m < 60) return plural(lang, m, t.minutesAgo);
-    const h = Math.round(m / 60);
-    if (h < 24) return plural(lang, h, t.hoursAgo);
-    const days = Math.round(h / 24);
-    if (days < 7) return plural(lang, days, t.daysAgo);
-    return date(new Date(ms).toISOString().slice(0, 10), true);
-  };
-
-  /** Percentage points, for rates: "0.3 points" / "0,3 puan". */
   const points = (diff: number): string => plural(lang, Math.abs(diff), t.points, { count: dec(Math.abs(diff), 1) });
 
   /**
@@ -224,7 +207,7 @@ export function createFormat(lang: Lang, currency: string = currentCurrency) {
   /** A since-date inside a sentence: "9 Oct" / "9 Ekim’den" (the Turkish templates add "beri"). */
   const since = (iso: string | null | undefined): string => (!iso ? dash : lang === "tr" ? trFrom(iso) : date(iso));
 
-  return { lang, currency, currencyMark: mark, dash, int, dec, pct, tryMoney, money, ratio, value, compact, date, range, relativeTime, points, delta, bytes, time, when, whenMid, since, dateLong, localDay };
+  return { lang, currency, currencyMark: mark, dash, int, dec, pct, tryMoney, money, ratio, value, compact, date, range, points, delta, bytes, time, when, whenMid, since, dateLong, localDay };
 }
 
 export type Format = ReturnType<typeof createFormat>;

@@ -290,6 +290,3 @@ export const SOURCE_LABEL = {
   bigquery: (project: string): Text => ({ en: `BigQuery · ${project}`, tr: `BigQuery · ${project}` }),
 };
 
-export const MODEL_LABEL = {
-  planner: T("Built-in planner", "Yerleşik planlayıcı"),
-};
