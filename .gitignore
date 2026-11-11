@@ -8,5 +8,3 @@ secrets.json
 app.db*
 ai-analyst.config.json
 .DS_Store
-.wrangler/
-.dev.vars
