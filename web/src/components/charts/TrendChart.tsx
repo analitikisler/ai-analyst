@@ -109,7 +109,7 @@ export function TrendChart({ query: q, type, height = 220, showPrevious = true, 
                 {data.map((r) => (
                   <Cell
                     key={r.key}
-                    fill={r.partial ? `url(#hatch-partial-${id})` : r.provisional ? "var(--color-data-provisional)" : "var(--color-data-cat-1)"}
+                    fill={r.partial ? `url(#hatch-partial-${id})` : r.provisional ? "var(--color-data-seq-2)" : "var(--color-data-cat-1)"}
                     stroke={r.partial || r.provisional ? "var(--color-data-cat-1)" : "none"}
                     strokeWidth={1}
                   />

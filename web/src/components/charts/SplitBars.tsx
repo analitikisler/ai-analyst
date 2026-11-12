@@ -32,7 +32,7 @@ export function SplitBars({ query: q, showPrevious = true, title, className, max
             <li key={r.key} aria-hidden className="grid grid-cols-[minmax(4.5rem,7rem)_minmax(0,1fr)_auto] items-center gap-2">
               <span className="truncate text-[13px] text-text">{name(r.key)}</span>
               <span className="relative h-3.5 rounded-xs bg-well">
-                <span className="absolute inset-y-0 left-0 rounded-xs bg-data-cat-1" style={{ width: `${((r.value ?? 0) / max) * 100}%` }} />
+                <span className="absolute inset-y-0 left-0 rounded-xs bg-cat-1" style={{ width: `${((r.value ?? 0) / max) * 100}%` }} />
                 {p != null && <span className="absolute -inset-y-1 w-0.5 bg-text" style={{ left: `calc(${(p / max) * 100}% - 1px)` }} />}
               </span>
               <span className={cn("min-w-14 text-right font-mono text-[13px] text-text tnum")}>{f.value(r.value, q.unit)}</span>

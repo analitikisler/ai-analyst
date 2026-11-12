@@ -7,25 +7,17 @@
 /* Çini · Mercan (src/cini, the Analitik İşler kit; copied as-is, never edited here). tokens.css owns every colour, light
    and dark; tailwind.css points shadcn's names at its roles. Dark follows the OS unless src/lib/theme.ts sets
    data-theme="light" or "dark" on <html>. Roles: ink buttons (`primary` / `action`), red links (`text-link`), teal
-   `ok` and `measured`, olive `warn`, wine `bad` and `broken`, charts on `--color-data-cat-*`, missing data on the
-   Pano hatch (`hatch-missing`).
+   `ok` and `measured`, olive `warn`, wine `bad` and `broken`, charts on `cat-1…6` (`--color-data-cat-*`), missing data
+   on the Pano hatch (`hatch-missing`).
 
    Components never branch on the theme (no `dark:` classes): every colour is a role that switches by itself.
    scripts/check-tokens.mjs fails the build on `dark:` or a hex colour in src/ (src/cini excepted). */
 
-/* What the kit leaves to the tool: a few more roles as utilities, the small type step and the radii. */
+/* What the kit leaves to the tool: the code colours as utilities, the small type step and the radii. */
 @theme inline {
-  --color-action-hover: var(--color-action-hover);
-  --color-overlay: var(--color-overlay);
   --color-code-keyword: var(--color-code-keyword);
   --color-code-string: var(--color-code-string);
   --color-code-comment: var(--color-code-comment);
-  --color-data-cat-1: var(--color-data-cat-1);
-  --color-data-cat-2: var(--color-data-cat-2);
-  --color-data-cat-3: var(--color-data-cat-3);
-  --color-data-cat-4: var(--color-data-cat-4);
-  --color-data-cat-5: var(--color-data-cat-5);
-  --color-data-cat-6: var(--color-data-cat-6);
 
   /* Radii from the kit: 1 px cells, 2 px chips, 4 px controls, 6 px cards and panels, 8 px at most. Steps past xl
      resolve to 6 px, so no class can grow past a card. rounded-full stays for status dots. */
@@ -42,11 +34,6 @@
   --shadow-lg: var(--shadow-overlay);
 }
 
-/* Chart fills the kit does not name, mixed from its roles: the "may change" bars are the first series, lighter. */
-:root {
-  --color-data-provisional: color-mix(in oklab, var(--color-data-cat-1) 24%, var(--color-surface));
-}
-
 @theme {
   --text-2xs: 0.75rem;
   --text-2xs--line-height: 1rem; /* 12px floor */
@@ -61,11 +48,6 @@
 @layer base {
   * {
     border-color: var(--color-border);
-  }
-  /* The kit colours every <a> red. Here the red is for links in text: a bare <a> (model text, markdown) and
-     `text-link`. Anchors styled as something else (cards, rows, nav, the status line, buttons) keep their colour. */
-  a:where([class]) {
-    color: inherit;
   }
   html {
     background: var(--color-bg);
@@ -151,19 +133,6 @@
   line-height: 1rem;
   font-weight: 500;
   color: var(--color-muted);
-}
-/** Missing data: the Pano ring hatch (the kit's `.is-missing`) over the box, in the missing-data role. Never grey or
- *  red bars. */
-@utility hatch-missing {
-  position: relative;
-  &::after {
-    content: "";
-    position: absolute;
-    inset: 0;
-    background: var(--color-data-missing);
-    mask: var(--pattern-missing) 0 0 / 8px 8px;
-    pointer-events: none;
-  }
 }
 /* Utilities the shadcn chat primitives (message-scroller, trace) expect from shadcn's own stylesheet, written here
    on the Çini roles. `shimmer` is a slow opacity pulse on the text of a running step (no gradient sweep). */

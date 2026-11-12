@@ -91,7 +91,8 @@
   --color-sidebar-ring: var(--sidebar-ring);
 
   /* Çini's own roles as utilities (bg-surface, text-link, border-strong, text-ok, bg-tile …). Names that shadcn
-     already uses (accent, muted, border) keep shadcn's meaning; the brand red is `link`. */
+     already uses (accent, muted, border) keep shadcn's meaning: bg-muted is a ground, so muted TEXT is
+     text-muted-foreground or text-subtle; the brand red is `link`; charts are cat-1 … cat-6. */
   --color-bg: var(--color-bg);
   --color-well: var(--color-well);
   --color-surface: var(--color-surface);
@@ -111,6 +112,15 @@
   --color-warn-soft: var(--color-warn-soft);
   --color-bad: var(--color-bad);
   --color-bad-soft: var(--color-bad-soft);
+  --color-risk: var(--color-risk);
+  --color-risk-soft: var(--color-risk-soft);
+  --color-info-soft: var(--color-info-soft);
+  --color-action-hover: var(--color-action-hover);
+  --color-link-soft: var(--color-accent-soft);
+  --color-link-ink: var(--color-accent-ink);
+  --color-selection: var(--color-selection);
+  --shadow-overlay: var(--shadow-overlay);
+  --shadow-raised: var(--shadow-raised);
   --color-info: var(--color-info);
   --color-measured: var(--color-data-measured);
   --color-missing: var(--color-data-missing);
@@ -119,6 +129,14 @@
   --color-tile-line: var(--color-tile-line);
   --color-tile-accent: var(--color-tile-accent);
   --color-code: var(--color-code-bg);
+  --color-code-text: var(--color-code-text);
+  --color-overlay: var(--color-overlay);
+  --color-cat-1: var(--color-data-cat-1);
+  --color-cat-2: var(--color-data-cat-2);
+  --color-cat-3: var(--color-data-cat-3);
+  --color-cat-4: var(--color-data-cat-4);
+  --color-cat-5: var(--color-data-cat-5);
+  --color-cat-6: var(--color-data-cat-6);
 
   --font-sans: var(--font-body);
   --font-display: var(--font-display);
@@ -130,11 +148,18 @@
   --radius-xl: 8px;
 }
 
+/* Missing data: the Pano ring hatch over the box (class="hatch-missing", on a positioned box) */
+@utility hatch-missing {
+  position: relative;
+  &::after { content: ""; position: absolute; inset: 0; background: var(--color-data-missing); mask: var(--pattern-missing) 0 0 / 8px 8px; pointer-events: none; }
+}
+
 /* The base, as cini.css sets it, for pages that use Tailwind only */
 @layer base {
   body { background: var(--color-bg); color: var(--color-text); font-family: var(--font-body); font-synthesis: none; -webkit-font-smoothing: antialiased; }
   h1, h2, h3, h4 { color: var(--color-text-strong); font-family: var(--font-display); font-weight: var(--font-weight-display); letter-spacing: var(--text-tracking-title); }
-  a { color: var(--color-accent); text-underline-offset: 0.22em; }
+  /* only plain links are red: an anchor with classes (a card, a row, a button) keeps the colour its classes give it */
+  a:not([class]) { color: var(--color-accent); text-underline-offset: 0.22em; }
   :focus-visible { outline: 2px solid var(--color-focus); outline-offset: 2px; }
   ::selection { background: var(--color-selection); color: var(--color-text); }
   code, kbd, pre { font-family: var(--font-mono); }
