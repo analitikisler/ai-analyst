@@ -1,4 +1,4 @@
-/* Çini · Mercan kit, built 2026-11-11 from analitikisler 97701e7 (styles/tokens.json). Do not edit: rebuild with cini-kit/build.ts. */
+/* Çini · Mercan kit, built 2026-11-12 from analitikisler 97701e7 (styles/tokens.json). Do not edit: rebuild with cini-kit/build.ts. */
 /* Çini · Mercan: the base and the common controls for the Analitik İşler tools (plain HTML or React without Tailwind).
    Load after tokens.css and fonts.css. Everything reads the roles in tokens.css, never a hex value, so light and dark
    follow the theme. The class names are the website's (analitikisler.com), so a component copied across keeps working.

@@ -1,4 +1,4 @@
-// Çini · Mercan kit, built 2026-11-11 from analitikisler 97701e7 (styles/tokens.json). Do not edit: rebuild with cini-kit/build.ts.
+// Çini · Mercan kit, built 2026-11-12 from analitikisler 97701e7 (styles/tokens.json). Do not edit: rebuild with cini-kit/build.ts.
 (() => {
   var __defProp = Object.defineProperty;
   var __returnValue = (v) => v;

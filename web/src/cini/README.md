@@ -73,7 +73,7 @@ shadcn's `.dark` class also works.
 | `--color-warn` | #6C5904 | #A18C0B | warnings | |
 | `--color-info` | #3B5876 | #729CC8 | the one quiet blue: notes | |
 | `--color-bg`, `--color-surface`, `--color-surface-2`, `--color-well` | glaze white family | warm near-black family | grounds, from the page to the nested box | |
-| `--color-data-cat-1…6`, `-seq-1…9`, `-div-1…9` | | | charts, in order (Tailwind: `cat-1…6`) | more than 6 series: group the rest as "other" |
+| `--color-data-cat-1…8`, `-seq-1…9`, `-div-1…9` | | | charts, in order (Tailwind: `cat-1…8`; 7 and 8 are kit-only) | more than 8 series: group the rest as "other" |
 
 - A status always has a glyph and a word. Colour is never the only signal. For "waiting" or "none", use the
   neutral tone (`data-tone="neutral"`, a muted –).

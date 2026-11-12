@@ -1,4 +1,4 @@
-// Çini · Mercan kit, built 2026-11-11 from analitikisler 97701e7 (styles/tokens.json). Do not edit: rebuild with cini-kit/build.ts.
+// Çini · Mercan kit, built 2026-11-12 from analitikisler 97701e7 (styles/tokens.json). Do not edit: rebuild with cini-kit/build.ts.
 // ../../analitikisler/lib/pattern/pano.ts
 var model = (() => {
   const hash = (s) => {
