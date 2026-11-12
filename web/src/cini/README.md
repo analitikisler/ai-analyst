@@ -50,6 +50,10 @@ any edits. `import { field } from './cini/pano.js'` works with the types in `pan
 
 **React without Tailwind** (rakip-reklam): import `tokens.css`, `fonts.css` and `cini.css` in the entry file.
 
+**Class names to watch.** The kit's classes are short (`.status`, `.tag`, `.card`, `.table`, `.field`, `.button`).
+If a tool already uses one of these names for something else, rename the tool's class rather than the kit's.
+In Tailwind, `bg-muted` is shadcn's ground colour. For muted text, use `text-muted-foreground` or `text-subtle`.
+
 **Theme.** Dark follows the OS. To let people choose, set `data-theme="light"` or `data-theme="dark"` on `<html>`.
 shadcn's `.dark` class also works.
 
@@ -65,12 +69,14 @@ shadcn's `.dark` class also works.
 | `--color-focus` | #B84A2C | #F0926D | the focus ring | |
 | `--color-ok` / `--color-data-measured` (teal) | #087671 | #3B9E98 | measured, sent, passes | |
 | `--color-bad` / `--color-data-broken` (wine) | #72051A | #FEC6D6 | errors, broken, fails | the brand |
+| `--color-risk` | #965000 | #F0A04B | risk: the severity between broken and warning (glyph ◆) | brand use. Kit-only, outside the site palette |
 | `--color-warn` | #6C5904 | #A18C0B | warnings | |
 | `--color-info` | #3B5876 | #729CC8 | the one quiet blue: notes | |
 | `--color-bg`, `--color-surface`, `--color-surface-2`, `--color-well` | glaze white family | warm near-black family | grounds, from the page to the nested box | |
-| `--color-data-cat-1…6`, `-seq-1…9`, `-div-1…9` | | | charts, in order | |
+| `--color-data-cat-1…6`, `-seq-1…9`, `-div-1…9` | | | charts, in order (Tailwind: `cat-1…6`) | more than 6 series: group the rest as "other" |
 
-- A status always has a glyph and a word. Colour is never the only signal.
+- A status always has a glyph and a word. Colour is never the only signal. For "waiting" or "none", use the
+  neutral tone (`data-tone="neutral"`, a muted –).
 - The brand red is not the error colour. Errors are wine.
 - Buttons are ink, not red.
 - Blue appears only as `info` and as one chart series. Avoid orange that looks like Google Analytics or HubSpot.
